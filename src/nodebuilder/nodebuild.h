@@ -320,3 +320,12 @@ inline int FNodeBuilder::ClassifyLine (node_t &node, const FPrivVert *v1, const 
 #endif
 #endif
 }
+
+inline angle_t PointToAngle(fixed_t x, fixed_t y)
+{
+	double ang = atan2(double(y), double(x));
+	const double rad2bam = double(1 << 30) / 3.14159265358979323846;
+	double dbam = ang * rad2bam;
+	// Convert to signed first since negative double to unsigned is undefined.
+	return angle_t(int(dbam)) << 1;
+}

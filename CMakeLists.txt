@@ -130,7 +130,7 @@ endif( NOT STRNICMP_EXISTS )
 
 set( ZDRAY_LIBS "${ZLIB_LIBRARIES}" )
 set( SOURCES
-	src/commandline/main.cpp
+	src/main.cpp
 	src/commandline/getopt.c
 	src/commandline/getopt1.c
 	src/blockmapbuilder/blockmapbuilder.cpp

@@ -73,7 +73,7 @@ StringBuffer stbuf;
 //
 //===========================================================================
 
-const char *FProcessor::ParseKey(const char *&value)
+const char *FLevelLoader::ParseKey(const char *&value)
 {
 	SC_MustGetString();
 	const char *key = stbuf.Copy(sc_String);
@@ -90,7 +90,7 @@ const char *FProcessor::ParseKey(const char *&value)
 	return key;
 }
 
-bool FProcessor::CheckKey(const char *&key, const char *&value)
+bool FLevelLoader::CheckKey(const char *&key, const char *&value)
 {
 	SC_SavePos();
 	SC_MustGetString();
@@ -138,7 +138,7 @@ fixed_t CheckFixed(const char *key)
 //
 //===========================================================================
 
-void FProcessor::ParseThing(IntThing *th)
+void FLevelLoader::ParseThing(IntThing *th)
 {
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
@@ -178,7 +178,7 @@ void FProcessor::ParseThing(IntThing *th)
 //
 //===========================================================================
 
-void FProcessor::ParseLinedef(IntLineDef *ld)
+void FLevelLoader::ParseLinedef(IntLineDef *ld)
 {
 	SC_MustGetStringName("{");
 	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
@@ -229,7 +229,7 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 //
 //===========================================================================
 
-void FProcessor::ParseSidedef(IntSideDef *sd)
+void FLevelLoader::ParseSidedef(IntSideDef *sd)
 {
 	SC_MustGetStringName("{");
 	sd->sector = NO_INDEX;
@@ -256,7 +256,7 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 //
 //===========================================================================
 
-void FProcessor::ParseSector(IntSector *sec)
+void FLevelLoader::ParseSector(IntSector *sec)
 {
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
@@ -279,7 +279,7 @@ void FProcessor::ParseSector(IntSector *sec)
 //
 //===========================================================================
 
-void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
+void FLevelLoader::ParseVertex(WideVertex *vt, IntVertex *vtp)
 {
 	vt->x = vt->y = 0;
 	SC_MustGetStringName("{");
@@ -310,7 +310,7 @@ void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
 //
 //===========================================================================
 
-void FProcessor::ParseMapProperties()
+void FLevelLoader::ParseMapProperties()
 {
 	const char *key, *value;
 
@@ -337,7 +337,7 @@ void FProcessor::ParseMapProperties()
 //
 //===========================================================================
 
-void FProcessor::ParseTextMap(int lump)
+void FLevelLoader::ParseTextMap(int lump)
 {
 	char *buffer;
 	int buffersize;
@@ -393,214 +393,7 @@ void FProcessor::ParseTextMap(int lump)
 //
 //===========================================================================
 
-void FProcessor::LoadUDMF()
+void FLevelLoader::LoadUDMF()
 {
 	ParseTextMap(Lump+1);
-}
-
-//===========================================================================
-//
-// writes a property list
-//
-//===========================================================================
-
-void FProcessor::WriteProps(FWadWriter &out, TArray<UDMFKey> &props)
-{
-	for(unsigned i=0; i< props.Size(); i++)
-	{
-		out.AddToLump(props[i].key, (int)strlen(props[i].key));
-		out.AddToLump(" = ", 3);
-		out.AddToLump(props[i].value, (int)strlen(props[i].value));
-		out.AddToLump(";\n", 2);
-	}
-}
-
-//===========================================================================
-//
-// writes an integer property
-//
-//===========================================================================
-
-void FProcessor::WriteIntProp(FWadWriter &out, const char *key, int value)
-{
-	char buffer[20];
-
-	out.AddToLump(key, (int)strlen(key));
-	out.AddToLump(" = ", 3);
-	sprintf(buffer, "%d;\n", value);
-	out.AddToLump(buffer, (int)strlen(buffer));
-}
-
-//===========================================================================
-//
-// writes a UDMF thing
-//
-//===========================================================================
-
-void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
-{
-	out.AddToLump("thing", 5);
-	if (WriteComments)
-	{
-		char buffer[32];
-		int len = sprintf(buffer, " // %d", num);
-		out.AddToLump(buffer, len);
-	}
-	out.AddToLump("\n{\n", 3);
-	WriteProps(out, th->props);
-	out.AddToLump("}\n\n", 3);
-}
-
-//===========================================================================
-//
-// writes a UDMF linedef
-//
-//===========================================================================
-
-void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
-{
-	out.AddToLump("linedef", 7);
-	if (WriteComments)
-	{
-		char buffer[32];
-		int len = sprintf(buffer, " // %d", num);
-		out.AddToLump(buffer, len);
-	}
-	out.AddToLump("\n{\n", 3);
-	WriteIntProp(out, "v1", ld->v1);
-	WriteIntProp(out, "v2", ld->v2);
-	if (ld->sidenum[0] != NO_INDEX) WriteIntProp(out, "sidefront", ld->sidenum[0]);
-	if (ld->sidenum[1] != NO_INDEX) WriteIntProp(out, "sideback", ld->sidenum[1]);
-	WriteProps(out, ld->props);
-	out.AddToLump("}\n\n", 3);
-}
-
-//===========================================================================
-//
-// writes a UDMF sidedef
-//
-//===========================================================================
-
-void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
-{
-	out.AddToLump("sidedef", 7);
-	if (WriteComments)
-	{
-		char buffer[32];
-		int len = sprintf(buffer, " // %d", num);
-		out.AddToLump(buffer, len);
-	}
-	out.AddToLump("\n{\n", 3);
-	WriteIntProp(out, "sector", sd->sector);
-	WriteProps(out, sd->props);
-	out.AddToLump("}\n\n", 3);
-}
-
-//===========================================================================
-//
-// writes a UDMF sector
-//
-//===========================================================================
-
-void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
-{
-	out.AddToLump("sector", 6);
-	if (WriteComments)
-	{
-		char buffer[32];
-		int len = sprintf(buffer, " // %d", num);
-		out.AddToLump(buffer, len);
-	}
-	out.AddToLump("\n{\n", 3);
-	WriteProps(out, sec->props);
-	out.AddToLump("}\n\n", 3);
-}
-
-//===========================================================================
-//
-// writes a UDMF vertex
-//
-//===========================================================================
-
-void FProcessor::WriteVertexUDMF(FWadWriter &out, IntVertex *vt, int num)
-{
-	out.AddToLump("vertex", 6);
-	if (WriteComments)
-	{
-		char buffer[32];
-		int len = sprintf(buffer, " // %d", num);
-		out.AddToLump(buffer, len);
-	}
-	out.AddToLump("\n{\n", 3);
-	WriteProps(out, vt->props);
-	out.AddToLump("}\n\n", 3);
-}
-
-//===========================================================================
-//
-// writes a UDMF text map
-//
-//===========================================================================
-
-void FProcessor::WriteTextMap(FWadWriter &out)
-{
-	out.StartWritingLump("TEXTMAP");
-	WriteProps(out, Level.props);
-	for(int i = 0; i < Level.NumThings(); i++)
-	{
-		WriteThingUDMF(out, &Level.Things[i], i);
-	}
-
-	for(int i = 0; i < Level.NumOrgVerts; i++)
-	{
-		WideVertex *vt = &Level.Vertices[i];
-		if (vt->index <= 0)
-		{
-			// not valid!
-			throw std::runtime_error("Invalid vertex data.");
-		}
-		WriteVertexUDMF(out, &Level.VertexProps[vt->index-1], i);
-	}
-
-	for(int i = 0; i < Level.NumLines(); i++)
-	{
-		WriteLinedefUDMF(out, &Level.Lines[i], i);
-	}
-
-	for(int i = 0; i < Level.NumSides(); i++)
-	{
-		WriteSidedefUDMF(out, &Level.Sides[i], i);
-	}
-
-	for(int i = 0; i < Level.NumSectors(); i++)
-	{
-		WriteSectorUDMF(out, &Level.Sectors[i], i);
-	}
-}
-
-//===========================================================================
-//
-// writes an UDMF map
-//
-//===========================================================================
-
-void FProcessor::WriteUDMF(FWadWriter &out)
-{
-	out.CopyLump (Wad, Lump);
-	WriteTextMap(out);
-	if (ForceCompression) WriteGLBSPZ (out, "ZNODES");
-	else WriteGLBSPX (out, "ZNODES");
-
-	// copy everything except existing nodes, blockmap and reject
-	for(int i=Lump+2; stricmp(Wad.LumpName(i), "ENDMAP") && i < Wad.NumLumps(); i++)
-	{
-		const char *lumpname = Wad.LumpName(i);
-		if (stricmp(lumpname, "ZNODES") &&
-			stricmp(lumpname, "BLOCKMAP") &&
-			stricmp(lumpname, "REJECT"))
-		{
-			out.CopyLump(Wad, i);
-		}
-	}
-	out.CreateLabel("ENDMAP");
 }
