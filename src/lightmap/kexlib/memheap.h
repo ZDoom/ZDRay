@@ -25,35 +25,34 @@
 //    distribution.
 //
 
-#ifndef __MEM_HEAP_H__
-#define __MEM_HEAP_H__
+#pragma once
 
 typedef void (*blockFunc_t)(void*);
 
 class kexHeapBlock;
 
-typedef struct memBlock_s
+struct memBlock
 {
     int                     heapTag;
     int                     purgeID;
     int                     size;
     kexHeapBlock            *heapBlock;
     void                    **ptrRef;
-    struct memBlock_s       *prev;
-    struct memBlock_s       *next;
-} memBlock_t;
+    memBlock              *prev;
+    memBlock              *next;
+};
 
 class kexHeapBlock
 {
 public:
     kexHeapBlock(const char *name, bool bGarbageCollect,
                  blockFunc_t funcFree, blockFunc_t funcGC);
-    ~kexHeapBlock(void);
+    ~kexHeapBlock();
 
     kexHeapBlock            *operator[](int index);
 
     char                    *name;
-    memBlock_t              *blocks;
+    memBlock              *blocks;
     bool                    bGC;
     blockFunc_t             freeFunc;
     blockFunc_t             gcFunc;
@@ -83,9 +82,9 @@ public:
     static kexHeapBlock     *blockList;
 
 private:
-    static void             AddBlock(memBlock_t *block, kexHeapBlock *heapBlock);
-    static void             RemoveBlock(memBlock_t *block);
-    static memBlock_t       *GetBlock(void *ptr, const char *file, int line);
+    static void             AddBlock(memBlock *block, kexHeapBlock *heapBlock);
+    static void             RemoveBlock(memBlock *block);
+    static memBlock       *GetBlock(void *ptr, const char *file, int line);
 
     static const int        HeapTag = 0x03151983;
 };
@@ -110,5 +109,3 @@ extern kexHeapBlock hb_object;
 
 #define Mem_Strdup(s, hb)       (strcpy((char*)Mem_Malloc(strlen(s)+1, hb), s))
 #define Mem_Strdupa(s)          (strcpy((char*)Mem_Alloca(strlen(s)+1), s))
-
-#endif

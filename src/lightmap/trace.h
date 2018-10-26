@@ -25,16 +25,15 @@
 //    distribution.
 //
 
-#ifndef __TRACE_H__
-#define __TRACE_H__
+#pragma once
 
 class kexDoomMap;
 
 class kexTrace
 {
 public:
-    kexTrace(void);
-    ~kexTrace(void);
+    kexTrace();
+    ~kexTrace();
 
     void                Init(kexDoomMap &doomMap);
     void                Trace(const kexVec3 &startVec, const kexVec3 &endVec);
@@ -55,5 +54,3 @@ private:
     kexDoomMap          *map;
 
 };
-
-#endif

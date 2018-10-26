@@ -43,7 +43,7 @@ const kexVec3 kexDoomMap::defaultSunDirection(0.45f, 0.3f, 0.9f);
 // kexDoomMap::kexDoomMap
 //
 
-kexDoomMap::kexDoomMap(void)
+kexDoomMap::kexDoomMap()
 {
     this->mapLines          = NULL;
     this->mapVerts          = NULL;
@@ -80,7 +80,7 @@ kexDoomMap::kexDoomMap(void)
 // kexDoomMap::~kexDoomMap
 //
 
-kexDoomMap::~kexDoomMap(void)
+kexDoomMap::~kexDoomMap()
 {
 }
 
@@ -142,7 +142,7 @@ void kexDoomMap::BuildMapFromWad(kexWadFile &wadFile)
 // kexDoomMap::CheckSkySectors
 //
 
-void kexDoomMap::CheckSkySectors(void)
+void kexDoomMap::CheckSkySectors()
 {
     char name[9];
 
@@ -191,7 +191,7 @@ void kexDoomMap::CheckSkySectors(void)
 // kexDoomMap::BuildPVS
 //
 
-void kexDoomMap::BuildPVS(void)
+void kexDoomMap::BuildPVS()
 {
     // don't do anything if already loaded
     if(mapPVS != NULL)
@@ -269,7 +269,7 @@ void kexDoomMap::BuildVertexes(kexWadFile &wadFile)
 // kexDoomMap::BuildNodeBounds
 //
 
-void kexDoomMap::BuildNodeBounds(void)
+void kexDoomMap::BuildNodeBounds()
 {
     int     i;
     int     j;
@@ -309,7 +309,7 @@ void kexDoomMap::BuildNodeBounds(void)
 // kexDoomMap::BuildLeafs
 //
 
-void kexDoomMap::BuildLeafs(void)
+void kexDoomMap::BuildLeafs()
 {
     mapSubSector_t  *ss;
     leaf_t          *lf;
@@ -615,7 +615,7 @@ bool kexDoomMap::LineIntersectSubSector(const kexVec3 &start, const kexVec3 &end
 // kexDoomMap::GetSunColor
 //
 
-const kexVec3 &kexDoomMap::GetSunColor(void) const
+const kexVec3 &kexDoomMap::GetSunColor() const
 {
     if(mapDef != NULL)
     {
@@ -629,7 +629,7 @@ const kexVec3 &kexDoomMap::GetSunColor(void) const
 // kexDoomMap::GetSunDirection
 //
 
-const kexVec3 &kexDoomMap::GetSunDirection(void) const
+const kexVec3 &kexDoomMap::GetSunDirection() const
 {
     if(mapDef != NULL)
     {
@@ -748,7 +748,7 @@ void kexDoomMap::ParseConfigFile(const char *file)
 
         if(lexer->Matches("surfaceLight"))
         {
-            surfaceLightDef_t surfaceLight;
+            surfaceLightDef surfaceLight;
 
             surfaceLight.tag = 0;
             surfaceLight.outerCone = 1.0f;
@@ -822,7 +822,7 @@ void kexDoomMap::ParseConfigFile(const char *file)
 // kexDoomMap::CreateLights
 //
 
-void kexDoomMap::CreateLights(void)
+void kexDoomMap::CreateLights()
 {
     mapThing_t *thing;
     thingLight_t *thingLight;
@@ -891,7 +891,7 @@ void kexDoomMap::CreateLights(void)
 
         for(unsigned int k = 0; k < surfaceLightDefs.Length(); ++k)
         {
-            surfaceLightDef_t *surfaceLightDef = &surfaceLightDefs[k];
+            surfaceLightDef *surfaceLightDef = &surfaceLightDefs[k];
 
             if(surface->type >= ST_MIDDLESEG && surface->type <= ST_LOWERSEG)
             {
@@ -948,7 +948,7 @@ void kexDoomMap::CreateLights(void)
 // kexDoomMap::CleanupThingLights
 //
 
-void kexDoomMap::CleanupThingLights(void)
+void kexDoomMap::CleanupThingLights()
 {
     for(unsigned int i = 0; i < thingLights.Length(); i++)
     {

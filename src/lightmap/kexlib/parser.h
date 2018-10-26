@@ -25,13 +25,12 @@
 //    distribution.
 //
 
-#ifndef __PARSER_H__
-#define __PARSER_H__
+#pragma once
 
 #define MAX_NESTED_PARSERS      128
 #define MAX_NESTED_FILENAMES    128
 
-typedef enum
+enum tokentype_t
 {
     TK_NONE,
     TK_NUMBER,
@@ -56,78 +55,78 @@ typedef enum
     TK_INCLUDE,
     TK_SETDIR,
     TK_EOF
-} tokentype_t;
+};
 
-typedef enum
+enum arraytype_t
 {
     AT_SHORT,
     AT_INTEGER,
     AT_FLOAT,
     AT_DOUBLE,
     AT_VECTOR
-} arraytype_t;
+};
 
 #define SC_TOKEN_LEN    512
 
-typedef struct
+struct sctokens
 {
     int         id;
     const char  *token;
-} sctokens_t;
+};
 
 class kexLexer
 {
 public:
     kexLexer(const char *filename, char *buf, int bufSize);
-    ~kexLexer(void);
+    ~kexLexer();
 
-    bool                CheckState(void);
-    void                CheckKeywords(void);
+    bool                CheckState();
+    void                CheckKeywords();
     void                MustMatchToken(int type);
     void                ExpectNextToken(int type);
-    bool                Find(void);
-    char                GetChar(void);
-    void                Rewind(void);
-    void                SkipLine(void);
+    bool                Find();
+    char                GetChar();
+    void                Rewind();
+    void                SkipLine();
     bool                Matches(const char *string);
-    int                 GetNumber(void);
-    double              GetFloat(void);
-    kexVec3             GetVector3(void);
-    kexVec4             GetVector4(void);
-    kexVec3             GetVectorString3(void);
-    kexVec4             GetVectorString4(void);
-    void                GetString(void);
-    int                 GetIDForTokenList(const sctokens_t *tokenlist, const char *token);
-    void                ExpectTokenListID(const sctokens_t *tokenlist, int id);
-    void                AssignFromTokenList(const sctokens_t *tokenlist,
+    int                 GetNumber();
+    double              GetFloat();
+    kexVec3             GetVector3();
+    kexVec4             GetVector4();
+    kexVec3             GetVectorString3();
+    kexVec4             GetVectorString4();
+    void                GetString();
+    int                 GetIDForTokenList(const sctokens *tokenlist, const char *token);
+    void                ExpectTokenListID(const sctokens *tokenlist, int id);
+    void                AssignFromTokenList(const sctokens *tokenlist,
                                             char *str, int id, bool expect);
-    void                AssignFromTokenList(const sctokens_t *tokenlist,
+    void                AssignFromTokenList(const sctokens *tokenlist,
                                             unsigned int *var, int id, bool expect);
-    void                AssignFromTokenList(const sctokens_t *tokenlist,
+    void                AssignFromTokenList(const sctokens *tokenlist,
                                             unsigned short *var, int id, bool expect);
-    void                AssignFromTokenList(const sctokens_t *tokenlist,
+    void                AssignFromTokenList(const sctokens *tokenlist,
                                             float *var, int id, bool expect);
-    void                AssignVectorFromTokenList(const sctokens_t *tokenlist,
+    void                AssignVectorFromTokenList(const sctokens *tokenlist,
             float *var, int id, bool expect);
-    void                AssignFromTokenList(const sctokens_t *tokenlist,
+    void                AssignFromTokenList(const sctokens *tokenlist,
                                             arraytype_t type, void **data, int count,
                                             int id, bool expect, kexHeapBlock &hb);
 
-    int                 LinePos(void) { return linepos; }
-    int                 RowPos(void) { return rowpos; }
-    int                 BufferPos(void) { return buffpos; }
-    int                 BufferSize(void) { return buffsize; }
-    char                *Buffer(void) { return buffer; }
-    char                *StringToken(void) { return stringToken; }
-    const char          *Token(void) const { return token; }
-    const int           TokenType(void) const { return tokentype; }
+    int                 LinePos() { return linepos; }
+    int                 RowPos() { return rowpos; }
+    int                 BufferPos() { return buffpos; }
+    int                 BufferSize() { return buffsize; }
+    char                *Buffer() { return buffer; }
+    char                *StringToken() { return stringToken; }
+    const char          *Token() const { return token; }
+    const int           TokenType() const { return tokentype; }
 
 private:
-    void                ClearToken(void);
+    void                ClearToken();
     void                GetNumberToken(char initial);
     void                GetLetterToken(char initial);
     void                GetSymbolToken(char c);
-    void                GetStringToken(void);
+    void                GetStringToken();
 
     char                token[SC_TOKEN_LEN];
     char                stringToken[MAX_FILEPATH];
@@ -145,22 +144,22 @@ private:
 class kexParser
 {
 public:
-    kexParser(void);
-    ~kexParser(void);
+    kexParser();
+    ~kexParser();
 
     kexLexer            *Open(const char *filename);
-    void                Close(void);
+    void                Close();
     void                HandleError(const char *msg, ...);
     void                PushLexer(const char *filename, char *buf, int bufSize);
-    void                PopLexer(void);
+    void                PopLexer();
     void                PushFileName(const char *name);
-    void                PopFileName(void);
-    byte                *CharCode(void) { return charcode; }
-    const kexLexer      *CurrentLexer(void) const { return currentLexer; }
+    void                PopFileName();
+    byte                *CharCode() { return charcode; }
+    const kexLexer      *CurrentLexer() const { return currentLexer; }
 
 private:
     int                 OpenExternalFile(const char *name, byte **buffer) const;
-    const char          *GetNestedFileName(void) const;
+    const char          *GetNestedFileName() const;
 
     kexLexer            *currentLexer;
     kexLexer            *lexers[MAX_NESTED_PARSERS];
@@ -171,5 +170,3 @@ private:
 };
 
 extern kexParser *parser;
-
-#endif

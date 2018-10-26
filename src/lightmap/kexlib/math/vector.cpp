@@ -45,7 +45,7 @@ kexVec2 kexVec2::vecZero(0, 0);
 // kexVec2::kexVec2
 //
 
-kexVec2::kexVec2(void)
+kexVec2::kexVec2()
 {
     Clear();
 }
@@ -73,7 +73,7 @@ void kexVec2::Set(const float x, const float y)
 // kexVec2::Clear
 //
 
-void kexVec2::Clear(void)
+void kexVec2::Clear()
 {
     x = y = 0.0f;
 }
@@ -175,7 +175,7 @@ kexVec2 &kexVec2::Cross(const kexVec3 &vec1, const kexVec3 &vec2)
 // kexVec2::UnitSq
 //
 
-float kexVec2::UnitSq(void) const
+float kexVec2::UnitSq() const
 {
     return x * x + y * y;
 }
@@ -184,7 +184,7 @@ float kexVec2::UnitSq(void) const
 // kexVec2::Unit
 //
 
-float kexVec2::Unit(void) const
+float kexVec2::Unit() const
 {
     return kexMath::Sqrt(UnitSq());
 }
@@ -214,7 +214,7 @@ float kexVec2::Distance(const kexVec2 &vec) const
 // kexVec2::Normalize
 //
 
-kexVec2 &kexVec2::Normalize(void)
+kexVec2 &kexVec2::Normalize()
 {
     *this *= kexMath::InvSqrt(UnitSq());
     return *this;
@@ -253,7 +253,7 @@ kexVec2 &kexVec2::Lerp(const kexVec2 &start, const kexVec2 &next, float movement
 // kexVec2::ToYaw
 //
 
-float kexVec2::ToYaw(void) const
+float kexVec2::ToYaw() const
 {
     float d = x * x + y * y;
 
@@ -269,7 +269,7 @@ float kexVec2::ToYaw(void) const
 // kexVec2::ToString
 //
 
-kexStr kexVec2::ToString(void) const
+kexStr kexVec2::ToString() const
 {
     kexStr str;
     str = str + x + " " + y;
@@ -280,7 +280,7 @@ kexStr kexVec2::ToString(void) const
 // kexVec2::ToFloatPtr
 //
 
-float *kexVec2::ToFloatPtr(void)
+float *kexVec2::ToFloatPtr()
 {
     return reinterpret_cast<float*>(&x);
 }
@@ -289,7 +289,7 @@ float *kexVec2::ToFloatPtr(void)
 // kexVec2::ToVec3
 //
 
-kexVec3 kexVec2::ToVec3(void)
+kexVec3 kexVec2::ToVec3()
 {
     return kexVec3(x, y, 0);
 }
@@ -345,7 +345,7 @@ kexVec2 kexVec2::operator-(const kexVec2 &vec) const
 // kexVec2::operator-
 //
 
-kexVec2 kexVec2::operator-(void) const
+kexVec2 kexVec2::operator-() const
 {
     return kexVec2(-x, -y);
 }
@@ -562,7 +562,7 @@ bool kexVec2::operator==(const kexVec2 &vec)
 // kexVec3::kexVec3
 //
 
-kexVec3::kexVec3(void)
+kexVec3::kexVec3()
 {
     Clear();
 }
@@ -591,7 +591,7 @@ void kexVec3::Set(const float x, const float y, const float z)
 // kexVec3::Clear
 //
 
-void kexVec3::Clear(void)
+void kexVec3::Clear()
 {
     x = y = z = 0.0f;
 }
@@ -644,7 +644,7 @@ kexVec3 &kexVec3::Cross(const kexVec3 &vec1, const kexVec3 &vec2)
 // kexVec3::UnitSq
 //
 
-float kexVec3::UnitSq(void) const
+float kexVec3::UnitSq() const
 {
     return x * x + y * y + z * z;
 }
@@ -653,7 +653,7 @@ float kexVec3::UnitSq(void) const
 // kexVec3::Unit
 //
 
-float kexVec3::Unit(void) const
+float kexVec3::Unit() const
 {
     return kexMath::Sqrt(UnitSq());
 }
@@ -684,7 +684,7 @@ float kexVec3::Distance(const kexVec3 &vec) const
 // kexVec3::Normalize
 //
 
-kexVec3 &kexVec3::Normalize(void)
+kexVec3 &kexVec3::Normalize()
 {
     *this *= kexMath::InvSqrt(UnitSq());
     return *this;
@@ -724,7 +724,7 @@ kexVec3 &kexVec3::Lerp(const kexVec3 &start, const kexVec3 &next, float movement
 // kexVec3::ToQuat
 //
 
-kexQuat kexVec3::ToQuat(void)
+kexQuat kexVec3::ToQuat()
 {
     kexVec3 scv = *this * kexMath::InvSqrt(UnitSq());
     return kexQuat(kexMath::ACos(scv.z), vecForward.Cross(scv).Normalize());
@@ -734,7 +734,7 @@ kexQuat kexVec3::ToQuat(void)
 // kexVec3::ToYaw
 //
 
-float kexVec3::ToYaw(void) const
+float kexVec3::ToYaw() const
 {
     float d = x * x + z * z;
 
@@ -750,7 +750,7 @@ float kexVec3::ToYaw(void) const
 // kexVec3::ToPitch
 //
 
-float kexVec3::ToPitch(void) const
+float kexVec3::ToPitch() const
 {
     float d = x * x + z * z;
 
@@ -773,7 +773,7 @@ float kexVec3::ToPitch(void) const
 // kexVec3::ToString
 //
 
-kexStr kexVec3::ToString(void) const
+kexStr kexVec3::ToString() const
 {
     kexStr str;
     str = str + x + " " + y + " " + z;
@@ -784,7 +784,7 @@ kexStr kexVec3::ToString(void) const
 // kexVec3::ToFloatPtr
 //
 
-float *kexVec3::ToFloatPtr(void)
+float *kexVec3::ToFloatPtr()
 {
     return reinterpret_cast<float*>(&x);
 }
@@ -793,7 +793,7 @@ float *kexVec3::ToFloatPtr(void)
 // kexVec3::ToVec2
 //
 
-kexVec2 kexVec3::ToVec2(void)
+kexVec2 kexVec3::ToVec2()
 {
     return kexVec2(x, y);
 }
@@ -802,7 +802,7 @@ kexVec2 kexVec3::ToVec2(void)
 // kexVec3::ToVec2
 //
 
-kexVec2 kexVec3::ToVec2(void) const
+kexVec2 kexVec3::ToVec2() const
 {
     return kexVec2(x, y);
 }
@@ -894,7 +894,7 @@ kexVec3 kexVec3::operator-(const kexVec3 &vec) const
 // kexVec3::operator-
 //
 
-kexVec3 kexVec3::operator-(void) const
+kexVec3 kexVec3::operator-() const
 {
     return kexVec3(-x, -y, -z);
 }
@@ -1154,7 +1154,7 @@ float &kexVec3::operator[](int index)
 // kexVec4::kexVec4
 //
 
-kexVec4::kexVec4(void)
+kexVec4::kexVec4()
 {
     Clear();
 }
@@ -1184,7 +1184,7 @@ void kexVec4::Set(const float x, const float y, const float z, const float w)
 // kexVec4::Clear
 //
 
-void kexVec4::Clear(void)
+void kexVec4::Clear()
 {
     x = y = z = w = 0.0f;
 }
@@ -1193,7 +1193,7 @@ void kexVec4::Clear(void)
 // kexVec4::ToVec3
 //
 
-kexVec3 const &kexVec4::ToVec3(void) const
+kexVec3 const &kexVec4::ToVec3() const
 {
     return *reinterpret_cast<const kexVec3*>(this);
 }
@@ -1202,7 +1202,7 @@ kexVec3 const &kexVec4::ToVec3(void) const
 // kexVec4::ToVec3
 //
 
-kexVec3 &kexVec4::ToVec3(void)
+kexVec3 &kexVec4::ToVec3()
 {
     return *reinterpret_cast<kexVec3*>(this);
 }
@@ -1211,7 +1211,7 @@ kexVec3 &kexVec4::ToVec3(void)
 // kexVec4::ToFloatPtr
 //
 
-float *kexVec4::ToFloatPtr(void)
+float *kexVec4::ToFloatPtr()
 {
     return reinterpret_cast<float*>(&x);
 }

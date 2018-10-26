@@ -41,7 +41,7 @@
 // kexLightSurface::kexLightSurface
 //
 
-kexLightSurface::kexLightSurface(void)
+kexLightSurface::kexLightSurface()
 {
 }
 
@@ -49,7 +49,7 @@ kexLightSurface::kexLightSurface(void)
 // kexLightSurface::~kexLightSurface
 //
 
-kexLightSurface::~kexLightSurface(void)
+kexLightSurface::~kexLightSurface()
 {
 }
 
@@ -57,7 +57,7 @@ kexLightSurface::~kexLightSurface(void)
 // kexLightSurface::Init
 //
 
-void kexLightSurface::Init(const surfaceLightDef_t &lightSurfaceDef,
+void kexLightSurface::Init(const surfaceLightDef &lightSurfaceDef,
                            surface_t *surface,
                            const bool bWall,
                            const bool bNoCenterPoint)
@@ -80,7 +80,7 @@ void kexLightSurface::Init(const surfaceLightDef_t &lightSurfaceDef,
 // intending on subdividing this light surface
 //
 
-void kexLightSurface::CreateCenterOrigin(void)
+void kexLightSurface::CreateCenterOrigin()
 {
     if(!bWall)
     {

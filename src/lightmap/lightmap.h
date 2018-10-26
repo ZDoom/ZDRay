@@ -25,8 +25,7 @@
 //    distribution.
 //
 
-#ifndef __LIGHTMAP_H__
-#define __LIGHTMAP_H__
+#pragma once
 
 #include "surfaces.h"
 
@@ -37,16 +36,16 @@ class kexTrace;
 class kexLightmapBuilder
 {
 public:
-    kexLightmapBuilder(void);
-    ~kexLightmapBuilder(void);
+    kexLightmapBuilder();
+    ~kexLightmapBuilder();
 
     void                    BuildSurfaceParams(surface_t *surface);
     void                    TraceSurface(surface_t *surface);
-    void                    CreateLightGrid(void);
+    void                    CreateLightGrid();
     void                    CreateLightmaps(kexDoomMap &doomMap);
     void                    LightSurface(const int surfid);
     void                    LightGrid(const int gridid);
-    void                    WriteTexturesToTGA(void);
+    void                    WriteTexturesToTGA();
     void                    AddLightGridLump(kexWadFile &wadFile);
     void                    AddLightmapLumps(kexWadFile &wadFile);
 
@@ -58,23 +57,21 @@ public:
     static const kexVec3    gridSize;
 
 private:
-    void                    NewTexture(void);
+    void                    NewTexture();
     bool                    MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
     kexBBox                 GetBoundsFromSurface(const surface_t *surface);
     kexVec3                 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
-    kexVec3                 LightCellSample(const int gridid, kexTrace &trace,
-                                            const kexVec3 &origin, const mapSubSector_t *sub);
-    bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin,
-                                            const kexVec3 &normal, float *dist);
+    kexVec3                 LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const mapSubSector_t *sub);
+    bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, float *dist);
     void                    ExportTexelsToObjFile(FILE *f, const kexVec3 &org, int indices);
     void                    WriteBlock(FILE *f, const int i, const kexVec3 &org, int indices, kexBBox &box);
 
-    typedef struct
+    struct gridMap_t
     {
         byte                marked;
         byte                sunShadow;
         kexVec3             color;
-    } gridMap_t;
+    };
 
     kexDoomMap              *map;
     kexArray<byte*>         textures;
@@ -89,5 +86,3 @@ private:
     kexBBox                 gridBound;
     kexVec3                 gridBlock;
 };
-
-#endif

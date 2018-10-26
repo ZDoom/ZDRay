@@ -25,12 +25,11 @@
 //    distribution.
 //
 
-#ifndef __WAD_H__
-#define __WAD_H__
+#pragma once
 
 #include "kexlib/binFile.h"
 
-typedef enum
+enum mapLumps_t
 {
     ML_HEADER               = 0,
     ML_THINGS,
@@ -45,9 +44,9 @@ typedef enum
     ML_BLOCKMAP,
     ML_LIGHTMAP,
     ML_NUMLUMPS
-} mapLumps_t;
+};
 
-typedef enum
+enum glMapLumps_t
 {
     ML_GL_LABEL = 0,    // A separator name, GL_ExMx or GL_MAPxx
     ML_GL_VERTS,        // Extra Vertices
@@ -55,9 +54,9 @@ typedef enum
     ML_GL_SSECT,        // SubSectors, list of segs
     ML_GL_NODES,        // GL BSP nodes
     ML_GL_PVS           // PVS portals
-} glMapLumps_t;
+};
 
-typedef enum
+enum lmMapLumps_t
 {
     ML_LM_LABEL = 0,
     ML_LM_CELLS,
@@ -65,30 +64,30 @@ typedef enum
     ML_LM_SURFS,
     ML_LM_TXCRD,
     ML_LM_LMAPS
-} lmMapLumps_t;
+};
 
 #define gNd2    0x32644E67
 
 #define GL_VERT_OFFSET 4
 
-typedef struct
+struct wadHeader_t
 {
     char                id[4];
     int                 lmpcount;
     int                 lmpdirpos;
-} wadHeader_t;
+};
 
-typedef struct
+struct lump_t
 {
     int                 filepos;
     int                 size;
     char                name[8];
-} lump_t;
+};
 
 class kexWadFile
 {
 public:
-    ~kexWadFile(void);
+    ~kexWadFile();
 
     wadHeader_t         header;
     lump_t              *lumps;
@@ -106,9 +105,9 @@ public:
     void                SetCurrentMap(const int map);
     bool                Open(const char *fileName);
     void                Write(const char *fileName);
-    void                Close(void);
-    void                CreateBackup(void);
-    void                InitForWrite(void);
+    void                Close();
+    void                CreateBackup();
+    void                InitForWrite();
     void                CopyLumpsFromWadFile(kexWadFile &wadFile);
     void                CopyLumpsFromWadFile(kexWadFile &wadFile, kexArray<int> &lumpIgnoreList);
     void                AddLump(const char *name, const int size, byte *data);
@@ -160,5 +159,3 @@ private:
     kexArray<lump_t>    writeLumpList;
     kexArray<byte*>     writeDataList;
 };
-
-#endif

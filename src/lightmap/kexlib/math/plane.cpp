@@ -37,7 +37,7 @@
 // kexPlane::kexPlane
 //
 
-kexPlane::kexPlane(void)
+kexPlane::kexPlane()
 {
     this->a = 0;
     this->b = 0;
@@ -115,7 +115,7 @@ kexPlane &kexPlane::SetNormal(const kexVec3 &pt1, const kexVec3 &pt2, const kexV
 // kexPlane::Normal
 //
 
-kexVec3 const &kexPlane::Normal(void) const
+kexVec3 const &kexPlane::Normal() const
 {
     return *reinterpret_cast<const kexVec3*>(&a);
 }
@@ -124,7 +124,7 @@ kexVec3 const &kexPlane::Normal(void) const
 // kexPlane::Normal
 //
 
-kexVec3 &kexPlane::Normal(void)
+kexVec3 &kexPlane::Normal()
 {
     return *reinterpret_cast<kexVec3*>(&a);
 }
@@ -161,7 +161,7 @@ bool kexPlane::IsFacing(const float yaw)
 // kexPlane::ToYaw
 //
 
-float kexPlane::ToYaw(void)
+float kexPlane::ToYaw()
 {
     float d = Normal().Unit();
 
@@ -184,7 +184,7 @@ float kexPlane::ToYaw(void)
 // kexPlane::ToPitch
 //
 
-float kexPlane::ToPitch(void)
+float kexPlane::ToPitch()
 {
     return kexMath::ACos(kexVec3::vecUp.Dot(Normal()));
 }
@@ -193,7 +193,7 @@ float kexPlane::ToPitch(void)
 // kexPlane::ToQuat
 //
 
-kexQuat kexPlane::ToQuat(void)
+kexQuat kexPlane::ToQuat()
 {
     kexVec3 cross = kexVec3::vecUp.Cross(Normal()).Normalize();
     return kexQuat(kexMath::ACos(kexVec3::vecUp.Dot(Normal())), cross);
@@ -203,7 +203,7 @@ kexQuat kexPlane::ToQuat(void)
 // kexPlane::ToVec4
 //
 
-kexVec4 const &kexPlane::ToVec4(void) const
+kexVec4 const &kexPlane::ToVec4() const
 {
     return *reinterpret_cast<const kexVec4*>(&a);
 }
@@ -212,7 +212,7 @@ kexVec4 const &kexPlane::ToVec4(void) const
 // kexPlane::ToVec4
 //
 
-kexVec4 &kexPlane::ToVec4(void)
+kexVec4 &kexPlane::ToVec4()
 {
     return *reinterpret_cast<kexVec4*>(&a);
 }
@@ -221,7 +221,7 @@ kexVec4 &kexPlane::ToVec4(void)
 // kexPlane::BestAxis
 //
 
-const kexPlane::planeAxis_t kexPlane::BestAxis(void) const
+const kexPlane::planeAxis_t kexPlane::BestAxis() const
 {
     float na = kexMath::Fabs(a);
     float nb = kexMath::Fabs(b);
@@ -244,7 +244,7 @@ const kexPlane::planeAxis_t kexPlane::BestAxis(void) const
 // kexPlane::GetInclination
 //
 
-kexVec3 kexPlane::GetInclination(void)
+kexVec3 kexPlane::GetInclination()
 {
     kexVec3 dir = Normal() * kexVec3::vecUp.Dot(Normal());
     return (kexVec3::vecUp - dir).Normalize();

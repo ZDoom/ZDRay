@@ -50,8 +50,8 @@
 
 // PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
 
-static void SC_PrepareScript (void);
-static void CheckOpen (void);
+static void SC_PrepareScript ();
+static void CheckOpen ();
 
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
@@ -107,7 +107,7 @@ void SC_OpenMem (const char *name, char *buffer, int len)
 //
 //==========================================================================
 
-static void SC_PrepareScript (void)
+static void SC_PrepareScript ()
 {
 	ScriptPtr = ScriptBuffer;
 	ScriptEndPtr = ScriptPtr + ScriptSize;
@@ -126,7 +126,7 @@ static void SC_PrepareScript (void)
 //
 //==========================================================================
 
-void SC_Close (void)
+void SC_Close ()
 {
 	if (ScriptOpen)
 	{
@@ -143,7 +143,7 @@ void SC_Close (void)
 //
 //==========================================================================
 
-void SC_SavePos (void)
+void SC_SavePos ()
 {
 	CheckOpen ();
 	if (sc_End)
@@ -165,7 +165,7 @@ void SC_SavePos (void)
 //
 //==========================================================================
 
-void SC_RestorePos (void)
+void SC_RestorePos ()
 {
 	if (SavedScriptPtr)
 	{
@@ -367,7 +367,7 @@ gottoken:
 //
 //==========================================================================
 
-void SC_MustGetString (void)
+void SC_MustGetString ()
 {
 	if (SC_GetString () == false)
 	{
@@ -417,7 +417,7 @@ bool SC_CheckString (const char *name)
 //
 //==========================================================================
 
-bool SC_GetNumber (void)
+bool SC_GetNumber ()
 {
 	char *stopper;
 
@@ -451,7 +451,7 @@ bool SC_GetNumber (void)
 //
 //==========================================================================
 
-void SC_MustGetNumber (void)
+void SC_MustGetNumber ()
 {
 	if (SC_GetNumber() == false)
 	{
@@ -467,7 +467,7 @@ void SC_MustGetNumber (void)
 //
 //==========================================================================
 
-bool SC_CheckNumber (void)
+bool SC_CheckNumber ()
 {
 	char *stopper;
 
@@ -503,7 +503,7 @@ bool SC_CheckNumber (void)
 //
 //==========================================================================
 
-bool SC_CheckFloat (void)
+bool SC_CheckFloat ()
 {
 	char *stopper;
 
@@ -532,7 +532,7 @@ bool SC_CheckFloat (void)
 //
 //==========================================================================
 
-bool SC_GetFloat (void)
+bool SC_GetFloat ()
 {
 	char *stopper;
 
@@ -559,7 +559,7 @@ bool SC_GetFloat (void)
 //
 //==========================================================================
 
-void SC_MustGetFloat (void)
+void SC_MustGetFloat ()
 {
 	if (SC_GetFloat() == false)
 	{
@@ -575,7 +575,7 @@ void SC_MustGetFloat (void)
 //
 //==========================================================================
 
-void SC_UnGet (void)
+void SC_UnGet ()
 {
 	AlreadyGot = true;
 }
@@ -589,7 +589,7 @@ void SC_UnGet (void)
 //==========================================================================
 
 /*
-bool SC_Check(void)
+bool SC_Check()
 {
 	char *text;
 
@@ -704,7 +704,7 @@ void SC_ScriptError (const char *message, ...)
 //
 //==========================================================================
 
-static void CheckOpen(void)
+static void CheckOpen()
 {
 	if (ScriptOpen == false)
 	{

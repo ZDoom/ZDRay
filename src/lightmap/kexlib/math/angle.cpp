@@ -39,7 +39,7 @@
 // kexAngle::kexAngle
 //
 
-kexAngle::kexAngle(void)
+kexAngle::kexAngle()
 {
     this->yaw   = 0;
     this->pitch = 0;
@@ -85,7 +85,7 @@ kexAngle::kexAngle(const kexAngle &an)
 // kexAngle::Clamp180
 //
 
-kexAngle &kexAngle::Clamp180(void)
+kexAngle &kexAngle::Clamp180()
 {
 #define CLAMP180(x)                                             \
     if(x < -M_PI) for(; x < -M_PI; x = x + FULLCIRCLE);         \
@@ -102,7 +102,7 @@ kexAngle &kexAngle::Clamp180(void)
 // kexAngle::Clamp180Invert
 //
 
-kexAngle &kexAngle::Clamp180Invert(void)
+kexAngle &kexAngle::Clamp180Invert()
 {
 #define CLAMP180(x)                                             \
     for(; x < -M_PI; x = x + FULLCIRCLE);                       \
@@ -146,7 +146,7 @@ kexAngle &kexAngle::Clamp180InvertSum(const kexAngle &angle)
 // kexAngle::Round
 //
 
-kexAngle &kexAngle::Round(void)
+kexAngle &kexAngle::Round()
 {
 #define ROUND(x)                                        \
     x = DEG2RAD((360.0f / 65536.0f) *                   \
@@ -235,7 +235,7 @@ void kexAngle::ToAxis(kexVec3 *forward, kexVec3 *up, kexVec3 *right)
 // kexAngle::ToForwardAxis
 //
 
-kexVec3 kexAngle::ToForwardAxis(void)
+kexVec3 kexAngle::ToForwardAxis()
 {
     kexVec3 vec;
 
@@ -247,7 +247,7 @@ kexVec3 kexAngle::ToForwardAxis(void)
 // kexAngle::ToUpAxis
 //
 
-kexVec3 kexAngle::ToUpAxis(void)
+kexVec3 kexAngle::ToUpAxis()
 {
     kexVec3 vec;
 
@@ -259,7 +259,7 @@ kexVec3 kexAngle::ToUpAxis(void)
 // kexAngle::ToRightAxis
 //
 
-kexVec3 kexAngle::ToRightAxis(void)
+kexVec3 kexAngle::ToRightAxis()
 {
     kexVec3 vec;
 
@@ -271,7 +271,7 @@ kexVec3 kexAngle::ToRightAxis(void)
 // kexAngle::ToVec3
 //
 
-const kexVec3 &kexAngle::ToVec3(void) const
+const kexVec3 &kexAngle::ToVec3() const
 {
     return *reinterpret_cast<const kexVec3*>(&yaw);
 }
@@ -280,7 +280,7 @@ const kexVec3 &kexAngle::ToVec3(void) const
 // kexAngle::ToVec3
 //
 
-kexVec3 &kexAngle::ToVec3(void)
+kexVec3 &kexAngle::ToVec3()
 {
     return *reinterpret_cast<kexVec3*>(&yaw);
 }
@@ -289,7 +289,7 @@ kexVec3 &kexAngle::ToVec3(void)
 // kexAngle::ToQuat
 //
 
-kexQuat kexAngle::ToQuat(void)
+kexQuat kexAngle::ToQuat()
 {
     return
         (kexQuat(pitch, kexVec3::vecRight) *
@@ -319,7 +319,7 @@ kexAngle kexAngle::operator-(const kexAngle &angle)
 // kexAngle::operator-
 //
 
-kexAngle kexAngle::operator-(void)
+kexAngle kexAngle::operator-()
 {
     return kexAngle(-yaw, -pitch, -roll);
 }

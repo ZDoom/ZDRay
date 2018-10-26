@@ -37,7 +37,7 @@
 // kexQuat::kexQuat
 //
 
-kexQuat::kexQuat(void)
+kexQuat::kexQuat()
 {
     Clear();
 }
@@ -103,7 +103,7 @@ void kexQuat::Set(const float x, const float y, const float z, const float w)
 // kexQuat::Clear
 //
 
-void kexQuat::Clear(void)
+void kexQuat::Clear()
 {
     x = y = z = 0.0f;
     w = 1.0f;
@@ -113,7 +113,7 @@ void kexQuat::Clear(void)
 // kexVec3::UnitSq
 //
 
-float kexQuat::UnitSq(void) const
+float kexQuat::UnitSq() const
 {
     return x * x + y * y + z * z + w * w;
 }
@@ -122,7 +122,7 @@ float kexQuat::UnitSq(void) const
 // kexVec3::Unit
 //
 
-float kexQuat::Unit(void) const
+float kexQuat::Unit() const
 {
     return kexMath::Sqrt(UnitSq());
 }
@@ -131,7 +131,7 @@ float kexQuat::Unit(void) const
 // kexQuat::Normalize
 //
 
-kexQuat &kexQuat::Normalize(void)
+kexQuat &kexQuat::Normalize()
 {
     float d = Unit();
     if(d != 0.0f)
@@ -146,7 +146,7 @@ kexQuat &kexQuat::Normalize(void)
 // kexQuat::Inverse
 //
 
-kexQuat kexQuat::Inverse(void) const
+kexQuat kexQuat::Inverse() const
 {
     kexQuat out;
     out.Set(-x, -y, -z, -w);
@@ -431,7 +431,7 @@ kexQuat &kexQuat::operator=(const float *vecs)
 // kexQuat::ToVec3
 //
 
-kexVec3 const &kexQuat::ToVec3(void) const
+kexVec3 const &kexQuat::ToVec3() const
 {
     return *reinterpret_cast<const kexVec3*>(this);
 }
@@ -440,7 +440,7 @@ kexVec3 const &kexQuat::ToVec3(void) const
 // kexQuat::ToVec3
 //
 
-kexVec3 &kexQuat::ToVec3(void)
+kexVec3 &kexQuat::ToVec3()
 {
     return *reinterpret_cast<kexVec3*>(this);
 }

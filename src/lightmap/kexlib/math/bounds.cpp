@@ -37,7 +37,7 @@
 // kexBBox::kexBBox
 //
 
-kexBBox::kexBBox(void)
+kexBBox::kexBBox()
 {
     Clear();
 }
@@ -56,7 +56,7 @@ kexBBox::kexBBox(const kexVec3 &vMin, const kexVec3 &vMax)
 // kexBBox::Clear
 //
 
-void kexBBox::Clear(void)
+void kexBBox::Clear()
 {
     min.Set(M_INFINITY, M_INFINITY, M_INFINITY);
     max.Set(-M_INFINITY, -M_INFINITY, -M_INFINITY);
@@ -90,7 +90,7 @@ void kexBBox::AddPoint(const kexVec3 &vec)
 // kexBBox::Center
 //
 
-kexVec3 kexBBox::Center(void) const
+kexVec3 kexBBox::Center() const
 {
     return kexVec3(
                (max.x + min.x) * 0.5f,
@@ -102,7 +102,7 @@ kexVec3 kexBBox::Center(void) const
 // kexBBox::Radius
 //
 
-float kexBBox::Radius(void) const
+float kexBBox::Radius() const
 {
     int i;
     float r = 0;

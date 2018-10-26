@@ -91,7 +91,7 @@ kexHeapBlock::kexHeapBlock(const char *name, bool bGarbageCollect,
 // kexHeapBlock::~kexHeapBlock
 //
 
-kexHeapBlock::~kexHeapBlock(void)
+kexHeapBlock::~kexHeapBlock()
 {
 }
 
@@ -129,7 +129,7 @@ kexHeapBlock *kexHeapBlock::operator[](int index)
 // kexHeap::AddBlock
 //
 
-void kexHeap::AddBlock(memBlock_t *block, kexHeapBlock *heapBlock)
+void kexHeap::AddBlock(memBlock *block, kexHeapBlock *heapBlock)
 {
     block->prev = NULL;
     block->next = heapBlock->blocks;
@@ -147,7 +147,7 @@ void kexHeap::AddBlock(memBlock_t *block, kexHeapBlock *heapBlock)
 // kexHeap::RemoveBlock
 //
 
-void kexHeap::RemoveBlock(memBlock_t *block)
+void kexHeap::RemoveBlock(memBlock *block)
 {
     if(block->prev == NULL)
     {
@@ -170,11 +170,11 @@ void kexHeap::RemoveBlock(memBlock_t *block)
 // kexHeap::GetBlock
 //
 
-memBlock_t *kexHeap::GetBlock(void *ptr, const char *file, int line)
+memBlock *kexHeap::GetBlock(void *ptr, const char *file, int line)
 {
-    memBlock_t* block;
+    memBlock* block;
 
-    block = (memBlock_t*)((byte*)ptr - sizeof(memBlock_t));
+    block = (memBlock*)((byte*)ptr - sizeof(memBlock));
 
     if(block->heapTag != kexHeap::HeapTag)
     {
@@ -190,13 +190,13 @@ memBlock_t *kexHeap::GetBlock(void *ptr, const char *file, int line)
 
 void *kexHeap::Malloc(int size, kexHeapBlock &heapBlock, const char *file, int line)
 {
-    memBlock_t *newblock;
+    memBlock *newblock;
 
     assert(size > 0);
 
     newblock = NULL;
 
-    if(!(newblock = (memBlock_t*)malloc(sizeof(memBlock_t) + size)))
+    if(!(newblock = (memBlock*)malloc(sizeof(memBlock) + size)))
     {
         Error("kexHeap::Malloc: failed on allocation of %u bytes (%s:%d)", size, file, line);
     }
@@ -208,7 +208,7 @@ void *kexHeap::Malloc(int size, kexHeapBlock &heapBlock, const char *file, int l
 
     kexHeap::AddBlock(newblock, &heapBlock);
 
-    return ((byte*)newblock) + sizeof(memBlock_t);
+    return ((byte*)newblock) + sizeof(memBlock);
 }
 
 //
@@ -226,8 +226,8 @@ void *kexHeap::Calloc(int size, kexHeapBlock &heapBlock, const char *file, int l
 
 void *kexHeap::Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char *file, int line)
 {
-    memBlock_t *block;
-    memBlock_t *newblock;
+    memBlock *block;
+    memBlock *newblock;
 
     if(!ptr)
     {
@@ -255,7 +255,7 @@ void *kexHeap::Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char 
         *block->ptrRef = NULL;
     }
 
-    if(!(newblock = (memBlock_t*)realloc(block, sizeof(memBlock_t) + size)))
+    if(!(newblock = (memBlock*)realloc(block, sizeof(memBlock) + size)))
     {
         Error("kexHeap::Realloc: failed on allocation of %u bytes (%s:%d)", size, file, line);
     }
@@ -267,7 +267,7 @@ void *kexHeap::Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char 
 
     kexHeap::AddBlock(newblock, &heapBlock);
 
-    return ((byte*)newblock) + sizeof(memBlock_t);
+    return ((byte*)newblock) + sizeof(memBlock);
 }
 
 //
@@ -285,7 +285,7 @@ void *kexHeap::Alloca(int size, const char *file, int line)
 
 void kexHeap::Free(void *ptr, const char *file, int line)
 {
-    memBlock_t* block;
+    memBlock* block;
 
     block = kexHeap::GetBlock(ptr, file, line);
     if(block->ptrRef)
@@ -305,8 +305,8 @@ void kexHeap::Free(void *ptr, const char *file, int line)
 
 void kexHeap::Purge(kexHeapBlock &heapBlock, const char *file, int line)
 {
-    memBlock_t *block;
-    memBlock_t *next;
+    memBlock *block;
+    memBlock *next;
 
     for(block = heapBlock.blocks; block != NULL;)
     {
@@ -353,8 +353,8 @@ void kexHeap::GarbageCollect(const char *file, int line)
 
 void kexHeap::CheckBlocks(const char *file, int line)
 {
-    memBlock_t *block;
-    memBlock_t *prev;
+    memBlock *block;
+    memBlock *prev;
     kexHeapBlock *heapBlock;
 
     for(heapBlock = kexHeap::blockList; heapBlock; heapBlock = heapBlock->next)
@@ -392,7 +392,7 @@ void kexHeap::Touch(void *ptr, const char *file, int line)
 int kexHeap::Usage(const kexHeapBlock &heapBlock)
 {
     int bytes = 0;
-    memBlock_t *block;
+    memBlock *block;
 
     for(block = heapBlock.blocks; block != NULL; block = block->next)
     {

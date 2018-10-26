@@ -39,7 +39,7 @@
 // kexTrace::kexTrace
 //
 
-kexTrace::kexTrace(void)
+kexTrace::kexTrace()
 {
     this->map = NULL;
 }
@@ -48,7 +48,7 @@ kexTrace::kexTrace(void)
 // kexTrace::~kexTrace
 //
 
-kexTrace::~kexTrace(void)
+kexTrace::~kexTrace()
 {
 }
 

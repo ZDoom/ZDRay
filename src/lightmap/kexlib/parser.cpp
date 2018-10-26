@@ -39,7 +39,7 @@
 #define COMMENT_SINGLELINE  1
 #define COMMENT_MULTILINE   2
 
-typedef enum
+enum chartype_t
 {
     CHAR_NUMBER,
     CHAR_LETTER,
@@ -47,7 +47,7 @@ typedef enum
     CHAR_QUOTE,
     CHAR_SPECIAL,
     CHAR_EOF
-} chartype_t;
+};
 
 #ifdef SC_DEBUG
 
@@ -97,7 +97,7 @@ kexLexer::kexLexer(const char *filename, char *buf, int bufSize)
 // kexLexer::~kexLexer
 //
 
-kexLexer::~kexLexer(void)
+kexLexer::~kexLexer()
 {
     if(buffer)
     {
@@ -116,7 +116,7 @@ kexLexer::~kexLexer(void)
 // kexLexer::CheckState
 //
 
-bool kexLexer::CheckState(void)
+bool kexLexer::CheckState()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("(%s): checking script state: %i : %i\n",
@@ -135,7 +135,7 @@ bool kexLexer::CheckState(void)
 // kexLexer::CheckKeywords
 //
 
-void kexLexer::CheckKeywords(void)
+void kexLexer::CheckKeywords()
 {
     if(!kexStr::Compare(token, "define"))
     {
@@ -159,7 +159,7 @@ void kexLexer::CheckKeywords(void)
 // kexLexer::ClearToken
 //
 
-void kexLexer::ClearToken(void)
+void kexLexer::ClearToken()
 {
     tokentype = TK_NONE;
     memset(token, 0, SC_TOKEN_LEN);
@@ -169,7 +169,7 @@ void kexLexer::ClearToken(void)
 // kexLexer::GetNumber
 //
 
-int kexLexer::GetNumber(void)
+int kexLexer::GetNumber()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("get number (%s)\n", token);
@@ -189,7 +189,7 @@ int kexLexer::GetNumber(void)
 // kexLexer::GetFloat
 //
 
-double kexLexer::GetFloat(void)
+double kexLexer::GetFloat()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("get float (%s)\n", token);
@@ -209,7 +209,7 @@ double kexLexer::GetFloat(void)
 // kexLexer::GetVector3
 //
 
-kexVec3 kexLexer::GetVector3(void)
+kexVec3 kexLexer::GetVector3()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("get vector3 (%s)\n", token);
@@ -230,7 +230,7 @@ kexVec3 kexLexer::GetVector3(void)
 // kexLexer::GetVector4
 //
 
-kexVec4 kexLexer::GetVector4(void)
+kexVec4 kexLexer::GetVector4()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("get vector4 (%s)\n", token);
@@ -252,7 +252,7 @@ kexVec4 kexLexer::GetVector4(void)
 // kexLexer::GetVectorString3
 //
 
-kexVec3 kexLexer::GetVectorString3(void)
+kexVec3 kexLexer::GetVectorString3()
 {
     kexVec3 vec;
 
@@ -266,7 +266,7 @@ kexVec3 kexLexer::GetVectorString3(void)
 // kexLexer::GetVectorString4
 //
 
-kexVec4 kexLexer::GetVectorString4(void)
+kexVec4 kexLexer::GetVectorString4()
 {
     kexVec4 vec;
 
@@ -280,7 +280,7 @@ kexVec4 kexLexer::GetVectorString4(void)
 // kexLexer::GetString
 //
 
-void kexLexer::GetString(void)
+void kexLexer::GetString()
 {
     ExpectNextToken(TK_STRING);
     strcpy(stringToken, token);
@@ -493,7 +493,7 @@ void kexLexer::GetSymbolToken(char c)
 // kexLexer::GetStringToken
 //
 
-void kexLexer::GetStringToken(void)
+void kexLexer::GetStringToken()
 {
     int i = 0;
     char c = GetChar();
@@ -515,7 +515,7 @@ void kexLexer::GetStringToken(void)
 // kexLexer::Find
 //
 
-bool kexLexer::Find(void)
+bool kexLexer::Find()
 {
     char c = 0;
     int comment = COMMENT_NONE;
@@ -618,7 +618,7 @@ bool kexLexer::Find(void)
 // kexLexer::GetChar
 //
 
-char kexLexer::GetChar(void)
+char kexLexer::GetChar()
 {
     int c;
 
@@ -654,7 +654,7 @@ bool kexLexer::Matches(const char *string)
 // kexLexer::Rewind
 //
 
-void kexLexer::Rewind(void)
+void kexLexer::Rewind()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("(%s): rewind\n", name);
@@ -668,7 +668,7 @@ void kexLexer::Rewind(void)
 // kexLexer::SkipLine
 //
 
-void kexLexer::SkipLine(void)
+void kexLexer::SkipLine()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("SkipLine\n");
@@ -691,7 +691,7 @@ void kexLexer::SkipLine(void)
 // kexLexer::GetIDForTokenList
 //
 
-int kexLexer::GetIDForTokenList(const sctokens_t *tokenlist, const char *token)
+int kexLexer::GetIDForTokenList(const sctokens *tokenlist, const char *token)
 {
     int i;
     for(i = 0; tokenlist[i].id != -1; i++)
@@ -714,7 +714,7 @@ int kexLexer::GetIDForTokenList(const sctokens_t *tokenlist, const char *token)
 // kexLexer::ExpectTokenListID
 //
 
-void kexLexer::ExpectTokenListID(const sctokens_t *tokenlist, int id)
+void kexLexer::ExpectTokenListID(const sctokens *tokenlist, int id)
 {
     Find();
     if(GetIDForTokenList(tokenlist, token) != id)
@@ -728,7 +728,7 @@ void kexLexer::ExpectTokenListID(const sctokens_t *tokenlist, int id)
 // kexLexer::AssignFromTokenList
 //
 
-void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, char *str, int id, bool expect)
+void kexLexer::AssignFromTokenList(const sctokens *tokenlist, char *str, int id, bool expect)
 {
     if(expect)
     {
@@ -743,7 +743,7 @@ void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, char *str, int i
 // kexLexer::AssignFromTokenList
 //
 
-void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, unsigned int *var, int id, bool expect)
+void kexLexer::AssignFromTokenList(const sctokens *tokenlist, unsigned int *var, int id, bool expect)
 {
     if(expect)
     {
@@ -757,7 +757,7 @@ void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, unsigned int *va
 // kexLexer::AssignFromTokenList
 //
 
-void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, unsigned short *var, int id, bool expect)
+void kexLexer::AssignFromTokenList(const sctokens *tokenlist, unsigned short *var, int id, bool expect)
 {
     if(expect)
     {
@@ -771,7 +771,7 @@ void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, unsigned short *
 // kexLexer::AssignFromTokenList
 //
 
-void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, float *var, int id, bool expect)
+void kexLexer::AssignFromTokenList(const sctokens *tokenlist, float *var, int id, bool expect)
 {
     if(expect)
     {
@@ -785,7 +785,7 @@ void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, float *var, int 
 // kexLexer::AssignVectorFromTokenList
 //
 
-void kexLexer::AssignVectorFromTokenList(const sctokens_t *tokenlist, float *var, int id, bool expect)
+void kexLexer::AssignVectorFromTokenList(const sctokens *tokenlist, float *var, int id, bool expect)
 {
     if(expect)
     {
@@ -803,7 +803,7 @@ void kexLexer::AssignVectorFromTokenList(const sctokens_t *tokenlist, float *var
 // kexLexer::AssignFromTokenList
 //
 
-void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, arraytype_t type,
+void kexLexer::AssignFromTokenList(const sctokens *tokenlist, arraytype_t type,
                                    void **data, int count, int id, bool expect, kexHeapBlock &hb)
 {
     void *buf;
@@ -926,7 +926,7 @@ void kexLexer::AssignFromTokenList(const sctokens_t *tokenlist, arraytype_t type
 // kexParser::kexParser
 //
 
-kexParser::kexParser(void)
+kexParser::kexParser()
 {
     int i;
 
@@ -965,7 +965,7 @@ kexParser::kexParser(void)
 // kexParser::~kexParser
 //
 
-kexParser::~kexParser(void)
+kexParser::~kexParser()
 {
 }
 
@@ -973,7 +973,7 @@ kexParser::~kexParser(void)
 // kexParser::GetNestedFileName
 //
 
-const char *kexParser::GetNestedFileName(void) const
+const char *kexParser::GetNestedFileName() const
 {
     if(numNestedFilenames <= 0)
     {
@@ -999,7 +999,7 @@ void kexParser::PushFileName(const char *name)
 // kexParser::PopFileName
 //
 
-void kexParser::PopFileName(void)
+void kexParser::PopFileName()
 {
 #ifdef SC_DEBUG
     SC_DebugPrintf("nested file pop\n");
@@ -1028,7 +1028,7 @@ void kexParser::PushLexer(const char *filename, char *buf, int bufSize)
 // kexParser::PopLexer
 //
 
-void kexParser::PopLexer(void)
+void kexParser::PopLexer()
 {
     delete lexers[--numLexers];
     if(numLexers <= 0)
@@ -1127,7 +1127,7 @@ kexLexer *kexParser::Open(const char* filename)
 // kexParser::Close
 //
 
-void kexParser::Close(void)
+void kexParser::Close()
 {
     PopLexer();
     PopFileName();

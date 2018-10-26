@@ -38,7 +38,7 @@
 // kexPluecker::kexPluecker
 //
 
-kexPluecker::kexPluecker(void)
+kexPluecker::kexPluecker()
 {
     Clear();
 }
@@ -56,7 +56,7 @@ kexPluecker::kexPluecker(const kexVec3 &start, const kexVec3 &end, bool bRay)
 // kexPluecker::Clear
 //
 
-void kexPluecker::Clear(void)
+void kexPluecker::Clear()
 {
     p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = 0;
 }

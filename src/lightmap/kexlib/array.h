@@ -25,8 +25,7 @@
 //    distribution.
 //
 
-#ifndef __KEXARRAY_H__
-#define __KEXARRAY_H__
+#pragma once
 
 #include <assert.h>
 
@@ -34,15 +33,15 @@ template<class type>
 class kexArray
 {
 public:
-    kexArray(void);
-    ~kexArray(void);
+    kexArray();
+    ~kexArray();
 
     typedef int         compare_t(const type*, const type*);
 
     void                Push(type o);
-    void                Pop(void);
-    void                Empty(void);
-    void                Init(void);
+    void                Pop();
+    void                Empty();
+    void                Init();
     void                Resize(unsigned int size);
     type                IndexOf(unsigned int index) const;
     bool                Contains(const type check) const;
@@ -50,7 +49,7 @@ public:
     void                Sort(compare_t *function);
     void                Sort(compare_t *function, unsigned int count);
 
-    const unsigned int  Length(void) const { return length; }
+    const unsigned int  Length() const { return length; }
     type                GetData(const int index) { return data[index]; }
 
     type                &operator[](unsigned int index);
@@ -66,7 +65,7 @@ protected:
 // kexArray::kexArray
 //
 template<class type>
-kexArray<type>::kexArray(void)
+kexArray<type>::kexArray()
 {
     Init();
 }
@@ -75,7 +74,7 @@ kexArray<type>::kexArray(void)
 // kexArray::~kexArray
 //
 template<class type>
-kexArray<type>::~kexArray(void)
+kexArray<type>::~kexArray()
 {
     Empty();
 }
@@ -84,7 +83,7 @@ kexArray<type>::~kexArray(void)
 // kexArray::Init
 //
 template<class type>
-void kexArray<type>::Init(void)
+void kexArray<type>::Init()
 {
     data = NULL;
     length = 0;
@@ -145,7 +144,7 @@ void kexArray<type>::Push(type o)
 // kexArray::Pop
 //
 template<class type>
-void kexArray<type>::Pop(void)
+void kexArray<type>::Pop()
 {
     if(length == 0)
     {
@@ -160,7 +159,7 @@ void kexArray<type>::Pop(void)
 // kexArray::Empty
 //
 template<class type>
-void kexArray<type>::Empty(void)
+void kexArray<type>::Empty()
 {
     if(data && length > 0)
     {
@@ -308,5 +307,3 @@ kexArray<type> &kexArray<type>::operator=(const kexArray<type> &arr)
 
     return *this;
 }
-
-#endif

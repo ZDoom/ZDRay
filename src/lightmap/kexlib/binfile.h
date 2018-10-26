@@ -25,30 +25,29 @@
 //    distribution.
 //
 
-#ifndef __BINFILE_H__
-#define __BINFILE_H__
+#pragma once
 
 #include "lightmap/kexlib/math/mathlib.h"
 
 class kexBinFile
 {
 public:
-    kexBinFile(void);
-    ~kexBinFile(void);
+    kexBinFile();
+    ~kexBinFile();
 
     bool                Open(const char *file, kexHeapBlock &heapBlock = hb_static);
     bool                Create(const char *file);
-    void                Close(void);
+    void                Close();
     bool                Exists(const char *file);
-    int                 Length(void);
+    int                 Length();
     void                Duplicate(const char *newFileName);
 
-    byte                Read8(void);
-    short               Read16(void);
-    int                 Read32(void);
-    float               ReadFloat(void);
-    kexVec3             ReadVector(void);
-    kexStr              ReadString(void);
+    byte                Read8();
+    short               Read16();
+    int                 Read32();
+    float               ReadFloat();
+    kexVec3             ReadVector();
+    kexStr              ReadString();
 
     void                Write8(const byte val);
     void                Write16(const short val);
@@ -62,11 +61,11 @@ public:
                                    byte *subdata = NULL,
                                    int *count = NULL);
 
-    FILE                *Handle(void) const { return handle; }
-    byte                *Buffer(void) const { return buffer; }
+    FILE                *Handle() const { return handle; }
+    byte                *Buffer() const { return buffer; }
     void                SetBuffer(byte *ptr) { buffer = ptr; }
-    byte                *BufferAt(void) const { return &buffer[bufferOffset]; }
-    bool                Opened(void) const { return bOpened; }
+    byte                *BufferAt() const { return &buffer[bufferOffset]; }
+    bool                Opened() const { return bOpened; }
     void                SetOffset(const int offset) { bufferOffset = offset; }
 
 private:
@@ -75,5 +74,3 @@ private:
     unsigned int        bufferOffset;
     bool                bOpened;
 };
-
-#endif

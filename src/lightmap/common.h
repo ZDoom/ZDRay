@@ -25,8 +25,7 @@
 //    distribution.
 //
 
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -160,7 +159,5 @@ typedef union
 void Error(const char *error, ...);
 char *Va(const char *str, ...);
 void Delay(int ms);
-const int64_t GetSeconds(void);
-const kexStr &FilePath(void);
-
-#endif
+const int64_t GetSeconds();
+const kexStr &FilePath();

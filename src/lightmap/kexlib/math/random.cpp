@@ -50,7 +50,7 @@ void kexRand::SetSeed(const int randSeed)
 // kexRand::SysRand
 //
 
-int kexRand::SysRand(void)
+int kexRand::SysRand()
 {
     return rand();
 }
@@ -59,7 +59,7 @@ int kexRand::SysRand(void)
 // kexRand::Int
 //
 
-int kexRand::Int(void)
+int kexRand::Int()
 {
     seed = 1479838765 - 1471521965 * seed;
     return seed & RANDOM_MAX;
@@ -83,7 +83,7 @@ int kexRand::Max(const int max)
 // kexRand::Float
 //
 
-float kexRand::Float(void)
+float kexRand::Float()
 {
     return (float)Max(RANDOM_MAX+1) / ((float)RANDOM_MAX+1);
 }
@@ -92,7 +92,7 @@ float kexRand::Float(void)
 // kexRand::CFloat
 //
 
-float kexRand::CFloat(void)
+float kexRand::CFloat()
 {
     return (float)(Max(20000) - 10000) * 0.0001f;
 }

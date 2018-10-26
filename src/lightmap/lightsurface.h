@@ -25,12 +25,11 @@
 //    distribution.
 //
 
-#ifndef __LIGHT_SURFACE_H__
-#define __LIGHT_SURFACE_H__
+#pragma once
 
 #include "surfaces.h"
 
-typedef struct
+struct surfaceLightDef
 {
     int             tag;
     float           outerCone;
@@ -42,7 +41,7 @@ typedef struct
     bool            bIgnoreCeiling;
     bool            bNoCenterPoint;
     kexVec3         rgb;
-} surfaceLightDef_t;
+};
 
 class kexDoomMap;
 class kexTrace;
@@ -50,32 +49,28 @@ class kexTrace;
 class kexLightSurface
 {
 public:
-    kexLightSurface(void);
-    ~kexLightSurface(void);
+    kexLightSurface();
+    ~kexLightSurface();
 
-    void                    Init(const surfaceLightDef_t &lightSurfaceDef, surface_t *surface,
-                                 const bool bWall, const bool bNoCenterPoint);
+    void                    Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint);
     void                    Subdivide(const float divide);
-    void                    CreateCenterOrigin(void);
-    bool                    TraceSurface(kexDoomMap *doomMap, kexTrace &trace, const surface_t *surface,
-                                         const kexVec3 &origin, float *dist);
+    void                    CreateCenterOrigin();
+    bool                    TraceSurface(kexDoomMap *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
 
-    const float             OuterCone(void) const { return outerCone; }
-    const float             InnerCone(void) const { return innerCone; }
-    const float             FallOff(void) const { return falloff; }
-    const float             Distance(void) const { return distance; }
-    const float             Intensity(void) const { return intensity; }
-    const kexVec3           GetRGB(void) const { return rgb; }
-    const bool              IsAWall(void) const { return bWall; }
-    const bool              NoCenterPoint(void) const { return bNoCenterPoint; }
-    const surface_t         *Surface(void) const { return surface; }
-    const vertexBatch_t     Origins(void) const { return origins; }
+    const float             OuterCone() const { return outerCone; }
+    const float             InnerCone() const { return innerCone; }
+    const float             FallOff() const { return falloff; }
+    const float             Distance() const { return distance; }
+    const float             Intensity() const { return intensity; }
+    const kexVec3           GetRGB() const { return rgb; }
+    const bool              IsAWall() const { return bWall; }
+    const bool              NoCenterPoint() const { return bNoCenterPoint; }
+    const surface_t         *Surface() const { return surface; }
+    const vertexBatch_t     Origins() const { return origins; }
 
 private:
-    bool                    SubdivideRecursion(vertexBatch_t &surfPoints, float divide,
-            kexArray<vertexBatch_t*> &points);
-    void                    Clip(vertexBatch_t &points, const kexVec3 &normal, float dist,
-                                 vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
+    bool                    SubdivideRecursion(vertexBatch_t &surfPoints, float divide, kexArray<vertexBatch_t*> &points);
+    void                    Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
 
     float                   outerCone;
     float                   innerCone;
@@ -88,5 +83,3 @@ private:
     vertexBatch_t           origins;
     surface_t               *surface;
 };
-
-#endif

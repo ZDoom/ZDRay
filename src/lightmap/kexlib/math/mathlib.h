@@ -25,8 +25,7 @@
 //    distribution.
 //
 
-#ifndef __MATHLIB_H__
-#define __MATHLIB_H__
+#pragma once
 
 #include <math.h>
 #include "lightmap/common.h"
@@ -87,11 +86,11 @@ class kexRand
 {
 public:
     static void             SetSeed(const int randSeed);
-    static int              SysRand(void);
-    static int              Int(void);
+    static int              SysRand();
+    static int              Int();
     static int              Max(const int max);
-    static float            Float(void);
-    static float            CFloat(void);
+    static float            Float();
+    static float            CFloat();
 
 private:
     static int              seed;
@@ -100,21 +99,21 @@ private:
 class kexQuat
 {
 public:
-    kexQuat(void);
+    kexQuat();
 
     explicit kexQuat(const float angle, const float x, const float y, const float z);
     explicit kexQuat(const float angle, kexVec3 &vector);
     explicit kexQuat(const float angle, const kexVec3 &vector);
 
     void                    Set(const float x, const float y, const float z, const float w);
-    void                    Clear(void);
+    void                    Clear();
     float                   Dot(const kexQuat &quat) const;
-    float                   UnitSq(void) const;
-    float                   Unit(void) const;
-    kexQuat                 &Normalize(void);
+    float                   UnitSq() const;
+    float                   Unit() const;
+    kexQuat                 &Normalize();
     kexQuat                 Slerp(const kexQuat &quat, float movement) const;
     kexQuat                 RotateFrom(const kexVec3 &location, const kexVec3 &target, float maxAngle);
-    kexQuat                 Inverse(void) const;
+    kexQuat                 Inverse() const;
 
     kexQuat                 operator+(const kexQuat &quat);
     kexQuat                 &operator+=(const kexQuat &quat);
@@ -129,8 +128,8 @@ public:
     kexQuat                 &operator=(const float *vecs);
     kexVec3                 operator|(const kexVec3 &vector);
 
-    const kexVec3           &ToVec3(void) const;
-    kexVec3                 &ToVec3(void);
+    const kexVec3           &ToVec3() const;
+    kexVec3                 &ToVec3();
 
     float                   x;
     float                   y;
@@ -141,11 +140,11 @@ public:
 class kexVec2
 {
 public:
-    kexVec2(void);
+    kexVec2();
     explicit kexVec2(const float x, const float y);
 
     void                    Set(const float x, const float y);
-    void                    Clear(void);
+    void                    Clear();
     float                   Dot(const kexVec2 &vec) const;
     static float            Dot(const kexVec2 &vec1, const kexVec2 &vec2);
     float                   CrossScalar(const kexVec2 &vec) const;
@@ -155,23 +154,23 @@ public:
     static float            Dot(const kexVec3 &vec1, const kexVec3 &vec2);
     kexVec2                 Cross(const kexVec3 &vec) const;
     kexVec2                 &Cross(const kexVec3 &vec1, const kexVec3 &vec2);
-    float                   UnitSq(void) const;
-    float                   Unit(void) const;
+    float                   UnitSq() const;
+    float                   Unit() const;
     float                   DistanceSq(const kexVec2 &vec) const;
     float                   Distance(const kexVec2 &vec) const;
-    kexVec2                 &Normalize(void);
+    kexVec2                 &Normalize();
     kexVec2                 Lerp(const kexVec2 &next, float movement) const;
     kexVec2                 &Lerp(const kexVec2 &next, const float movement);
     kexVec2                 &Lerp(const kexVec2 &start, const kexVec2 &next, float movement);
-    kexStr                  ToString(void) const;
-    float                   ToYaw(void) const;
-    float                   *ToFloatPtr(void);
-    kexVec3                 ToVec3(void);
+    kexStr                  ToString() const;
+    float                   ToYaw() const;
+    float                   *ToFloatPtr();
+    kexVec3                 ToVec3();
 
     kexVec2                 operator+(const kexVec2 &vec);
     kexVec2                 operator+(const kexVec2 &vec) const;
     kexVec2                 operator+(kexVec2 &vec);
-    kexVec2                 operator-(void) const;
+    kexVec2                 operator-() const;
     kexVec2                 operator-(const kexVec2 &vec) const;
     kexVec2                 operator*(const kexVec2 &vec);
     kexVec2                 operator*(const float val);
@@ -195,7 +194,7 @@ public:
     float                   &operator[](int index);
     bool                    operator==(const kexVec2 &vec);
 
-    operator                float *(void) { return reinterpret_cast<float*>(&x); }
+    operator                float *() { return reinterpret_cast<float*>(&x); }
 
     static kexVec2          vecZero;
     static const kexVec2    vecRight;
@@ -208,30 +207,30 @@ public:
 class kexVec3
 {
 public:
-    kexVec3(void);
+    kexVec3();
     explicit kexVec3(const float x, const float y, const float z);
 
     void                    Set(const float x, const float y, const float z);
-    void                    Clear(void);
+    void                    Clear();
     float                   Dot(const kexVec3 &vec) const;
     static float            Dot(const kexVec3 &vec1, const kexVec3 &vec2);
     kexVec3                 Cross(const kexVec3 &vec) const;
     kexVec3                 &Cross(const kexVec3 &vec1, const kexVec3 &vec2);
-    float                   UnitSq(void) const;
-    float                   Unit(void) const;
+    float                   UnitSq() const;
+    float                   Unit() const;
     float                   DistanceSq(const kexVec3 &vec) const;
     float                   Distance(const kexVec3 &vec) const;
-    kexVec3                 &Normalize(void);
+    kexVec3                 &Normalize();
     kexAngle                PointAt(kexVec3 &location) const;
     kexVec3                 Lerp(const kexVec3 &next, float movement) const;
     kexVec3                 &Lerp(const kexVec3 &start, const kexVec3 &next, float movement);
-    kexQuat                 ToQuat(void);
-    float                   ToYaw(void) const;
-    float                   ToPitch(void) const;
-    kexStr                  ToString(void) const;
-    float                   *ToFloatPtr(void);
-    kexVec2                 ToVec2(void);
-    kexVec2                 ToVec2(void) const;
+    kexQuat                 ToQuat();
+    float                   ToYaw() const;
+    float                   ToPitch() const;
+    kexStr                  ToString() const;
+    float                   *ToFloatPtr();
+    kexVec2                 ToVec2();
+    kexVec2                 ToVec2() const;
     kexVec3                 ScreenProject(kexMatrix &proj, kexMatrix &model,
                                           const int width, const int height,
                                           const int wx, const int wy);
@@ -239,7 +238,7 @@ public:
     kexVec3                 operator+(const kexVec3 &vec);
     kexVec3                 operator+(const kexVec3 &vec) const;
     kexVec3                 operator+(kexVec3 &vec);
-    kexVec3                 operator-(void) const;
+    kexVec3                 operator-() const;
     kexVec3                 operator-(const kexVec3 &vec) const;
     kexVec3                 operator*(const kexVec3 &vec);
     kexVec3                 operator*(const float val);
@@ -262,7 +261,7 @@ public:
     float                   operator[](int index) const;
     float                   &operator[](int index);
 
-    operator                float *(void) { return reinterpret_cast<float*>(&x); }
+    operator                float *() { return reinterpret_cast<float*>(&x); }
 
     static const kexVec3    vecForward;
     static const kexVec3    vecUp;
@@ -276,15 +275,15 @@ public:
 class kexVec4
 {
 public:
-    kexVec4(void);
+    kexVec4();
     explicit kexVec4(const float x, const float y, const float z, const float w);
 
     void                    Set(const float x, const float y, const float z, const float w);
-    void                    Clear(void);
-    float                   *ToFloatPtr(void);
+    void                    Clear();
+    float                   *ToFloatPtr();
 
-    const kexVec3           &ToVec3(void) const;
-    kexVec3                 &ToVec3(void);
+    const kexVec3           &ToVec3() const;
+    kexVec3                 &ToVec3();
     kexVec4                 operator|(const kexMatrix &mtx);
     kexVec4                 &operator|=(const kexMatrix &mtx);
     float                   operator[](int index) const;
@@ -299,13 +298,13 @@ public:
 class kexMatrix
 {
 public:
-    kexMatrix(void);
+    kexMatrix();
     kexMatrix(const kexMatrix &mtx);
     kexMatrix(const float x, const float y, const float z);
     kexMatrix(const kexQuat &quat);
     kexMatrix(const float angle, const int axis);
 
-    kexMatrix               &Identity(void);
+    kexMatrix               &Identity();
     kexMatrix               &Identity(const float x, const float y, const float z);
     kexMatrix               &SetTranslation(const float x, const float y, const float z);
     kexMatrix               &SetTranslation(const kexVec3 &vector);
@@ -314,11 +313,11 @@ public:
     kexMatrix               &Scale(const float x, const float y, const float z);
     kexMatrix               &Scale(const kexVec3 &vector);
     static kexMatrix        Scale(const kexMatrix &mtx, const float x, const float y, const float z);
-    kexMatrix               &Transpose(void);
+    kexMatrix               &Transpose();
     static kexMatrix        Transpose(const kexMatrix &mtx);
     static kexMatrix        Invert(kexMatrix &mtx);
-    kexQuat                 ToQuat(void);
-    float                   *ToFloatPtr(void);
+    kexQuat                 ToQuat();
+    float                   *ToFloatPtr();
     void                    SetViewProjection(float aspect, float fov, float zNear, float zFar);
     void                    SetOrtho(float left, float right,
                                      float bottom, float top,
@@ -339,10 +338,10 @@ public:
 class kexPluecker
 {
 public:
-    kexPluecker(void);
+    kexPluecker();
     kexPluecker(const kexVec3 &start, const kexVec3 &end, bool bRay = false);
 
-    void                    Clear(void);
+    void                    Clear();
     void                    SetLine(const kexVec3 &start, const kexVec3 &end);
     void                    SetRay(const kexVec3 &start, const kexVec3 &dir);
     float                   InnerProduct(const kexPluecker &pluecker) const;
@@ -353,33 +352,33 @@ public:
 class kexPlane
 {
 public:
-    kexPlane(void);
+    kexPlane();
     kexPlane(const float a, const float b, const float c, const float d);
     kexPlane(const kexVec3 &pt1, const kexVec3 &pt2, const kexVec3 &pt3);
     kexPlane(const kexVec3 &normal, const kexVec3 &point);
     kexPlane(const kexPlane &plane);
 
-    typedef enum
+    enum planeAxis_t
     {
         AXIS_YZ             = 0,
         AXIS_XZ,
         AXIS_XY
-    } planeAxis_t;
+    };
 
-    const kexVec3           &Normal(void) const;
-    kexVec3                 &Normal(void);
+    const kexVec3           &Normal() const;
+    kexVec3                 &Normal();
     kexPlane                &SetNormal(const kexVec3 &normal);
     kexPlane                &SetNormal(const kexVec3 &pt1, const kexVec3 &pt2, const kexVec3 &pt3);
     float                   Distance(const kexVec3 &point);
     kexPlane                &SetDistance(const kexVec3 &point);
     bool                    IsFacing(const float yaw);
-    float                   ToYaw(void);
-    float                   ToPitch(void);
-    kexQuat                 ToQuat(void);
-    const kexVec4           &ToVec4(void) const;
-    kexVec4                 &ToVec4(void);
-    const planeAxis_t       BestAxis(void) const;
-    kexVec3                 GetInclination(void);
+    float                   ToYaw();
+    float                   ToPitch();
+    kexQuat                 ToQuat();
+    const kexVec4           &ToVec4() const;
+    kexVec4                 &ToVec4();
+    const planeAxis_t       BestAxis() const;
+    kexVec3                 GetInclination();
 
     kexPlane                &operator|(const kexQuat &quat);
     kexPlane                &operator|=(const kexQuat &quat);
@@ -395,23 +394,23 @@ public:
 class kexAngle
 {
 public:
-    kexAngle(void);
+    kexAngle();
     kexAngle(const float yaw, const float pitch, const float roll);
     kexAngle(const kexVec3 &vector);
     kexAngle(const kexAngle &an);
 
-    kexAngle                &Round(void);
-    kexAngle                &Clamp180(void);
-    kexAngle                &Clamp180Invert(void);
+    kexAngle                &Round();
+    kexAngle                &Clamp180();
+    kexAngle                &Clamp180Invert();
     kexAngle                &Clamp180InvertSum(const kexAngle &angle);
     kexAngle                Diff(kexAngle &angle);
     void                    ToAxis(kexVec3 *forward, kexVec3 *up, kexVec3 *right);
-    kexVec3                 ToForwardAxis(void);
-    kexVec3                 ToUpAxis(void);
-    kexVec3                 ToRightAxis(void);
-    const kexVec3           &ToVec3(void) const;
-    kexVec3                 &ToVec3(void);
-    kexQuat                 ToQuat(void);
+    kexVec3                 ToForwardAxis();
+    kexVec3                 ToUpAxis();
+    kexVec3                 ToRightAxis();
+    const kexVec3           &ToVec3() const;
+    kexVec3                 &ToVec3();
+    kexQuat                 ToQuat();
 
     kexAngle                operator+(const kexAngle &angle);
     kexAngle                operator-(const kexAngle &angle);
@@ -420,7 +419,7 @@ public:
     kexAngle                &operator=(const kexAngle &angle);
     kexAngle                &operator=(const kexVec3 &vector);
     kexAngle                &operator=(const float *vecs);
-    kexAngle                operator-(void);
+    kexAngle                operator-();
     float                   operator[](int index) const;
     float                   &operator[](int index);
 
@@ -432,12 +431,12 @@ public:
 class kexBBox
 {
 public:
-    kexBBox(void);
+    kexBBox();
     explicit kexBBox(const kexVec3 &vMin, const kexVec3 &vMax);
 
-    void                    Clear(void);
-    kexVec3                 Center(void) const;
-    float                   Radius(void) const;
+    void                    Clear();
+    kexVec3                 Center() const;
+    float                   Radius() const;
     void                    AddPoint(const kexVec3 &vec);
     bool                    PointInside(const kexVec3 &vec) const;
     bool                    IntersectingBox(const kexBBox &box) const;
@@ -656,6 +655,3 @@ d_inline void kexMath::Clamp(kexVec3 &v, const float min, const float max)
     if(v.z < min) { v.z = min; }
     if(v.z > max) { v.z = max; }
 }
-
-#endif
-

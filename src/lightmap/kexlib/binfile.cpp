@@ -37,7 +37,7 @@
 // kexBinFile::kexBinFile
 //
 
-kexBinFile::kexBinFile(void)
+kexBinFile::kexBinFile()
 {
     this->handle = NULL;
     this->buffer = NULL;
@@ -49,7 +49,7 @@ kexBinFile::kexBinFile(void)
 // kexBinFile::~kexBinFile
 //
 
-kexBinFile::~kexBinFile(void)
+kexBinFile::~kexBinFile()
 {
     Close();
 }
@@ -108,7 +108,7 @@ bool kexBinFile::Create(const char *file)
 // kexBinFile::Close
 //
 
-void kexBinFile::Close(void)
+void kexBinFile::Close()
 {
     if(bOpened == false)
     {
@@ -185,7 +185,7 @@ void kexBinFile::Duplicate(const char *newFileName)
 // kexBinFile::Length
 //
 
-int kexBinFile::Length(void)
+int kexBinFile::Length()
 {
     long savedpos;
     long length;
@@ -212,7 +212,7 @@ int kexBinFile::Length(void)
 // kexBinFile::Read8
 //
 
-byte kexBinFile::Read8(void)
+byte kexBinFile::Read8()
 {
     byte result;
     result = buffer[bufferOffset++];
@@ -223,7 +223,7 @@ byte kexBinFile::Read8(void)
 // kexBinFile::Read16
 //
 
-short kexBinFile::Read16(void)
+short kexBinFile::Read16()
 {
     int result;
     result = Read8();
@@ -235,7 +235,7 @@ short kexBinFile::Read16(void)
 // kexBinFile::Read32
 //
 
-int kexBinFile::Read32(void)
+int kexBinFile::Read32()
 {
     int result;
     result = Read8();
@@ -249,7 +249,7 @@ int kexBinFile::Read32(void)
 // kexBinFile::ReadFloat
 //
 
-float kexBinFile::ReadFloat(void)
+float kexBinFile::ReadFloat()
 {
     fint_t fi;
     fi.i = Read32();
@@ -260,7 +260,7 @@ float kexBinFile::ReadFloat(void)
 // kexBinFile::ReadVector
 //
 
-kexVec3 kexBinFile::ReadVector(void)
+kexVec3 kexBinFile::ReadVector()
 {
     kexVec3 vec;
 
@@ -275,7 +275,7 @@ kexVec3 kexBinFile::ReadVector(void)
 // kexBinFile::ReadString
 //
 
-kexStr kexBinFile::ReadString(void)
+kexStr kexBinFile::ReadString()
 {
     kexStr str;
     char c = 0;

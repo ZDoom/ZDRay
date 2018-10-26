@@ -37,7 +37,7 @@
 // kexStr::Init
 //
 
-void kexStr::Init(void)
+void kexStr::Init()
 {
     length = 0;
     bufferLength = STRING_DEFAULT_SIZE;
@@ -74,7 +74,7 @@ void kexStr::CopyNew(const char *string, int len)
 // kexStr::kexStr
 //
 
-kexStr::kexStr(void)
+kexStr::kexStr()
 {
     Init();
 }
@@ -131,7 +131,7 @@ kexStr::kexStr(const kexStr &string)
 // kexStr::~kexStr
 //
 
-kexStr::~kexStr(void)
+kexStr::~kexStr()
 {
     if(charPtr != defaultBuffer)
     {
@@ -467,7 +467,7 @@ int kexStr::IndexOf(const kexStr &pattern) const
 // kexStr::NormalizeSlashes
 //
 
-kexStr &kexStr::NormalizeSlashes(void)
+kexStr &kexStr::NormalizeSlashes()
 {
     for(int i = 0; i < length; i++)
     {
@@ -484,7 +484,7 @@ kexStr &kexStr::NormalizeSlashes(void)
 // kexStr::StripPath
 //
 
-kexStr &kexStr::StripPath(void)
+kexStr &kexStr::StripPath()
 {
     int pos = 0;
     int i = 0;
@@ -513,7 +513,7 @@ kexStr &kexStr::StripPath(void)
 // kexStr::StripExtension
 //
 
-kexStr &kexStr::StripExtension(void)
+kexStr &kexStr::StripExtension()
 {
     int pos = IndexOf(".");
 
@@ -533,7 +533,7 @@ kexStr &kexStr::StripExtension(void)
 // kexStr::StripFile
 //
 
-kexStr &kexStr::StripFile(void)
+kexStr &kexStr::StripFile()
 {
     int pos = 0;
     int i = 0;
@@ -564,7 +564,7 @@ kexStr &kexStr::StripFile(void)
 // kexStr::Hash
 //
 
-int kexStr::Hash(void)
+int kexStr::Hash()
 {
     unsigned int hash   = 0;
     char *str           = (char*)charPtr;
@@ -670,7 +670,7 @@ void kexStr::Split(kexStrList &list, const char seperator)
 // kexStr::Atoi
 //
 
-int kexStr::Atoi(void)
+int kexStr::Atoi()
 {
     return atoi(charPtr);
 }
@@ -679,7 +679,7 @@ int kexStr::Atoi(void)
 // kexStr::Atof
 //
 
-float kexStr::Atof(void)
+float kexStr::Atof()
 {
     return (float)atof(charPtr);
 }
@@ -704,7 +704,7 @@ void kexStr::WriteToFile(const char *file)
 // kexStr::ToUpper
 //
 
-kexStr &kexStr::ToUpper(void)
+kexStr &kexStr::ToUpper()
 {
     char c;
     for(int i = 0; i < length; i++)
@@ -724,7 +724,7 @@ kexStr &kexStr::ToUpper(void)
 // kexStr::ToLower
 //
 
-kexStr &kexStr::ToLower(void)
+kexStr &kexStr::ToLower()
 {
     char c;
     for(int i = 0; i < length; i++)

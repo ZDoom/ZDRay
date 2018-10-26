@@ -37,7 +37,7 @@
 // kexWadFile::~kexWadFile
 //
 
-kexWadFile::~kexWadFile(void)
+kexWadFile::~kexWadFile()
 {
     Close();
 }
@@ -106,7 +106,7 @@ void kexWadFile::Write(const char *fileName)
 // kexWadFile::Close
 //
 
-void kexWadFile::Close(void)
+void kexWadFile::Close()
 {
     if(file.Opened())
     {
@@ -225,7 +225,7 @@ lump_t *kexWadFile::GetGLMapLump(glMapLumps_t lumpID)
 // kexWadFile::InitForWrite
 //
 
-void kexWadFile::InitForWrite(void)
+void kexWadFile::InitForWrite()
 {
     header.id[0] = 'P';
     header.id[1] = 'W';
@@ -317,7 +317,7 @@ void kexWadFile::AddLump(const char *name, const int size, byte *data)
 // kexWadFile::CreateBackup
 //
 
-void kexWadFile::CreateBackup(void)
+void kexWadFile::CreateBackup()
 {
     kexStr backupName = wadName;
 

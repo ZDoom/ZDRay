@@ -25,8 +25,7 @@
 //    distribution.
 //
 
-#ifndef __WORKER_H__
-#define __WORKER_H__
+#pragma once
 
 #include <thread>
 #include <mutex>
@@ -37,30 +36,30 @@ class kexWorker;
 
 typedef void(*jobFunc_t)(void*, int);
 
-typedef struct
+struct jobFuncArgs_t
 {
     kexWorker *worker;
     void *data;
     int jobID;
-} jobFuncArgs_t;
+};
 
 class kexWorker
 {
 public:
-    kexWorker(void);
-    ~kexWorker(void);
+    kexWorker();
+    ~kexWorker();
 
     void                RunThreads(const int count, void *data, jobFunc_t jobFunc);
-    void                LockMutex(void);
-    void                UnlockMutex(void);
-    void                Destroy(void);
+    void                LockMutex();
+    void                UnlockMutex();
+    void                Destroy();
 
-    bool                FinishedAllJobs(void) { return jobsWorked == numWorkLoad; }
-    int                 DispatchJob(void) { int j = jobsWorked; jobsWorked++; return j; }
+    bool                FinishedAllJobs() { return jobsWorked == numWorkLoad; }
+    int                 DispatchJob() { int j = jobsWorked; jobsWorked++; return j; }
     void                RunJob(void *data, const int jobID) { job(data, jobID); }
 
     jobFuncArgs_t       *Args(const int id) { return &jobArgs[id]; }
-    const int           JobsWorked(void) const { return jobsWorked; }
+    const int           JobsWorked() const { return jobsWorked; }
 
     static int          maxWorkThreads;
 
@@ -72,5 +71,3 @@ private:
     int                 jobsWorked;
     int                 numWorkLoad;
 };
-
-#endif

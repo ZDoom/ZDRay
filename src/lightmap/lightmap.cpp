@@ -68,7 +68,7 @@ static void LightGridWorkerFunc(void *data, int id)
 // kexLightmapBuilder::kexLightmapBuilder
 //
 
-kexLightmapBuilder::kexLightmapBuilder(void)
+kexLightmapBuilder::kexLightmapBuilder()
 {
     this->textureWidth  = 128;
     this->textureHeight = 128;
@@ -85,7 +85,7 @@ kexLightmapBuilder::kexLightmapBuilder(void)
 // kexLightmapBuilder::~kexLightmapBuilder
 //
 
-kexLightmapBuilder::~kexLightmapBuilder(void)
+kexLightmapBuilder::~kexLightmapBuilder()
 {
 }
 
@@ -95,7 +95,7 @@ kexLightmapBuilder::~kexLightmapBuilder(void)
 // Allocates a new texture pointer
 //
 
-void kexLightmapBuilder::NewTexture(void)
+void kexLightmapBuilder::NewTexture()
 {
     numTextures++;
 
@@ -881,7 +881,7 @@ void kexLightmapBuilder::CreateLightmaps(kexDoomMap &doomMap)
 // kexLightmapBuilder::CreateLightGrid
 //
 
-void kexLightmapBuilder::CreateLightGrid(void)
+void kexLightmapBuilder::CreateLightGrid()
 {
     int count;
     int numNodes;
@@ -1135,7 +1135,7 @@ void kexLightmapBuilder::AddLightmapLumps(kexWadFile &wadFile)
 // kexLightmapBuilder::WriteTexturesToTGA
 //
 
-void kexLightmapBuilder::WriteTexturesToTGA(void)
+void kexLightmapBuilder::WriteTexturesToTGA()
 {
     kexBinFile file;
 

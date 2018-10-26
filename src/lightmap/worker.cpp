@@ -69,7 +69,7 @@ void *WorkThread(void *p)
 // kexWorker::kexWorker
 //
 
-kexWorker::kexWorker(void)
+kexWorker::kexWorker()
 {
     this->numWorkLoad = 0;
     this->jobsWorked = 0;
@@ -82,7 +82,7 @@ kexWorker::kexWorker(void)
 // kexWorker::~kexWorker
 //
 
-kexWorker::~kexWorker(void)
+kexWorker::~kexWorker()
 {
 }
 
@@ -90,7 +90,7 @@ kexWorker::~kexWorker(void)
 // kexWorker::LockMutex
 //
 
-void kexWorker::LockMutex(void)
+void kexWorker::LockMutex()
 {
 	mutex.lock();
 }
@@ -99,7 +99,7 @@ void kexWorker::LockMutex(void)
 // kexWorker::UnlockMutex
 //
 
-void kexWorker::UnlockMutex(void)
+void kexWorker::UnlockMutex()
 {
 	mutex.unlock();
 }
@@ -108,7 +108,7 @@ void kexWorker::UnlockMutex(void)
 // kexWorker::Destroy
 //
 
-void kexWorker::Destroy(void)
+void kexWorker::Destroy()
 {
 }
 
@@ -174,7 +174,7 @@ void Delay(int ms)
 // GetSeconds
 //
 
-const int64_t GetSeconds(void)
+const int64_t GetSeconds()
 {
 	return time(0);
 }
@@ -183,7 +183,7 @@ const int64_t GetSeconds(void)
 // FilePath
 //
 
-const kexStr &FilePath(void)
+const kexStr &FilePath()
 {
 	return basePath;
 }

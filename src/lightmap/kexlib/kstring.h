@@ -25,8 +25,7 @@
 //    distribution.
 //
 
-#ifndef __KSTRING_H__
-#define __KSTRING_H__
+#pragma once
 
 #include <string.h>
 #include "lightmap/common.h"
@@ -39,11 +38,11 @@ typedef kexArray<kexStr>        kexStrList;
 class kexStr
 {
 public:
-    kexStr(void);
+    kexStr();
     kexStr(const char *string);
     kexStr(const char *string, const int length);
     kexStr(const kexStr &string);
-    ~kexStr(void);
+    ~kexStr();
 
     void                CheckSize(int size, bool bKeepString);
     int                 IndexOf(const char *pattern) const;
@@ -51,23 +50,23 @@ public:
     kexStr              &Concat(const char *string);
     kexStr              &Concat(const char *string, int len);
     kexStr              &Concat(const char c);
-    kexStr              &NormalizeSlashes(void);
-    kexStr              &StripPath(void);
-    kexStr              &StripExtension(void);
-    kexStr              &StripFile(void);
+    kexStr              &NormalizeSlashes();
+    kexStr              &StripPath();
+    kexStr              &StripExtension();
+    kexStr              &StripFile();
     kexStr              &Copy(const kexStr &src, int len);
     kexStr              &Copy(const kexStr &src);
-    kexStr              &ToUpper(void);
-    kexStr              &ToLower(void);
-    int                 Hash(void);
+    kexStr              &ToUpper();
+    kexStr              &ToLower();
+    int                 Hash();
     kexStr              Substr(int start, int len) const;
     void                Split(kexStrList &list, const char seperator);
-    int                 Atoi(void);
-    float               Atof(void);
+    int                 Atoi();
+    float               Atof();
     void                WriteToFile(const char *file);
 
-    int                 Length(void) const { return length; }
-    const char          *c_str(void) const { return charPtr; }
+    int                 Length() const { return length; }
+    const char          *c_str() const { return charPtr; }
 
     kexStr              &operator=(const kexStr &str);
     kexStr              &operator=(const char *str);
@@ -87,8 +86,8 @@ public:
     friend bool         operator==(const char *a, const kexStr &b);
     friend bool         operator==(const kexStr &a, const char *b);
 
-    operator            const char *(void) const { return c_str(); }
-    operator            const char *(void) { return c_str(); }
+    operator            const char *() const { return c_str(); }
+    operator            const char *() { return c_str(); }
 
     static bool         CompareCase(const char *s1, const char *s2);
     static bool         CompareCase(const kexStr &a, const kexStr &b);
@@ -103,7 +102,7 @@ private:
     void                CopyNew(const char *string, int len);
 
 protected:
-    void                Init(void);
+    void                Init();
 
     static const int    STRING_DEFAULT_SIZE = 32;
 
@@ -127,5 +126,3 @@ d_inline bool operator==(const kexStr &a, const char *b)
 {
     return (!strcmp(a.charPtr, b));
 }
-
-#endif

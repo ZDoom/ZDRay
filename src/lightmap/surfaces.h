@@ -25,10 +25,11 @@
 //    distribution.
 //
 
-#ifndef __SURFACES_H__
-#define __SURFACES_H__
+#pragma once
 
-typedef enum
+struct mapSubSector_t;
+
+enum surfaceType_t
 {
     ST_UNKNOWN      = 0,
     ST_MIDDLESEG,
@@ -36,14 +37,14 @@ typedef enum
     ST_LOWERSEG,
     ST_CEILING,
     ST_FLOOR
-} surfaceType_t;
+};
 
 typedef kexArray<kexVec3> vertexBatch_t;
 
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
 
-typedef struct
+struct surface_t
 {
     kexPlane                plane;
     int                     lightmapNum;
@@ -60,8 +61,8 @@ typedef struct
     int                     typeIndex;
     void                    *data;
     bool                    bSky;
-    struct mapSubSector_s   *subSector;
-} surface_t;
+    mapSubSector_t          *subSector;
+};
 
 extern kexArray<surface_t*> surfaces;
 
@@ -69,5 +70,3 @@ class kexDoomMap;
 class kexWadFile;
 
 void Surface_AllocateFromMap(kexDoomMap &doomMap);
-
-#endif

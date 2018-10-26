@@ -77,7 +77,7 @@
 // kexMatrix::kexMatrix
 //
 
-kexMatrix::kexMatrix(void)
+kexMatrix::kexMatrix()
 {
     Identity();
 }
@@ -182,7 +182,7 @@ kexMatrix::kexMatrix(const float angle, const int axis)
 // kexMatrix::Identity
 //
 
-kexMatrix &kexMatrix::Identity(void)
+kexMatrix &kexMatrix::Identity()
 {
     vectors[0].Set(1, 0, 0, 0);
     vectors[1].Set(0, 1, 0, 0);
@@ -293,7 +293,7 @@ kexMatrix kexMatrix::Scale(const kexMatrix &mtx, const float x, const float y, c
 // kexMatrix::Transpose
 //
 
-kexMatrix &kexMatrix::Transpose(void)
+kexMatrix &kexMatrix::Transpose()
 {
     kexVec3 v1 = vectors[1].ToVec3();
     kexVec3 v2 = vectors[2].ToVec3();
@@ -446,7 +446,7 @@ void kexMatrix::SetOrtho(float left, float right,
 // kexMatrix::ToQuat
 //
 
-kexQuat kexMatrix::ToQuat(void)
+kexQuat kexMatrix::ToQuat()
 {
     float t;
     float d;
@@ -537,7 +537,7 @@ kexMatrix &kexMatrix::operator*=(const kexVec3 &vector)
 // kexMatrix::ToFloatPtr
 //
 
-float *kexMatrix::ToFloatPtr(void)
+float *kexMatrix::ToFloatPtr()
 {
     return reinterpret_cast<float*>(vectors);
 }
