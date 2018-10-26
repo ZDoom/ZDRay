@@ -144,6 +144,26 @@ set( SOURCES
 	src/nodebuilder/nodebuild_gl.cpp
 	src/nodebuilder/nodebuild_utility.cpp
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
+	src/lightmap/lightmap.cpp
+	src/lightmap/lightsurface.cpp
+	src/lightmap/mapdata.cpp
+	src/lightmap/surfaces.cpp
+	src/lightmap/trace.cpp
+	src/lightmap/wad.cpp
+	src/lightmap/worker.cpp
+	src/lightmap/kexlib/binfile.cpp
+	src/lightmap/kexlib/kstring.cpp
+	src/lightmap/kexlib/memheap.cpp
+	src/lightmap/kexlib/parser.cpp
+	src/lightmap/kexlib/math/angle.cpp
+	src/lightmap/kexlib/math/bounds.cpp
+	src/lightmap/kexlib/math/mathlib.cpp
+	src/lightmap/kexlib/math/matrix.cpp
+	src/lightmap/kexlib/math/plane.cpp
+	src/lightmap/kexlib/math/pluecker.cpp
+	src/lightmap/kexlib/math/quaternion.cpp
+	src/lightmap/kexlib/math/random.cpp
+	src/lightmap/kexlib/math/vector.cpp
 )
 if( WIN32 )
 	set( SOURCES "${SOURCES}" src/viewer/view.cpp )
@@ -164,7 +184,22 @@ set( HEADERS
 	src/framework/tarray.h
 	src/framework/templates.h
 	src/framework/zdray.h
-	src/framework/xs_Float.h )
+	src/framework/xs_Float.h
+	src/lightmap/common.h
+	src/lightmap/lightmap.h
+	src/lightmap/lightsurface.h
+	src/lightmap/mapdata.h
+	src/lightmap/surfaces.h
+	src/lightmap/trace.h
+	src/lightmap/wad.h
+	src/lightmap/worker.h
+	src/lightmap/kexlib/array.h
+	src/lightmap/kexlib/binfile.h
+	src/lightmap/kexlib/kstring.h
+	src/lightmap/kexlib/memheap.h
+	src/lightmap/kexlib/parser.h
+	src/lightmap/kexlib/math/mathlib.h
+)
 
 if( SSE_MATTERS )
 	if( FULL_SSE2 )
@@ -233,3 +268,6 @@ source_group("Sources\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR
 source_group("Sources\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
 source_group("Sources\\Viewer" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/viewer/.+")
 source_group("Sources\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
+source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
+source_group("Sources\\Lightmap\\kexlib" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/kexlib/.+")
+source_group("Sources\\Lightmap\\kexlib\\math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/kexlib/math/.+")
