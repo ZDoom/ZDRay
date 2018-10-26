@@ -42,16 +42,14 @@ kexArray<surface_t*> surfaces;
 // Surface_AllocateFromSeg
 //
 
-static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
+static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
 {
-    mapSideDef_t *side;
+    IntSideDef *side;
     surface_t *surf;
     float top, bTop;
     float bottom, bBottom;
-    mapSector_t *front;
-    mapSector_t *back;
-    vertex_t *v1;
-    vertex_t *v2;
+    IntSector *front;
+    IntSector *back;
 
     if(seg->linedef == NO_LINE_INDEX)
     {
@@ -65,8 +63,8 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
     top = front->data.ceilingheight;
     bottom = front->data.floorheight;
 
-    v1 = doomMap.GetSegVertex(seg->v1);
-    v2 = doomMap.GetSegVertex(seg->v2);
+    FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
+	FloatVertex v2 = doomMap.GetSegVertex(seg->v2);
 
     if(back)
     {
@@ -87,10 +85,10 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
                 surf->numVerts = 4;
                 surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
 
-                surf->verts[0].x = surf->verts[2].x = v1->x;
-                surf->verts[0].y = surf->verts[2].y = v1->y;
-                surf->verts[1].x = surf->verts[3].x = v2->x;
-                surf->verts[1].y = surf->verts[3].y = v2->y;
+                surf->verts[0].x = surf->verts[2].x = v1.x;
+                surf->verts[0].y = surf->verts[2].y = v1.y;
+                surf->verts[1].x = surf->verts[3].x = v2.x;
+                surf->verts[1].y = surf->verts[3].y = v2.y;
                 surf->verts[0].z = surf->verts[1].z = bottom;
                 surf->verts[2].z = surf->verts[3].z = bBottom;
 
@@ -101,7 +99,7 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
                 surf->subSector = &doomMap.GLSubsectors[doomMap.segLeafLookup[seg - doomMap.GLSegs]];
 
                 doomMap.segSurfaces[1][surf->typeIndex] = surf;
-                surf->data = (glSeg_t*)seg;
+                surf->data = (MapSegGLEx*)seg;
 
                 surfaces.Push(surf);
             }
@@ -130,10 +128,10 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
                 surf->numVerts = 4;
                 surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
 
-                surf->verts[0].x = surf->verts[2].x = v1->x;
-                surf->verts[0].y = surf->verts[2].y = v1->y;
-                surf->verts[1].x = surf->verts[3].x = v2->x;
-                surf->verts[1].y = surf->verts[3].y = v2->y;
+                surf->verts[0].x = surf->verts[2].x = v1.x;
+                surf->verts[0].y = surf->verts[2].y = v1.y;
+                surf->verts[1].x = surf->verts[3].x = v2.x;
+                surf->verts[1].y = surf->verts[3].y = v2.y;
                 surf->verts[0].z = surf->verts[1].z = bTop;
                 surf->verts[2].z = surf->verts[3].z = top;
 
@@ -145,7 +143,7 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
                 surf->subSector = &doomMap.GLSubsectors[doomMap.segLeafLookup[seg - doomMap.GLSegs]];
 
                 doomMap.segSurfaces[2][surf->typeIndex] = surf;
-                surf->data = (glSeg_t*)seg;
+                surf->data = (MapSegGLEx*)seg;
 
                 surfaces.Push(surf);
             }
@@ -161,10 +159,10 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
         surf->numVerts = 4;
         surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
 
-        surf->verts[0].x = surf->verts[2].x = v1->x;
-        surf->verts[0].y = surf->verts[2].y = v1->y;
-        surf->verts[1].x = surf->verts[3].x = v2->x;
-        surf->verts[1].y = surf->verts[3].y = v2->y;
+        surf->verts[0].x = surf->verts[2].x = v1.x;
+        surf->verts[0].y = surf->verts[2].y = v1.y;
+        surf->verts[1].x = surf->verts[3].x = v2.x;
+        surf->verts[1].y = surf->verts[3].y = v2.y;
         surf->verts[0].z = surf->verts[1].z = bottom;
         surf->verts[2].z = surf->verts[3].z = top;
 
@@ -175,7 +173,7 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
         surf->subSector = &doomMap.GLSubsectors[doomMap.segLeafLookup[seg - doomMap.GLSegs]];
 
         doomMap.segSurfaces[0][surf->typeIndex] = surf;
-        surf->data = (glSeg_t*)seg;
+        surf->data = (MapSegGLEx*)seg;
 
         surfaces.Push(surf);
     }
@@ -188,11 +186,11 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
 // unless slopes are involved....
 //
 
-static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
+static void Surface_AllocateFromLeaf(FLevel &doomMap)
 {
     surface_t *surf;
     leaf_t *leaf;
-    mapSector_t *sector = NULL;
+    IntSector *sector = NULL;
     int i;
     int j;
 
@@ -230,8 +228,8 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         {
             leaf = &doomMap.leafs[doomMap.ssLeafLookup[i] + (surf->numVerts - 1) - j];
 
-            surf->verts[j].x = leaf->vertex->x;
-            surf->verts[j].y = leaf->vertex->y;
+            surf->verts[j].x = leaf->vertex.x;
+            surf->verts[j].y = leaf->vertex.y;
             surf->verts[j].z = sector->data.floorheight;
         }
 
@@ -241,7 +239,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         surf->typeIndex = i;
 
         doomMap.leafSurfaces[0][i] = surf;
-        surf->data = (mapSector_t*)sector;
+        surf->data = (IntSector*)sector;
 
         surfaces.Push(surf);
 
@@ -260,8 +258,8 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         {
             leaf = &doomMap.leafs[doomMap.ssLeafLookup[i] + j];
 
-            surf->verts[j].x = leaf->vertex->x;
-            surf->verts[j].y = leaf->vertex->y;
+            surf->verts[j].x = leaf->vertex.x;
+            surf->verts[j].y = leaf->vertex.y;
             surf->verts[j].z = sector->data.ceilingheight;
         }
 
@@ -271,7 +269,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         surf->typeIndex = i;
 
         doomMap.leafSurfaces[1][i] = surf;
-        surf->data = (mapSector_t*)sector;
+        surf->data = (IntSector*)sector;
 
         surfaces.Push(surf);
     }
@@ -283,7 +281,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
 // Surface_AllocateFromMap
 //
 
-void Surface_AllocateFromMap(kexDoomMap &doomMap)
+void Surface_AllocateFromMap(FLevel &doomMap)
 {
     doomMap.segSurfaces[0] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
     doomMap.segSurfaces[1] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);

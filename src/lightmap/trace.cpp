@@ -56,7 +56,7 @@ kexTrace::~kexTrace()
 // kexTrace::Init
 //
 
-void kexTrace::Init(kexDoomMap &doomMap)
+void kexTrace::Init(FLevel &doomMap)
 {
     map = &doomMap;
 }
@@ -197,7 +197,7 @@ void kexTrace::TraceSurface(surface_t *surface)
 
 void kexTrace::TraceSubSector(int num)
 {
-    mapSubSector_t *sub;
+    MapSubsectorEx *sub;
     int i;
     int j;
 

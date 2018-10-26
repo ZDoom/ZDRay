@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 {
 	kexWadFile wadFile;
 	kexWadFile outWadFile;
-	kexDoomMap doomMap;
+	FLevel doomMap;
 	lump_t *lmLump;
 	kexArray<int> ignoreLumps;
 	kexLightmapBuilder builder;

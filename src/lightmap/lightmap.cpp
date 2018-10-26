@@ -38,6 +38,7 @@
 #include "worker.h"
 #include "kexlib/binFile.h"
 #include "wad.h"
+#include "framework/templates.h"
 
 //#define EXPORT_TEXELS_OBJ
 
@@ -314,7 +315,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 
         dir.Normalize();
 
-        float r = MAX(radius - dist, 0);
+        float r = MAX(radius - dist, 0.0f);
 
         colorAdd = ((r * plane.Normal().Dot(dir)) / radius) * intensity;
         kexMath::Clamp(colorAdd, 0, 1);
@@ -651,11 +652,11 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 // and against all nearby thing lights
 //
 
-kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const mapSubSector_t *sub)
+kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const MapSubsectorEx *sub)
 {
     kexVec3 color;
     kexVec3 dir;
-    mapSector_t *mapSector;
+    IntSector *mapSector;
     float intensity;
     float radius;
     float dist;
@@ -787,7 +788,7 @@ void kexLightmapBuilder::LightGrid(const int gridid)
     int gx = (int)gridBlock.x;
     int gy = (int)gridBlock.y;
     kexTrace trace;
-    mapSubSector_t *ss;
+    MapSubsectorEx *ss;
 
     // convert grid id to xyz coordinates
     mod = gridid;
@@ -858,7 +859,7 @@ void kexLightmapBuilder::LightGrid(const int gridid)
 // kexLightmapBuilder::CreateLightmaps
 //
 
-void kexLightmapBuilder::CreateLightmaps(kexDoomMap &doomMap)
+void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 {
     map = &doomMap;
 
@@ -916,7 +917,7 @@ void kexLightmapBuilder::CreateLightGrid()
 
     // allocate data
     gridMap = (gridMap_t*)Mem_Calloc(sizeof(gridMap_t) * count, hb_static);
-    gridSectors = (mapSubSector_t**)Mem_Calloc(sizeof(mapSubSector_t*) *
+    gridSectors = (MapSubsectorEx**)Mem_Calloc(sizeof(MapSubsectorEx*) *
                   (int)(gridBlock.x * gridBlock.y), hb_static);
 
     // process all grid cells

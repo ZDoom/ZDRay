@@ -43,7 +43,7 @@ public:
     void                    BuildSurfaceParams(surface_t *surface);
     void                    TraceSurface(surface_t *surface);
     void                    CreateLightGrid();
-    void                    CreateLightmaps(kexDoomMap &doomMap);
+    void                    CreateLightmaps(FLevel &doomMap);
     void                    LightSurface(const int surfid);
     void                    LightGrid(const int gridid);
     void                    WriteTexturesToTGA();
@@ -62,7 +62,7 @@ private:
     bool                    MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
     kexBBox                 GetBoundsFromSurface(const surface_t *surface);
     kexVec3                 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
-    kexVec3                 LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const mapSubSector_t *sub);
+    kexVec3                 LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const MapSubsectorEx *sub);
     bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, float *dist);
     void                    ExportTexelsToObjFile(FILE *f, const kexVec3 &org, int indices);
     void                    WriteBlock(FILE *f, const int i, const kexVec3 &org, int indices, kexBBox &box);
@@ -74,7 +74,7 @@ private:
         kexVec3             color;
     };
 
-    kexDoomMap              *map;
+    FLevel              *map;
     kexArray<byte*>         textures;
     int                     **allocBlocks;
     int                     numTextures;
@@ -82,7 +82,7 @@ private:
     int                     tracedTexels;
     int                     numLightGrids;
     gridMap_t               *gridMap;
-    mapSubSector_t          **gridSectors;
+    MapSubsectorEx          **gridSectors;
     kexBBox                 worldGrid;
     kexBBox                 gridBound;
     kexVec3                 gridBlock;

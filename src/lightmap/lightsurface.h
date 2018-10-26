@@ -29,21 +29,8 @@
 
 #include "surfaces.h"
 
-struct surfaceLightDef
-{
-    int             tag;
-    float           outerCone;
-    float           innerCone;
-    float           falloff;
-    float           distance;
-    float           intensity;
-    bool            bIgnoreFloor;
-    bool            bIgnoreCeiling;
-    bool            bNoCenterPoint;
-    kexVec3         rgb;
-};
-
 struct FLevel;
+struct surfaceLightDef;
 class kexTrace;
 
 class kexLightSurface

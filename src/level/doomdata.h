@@ -2,6 +2,9 @@
 #pragma once
 
 #include "framework/tarray.h"
+#include "lightmap/kexlib/math/mathlib.h"
+#undef MIN
+#undef MAX
 
 enum
 {
@@ -228,11 +231,77 @@ struct vertex_t;
 struct surface_t;
 struct thingLight_t;
 
+struct FloatVertex
+{
+	float x;
+	float y;
+};
+
 struct leaf_t
 {
-	vertex_t *vertex;
+	FloatVertex vertex;
 	MapSegGLEx *seg;
 };
+
+struct lightDef_t
+{
+	int             doomednum;
+	float           height;
+	float           radius;
+	float           intensity;
+	float           falloff;
+	bool            bCeiling;
+	kexVec3         rgb;
+};
+
+struct mapDef_t
+{
+	int             map;
+	int             sunIgnoreTag;
+	kexVec3         sunDir;
+	kexVec3         sunColor;
+};
+
+struct thingLight_t
+{
+	IntThing        *mapThing;
+	kexVec2         origin;
+	kexVec3         rgb;
+	float           intensity;
+	float           falloff;
+	float           height;
+	float           radius;
+	bool            bCeiling;
+	IntSector       *sector;
+	MapSubsectorEx  *ssect;
+};
+
+struct surfaceLightDef
+{
+	int             tag;
+	float           outerCone;
+	float           innerCone;
+	float           falloff;
+	float           distance;
+	float           intensity;
+	bool            bIgnoreFloor;
+	bool            bIgnoreCeiling;
+	bool            bNoCenterPoint;
+	kexVec3         rgb;
+};
+
+enum mapFlags_t
+{
+	ML_BLOCKING = 1,    // Solid, is an obstacle.
+	ML_BLOCKMONSTERS = 2,    // Blocks monsters only.
+	ML_TWOSIDED = 4,    // Backside will not be present at all if not two sided.
+	ML_TRANSPARENT1 = 2048, // 25% or 75% transcluency?
+	ML_TRANSPARENT2 = 4096  // 25% or 75% transcluency?
+};
+
+#define NO_SIDE_INDEX           -1
+#define NO_LINE_INDEX           0xFFFF
+#define NF_SUBSECTOR            0x8000
 
 struct FLevel
 {
@@ -277,30 +346,34 @@ struct FLevel
 
 	// Dlight helpers
 
-	leaf_t *leafs;
-	uint8_t *mapPVS;
+	leaf_t *leafs = nullptr;
+	uint8_t *mapPVS = nullptr;
 
-	bool *bSkySectors;
-	bool *bSSectsVisibleToSky;
+	bool *bSkySectors = nullptr;
+	bool *bSSectsVisibleToSky = nullptr;
 
-	int numLeafs;
+	int numLeafs = 0;
 
-	int *segLeafLookup;
-	int *ssLeafLookup;
-	int *ssLeafCount;
-	kexBBox *ssLeafBounds;
+	int *segLeafLookup = nullptr;
+	int *ssLeafLookup = nullptr;
+	int *ssLeafCount = nullptr;
+	kexBBox *ssLeafBounds = nullptr;
 
-	kexBBox *nodeBounds;
+	kexBBox *nodeBounds = nullptr;
 
-	surface_t **segSurfaces[3];
-	surface_t **leafSurfaces[2];
+	surface_t **segSurfaces[3] = { nullptr, nullptr, nullptr };
+	surface_t **leafSurfaces[2] = { nullptr, nullptr };
 
 	TArray<thingLight_t*> thingLights;
 	TArray<kexLightSurface*> lightSurfaces;
 
+	void SetupDlight();
+	void ParseConfigFile(const char *file);
+	void CreateLights();
+	void CleanupThingLights();
+
 	const kexVec3 &GetSunColor() const;
 	const kexVec3 &GetSunDirection() const;
-
 	IntSideDef *GetSideDef(const MapSegGLEx *seg);
 	IntSector *GetFrontSector(const MapSegGLEx *seg);
 	IntSector *GetBackSector(const MapSegGLEx *seg);
@@ -308,8 +381,20 @@ struct FLevel
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
 	bool PointInsideSubSector(const float x, const float y, const MapSubsectorEx *sub);
 	bool LineIntersectSubSector(const kexVec3 &start, const kexVec3 &end, const MapSubsectorEx *sub, kexVec2 &out);
-	vertex_t *GetSegVertex(int index);
+	FloatVertex GetSegVertex(int index);
 	bool CheckPVS(MapSubsectorEx *s1, MapSubsectorEx *s2);
+
+private:
+	void BuildNodeBounds();
+	void BuildLeafs();
+	void BuildPVS();
+	void CheckSkySectors();
+
+	TArray<lightDef_t> lightDefs;
+	TArray<surfaceLightDef> surfaceLightDefs;
+	TArray<mapDef_t> mapDefs;
+
+	mapDef_t *mapDef = nullptr;
 };
 
 const int BLOCKSIZE = 128;
