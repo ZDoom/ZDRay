@@ -43,7 +43,7 @@ struct surfaceLightDef
     kexVec3         rgb;
 };
 
-class kexDoomMap;
+struct FLevel;
 class kexTrace;
 
 class kexLightSurface
@@ -55,7 +55,7 @@ public:
     void                    Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint);
     void                    Subdivide(const float divide);
     void                    CreateCenterOrigin();
-    bool                    TraceSurface(kexDoomMap *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
+    bool                    TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
 
     const float             OuterCone() const { return outerCone; }
     const float             InnerCone() const { return innerCone; }

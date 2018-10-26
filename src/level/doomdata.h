@@ -220,6 +220,20 @@ struct IntVertex
 	TArray<UDMFKey> props;
 };
 
+class kexBBox;
+class kexVec3;
+class kexVec2;
+class kexLightSurface;
+struct vertex_t;
+struct surface_t;
+struct thingLight_t;
+
+struct leaf_t
+{
+	vertex_t *vertex;
+	MapSegGLEx *seg;
+};
+
 struct FLevel
 {
 	FLevel ();
@@ -260,6 +274,42 @@ struct FLevel
 	int NumLines() const { return Lines.Size(); }
 	int NumSectors() const { return Sectors.Size(); }
 	int NumThings() const { return Things.Size(); }
+
+	// Dlight helpers
+
+	leaf_t *leafs;
+	uint8_t *mapPVS;
+
+	bool *bSkySectors;
+	bool *bSSectsVisibleToSky;
+
+	int numLeafs;
+
+	int *segLeafLookup;
+	int *ssLeafLookup;
+	int *ssLeafCount;
+	kexBBox *ssLeafBounds;
+
+	kexBBox *nodeBounds;
+
+	surface_t **segSurfaces[3];
+	surface_t **leafSurfaces[2];
+
+	TArray<thingLight_t*> thingLights;
+	TArray<kexLightSurface*> lightSurfaces;
+
+	const kexVec3 &GetSunColor() const;
+	const kexVec3 &GetSunDirection() const;
+
+	IntSideDef *GetSideDef(const MapSegGLEx *seg);
+	IntSector *GetFrontSector(const MapSegGLEx *seg);
+	IntSector *GetBackSector(const MapSegGLEx *seg);
+	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
+	MapSubsectorEx *PointInSubSector(const int x, const int y);
+	bool PointInsideSubSector(const float x, const float y, const MapSubsectorEx *sub);
+	bool LineIntersectSubSector(const kexVec3 &start, const kexVec3 &end, const MapSubsectorEx *sub, kexVec2 &out);
+	vertex_t *GetSegVertex(int index);
+	bool CheckPVS(MapSubsectorEx *s1, MapSubsectorEx *s2);
 };
 
 const int BLOCKSIZE = 128;

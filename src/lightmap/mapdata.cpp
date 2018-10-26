@@ -36,6 +36,258 @@
 #include "mapData.h"
 #include "lightSurface.h"
 
+static const kexVec3 defaultSunColor(1, 1, 1);
+static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
+
+const kexVec3 &FLevel::GetSunColor() const
+{
+	/*if (mapDef != NULL)
+	{
+		return mapDef->sunColor;
+	}*/
+
+	return defaultSunColor;
+}
+
+const kexVec3 &FLevel::GetSunDirection() const
+{
+	/*if (mapDef != NULL)
+	{
+		return mapDef->sunDir;
+	}*/
+
+	return defaultSunDirection;
+}
+
+IntSideDef *FLevel::GetSideDef(const MapSegGLEx *seg)
+{
+	if (seg->linedef == NO_LINE_INDEX)
+	{
+		// skip minisegs
+		return NULL;
+	}
+
+	IntLineDef *line = &Lines[seg->linedef];
+	return &Sides[line->sidenum[seg->side]];
+}
+
+IntSector *FLevel::GetFrontSector(const MapSegGLEx *seg)
+{
+	IntSideDef *side = GetSideDef(seg);
+
+	if (side == NULL)
+	{
+		return NULL;
+	}
+
+	return &Sectors[side->sector];
+}
+
+IntSector *FLevel::GetBackSector(const MapSegGLEx *seg)
+{
+	if (seg->linedef == NO_LINE_INDEX)
+	{
+		// skip minisegs
+		return NULL;
+	}
+
+	IntLineDef *line = &Lines[seg->linedef];
+
+	if (line->flags & ML_TWOSIDED)
+	{
+		mapSideDef_t *backSide = &Sides[line->sidenum[seg->side ^ 1]];
+		return &Sectors[backSide->sector];
+	}
+
+	return NULL;
+}
+
+IntSector *FLevel::GetSectorFromSubSector(const MapSubsectorEx *sub)
+{
+	mapSector_t *sector = NULL;
+
+	// try to find a sector that the subsector belongs to
+	for (int i = 0; i < (int)sub->numlines; i++)
+	{
+		glSeg_t *seg = &GLSegs[sub->firstline + i];
+		if (seg->side != NO_SIDE_INDEX)
+		{
+			sector = GetFrontSector(seg);
+			break;
+		}
+	}
+
+	return sector;
+}
+
+MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
+{
+	MapNodeEx   *node;
+	int         side;
+	int         nodenum;
+	kexVec3     dp1;
+	kexVec3     dp2;
+	float       d;
+
+	// single subsector is a special case
+	if (!NumGLNodes)
+	{
+		return &GLSubsectors[0];
+	}
+
+	nodenum = NumGLNodes - 1;
+
+	while (!(nodenum & NF_SUBSECTOR))
+	{
+		node = &GLNodes[nodenum];
+
+		kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
+		kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
+		kexVec3 pos(F(x << 16), F(y << 16), 0);
+
+		dp1 = pt1 - pos;
+		dp2 = (pt2 + pt1) - pos;
+		d = dp1.Cross(dp2).z;
+
+		side = FLOATSIGNBIT(d);
+
+		nodenum = node->children[side ^ 1];
+	}
+
+	return &GLSubsectors[nodenum & ~NF_SUBSECTOR];
+}
+
+bool FLevel::PointInsideSubSector(const float x, const float y, const MapSubsectorEx *sub)
+{
+	surface_t *surf;
+	int i;
+	kexVec2 p(x, y);
+	kexVec2 dp1, dp2;
+	kexVec2 pt1, pt2;
+
+	surf = leafSurfaces[0][sub - GLSubsectors];
+
+	// check to see if the point is inside the subsector leaf
+	for (i = 0; i < surf->numVerts; i++)
+	{
+		pt1 = surf->verts[i].ToVec2();
+		pt2 = surf->verts[(i + 1) % surf->numVerts].ToVec2();
+
+		dp1 = pt1 - p;
+		dp2 = pt2 - p;
+
+		if (dp1.CrossScalar(dp2) < 0)
+		{
+			continue;
+		}
+
+		// this point is outside the subsector leaf
+		return false;
+	}
+
+	return true;
+}
+
+bool FLevel::LineIntersectSubSector(const kexVec3 &start, const kexVec3 &end, const MapSubsectorEx *sub, kexVec2 &out)
+{
+	surface_t *surf;
+	kexVec2 p1, p2;
+	kexVec2 s1, s2;
+	kexVec2 pt;
+	kexVec2 v;
+	float d, u;
+	float newX;
+	float ab;
+	int i;
+
+	surf = leafSurfaces[0][sub - GLSubsectors];
+	p1 = start.ToVec2();
+	p2 = end.ToVec2();
+
+	for (i = 0; i < surf->numVerts; i++)
+	{
+		s1 = surf->verts[i].ToVec2();
+		s2 = surf->verts[(i + 1) % surf->numVerts].ToVec2();
+
+		if ((p1 == p2) || (s1 == s2))
+		{
+			// zero length
+			continue;
+		}
+
+		if ((p1 == s1) || (p2 == s1) || (p1 == s2) || (p2 == s2))
+		{
+			// shares end point
+			continue;
+		}
+
+		// translate to origin
+		pt = p2 - p1;
+		s1 -= p1;
+		s2 -= p1;
+
+		// normalize
+		u = pt.UnitSq();
+		d = kexMath::InvSqrt(u);
+		v = (pt * d);
+
+		// rotate points s1 and s2 so they're on the positive x axis
+		newX = s1.Dot(v);
+		s1.y = s1.CrossScalar(v);
+		s1.x = newX;
+
+		newX = s2.Dot(v);
+		s2.y = s2.CrossScalar(v);
+		s2.x = newX;
+
+		if ((s1.y < 0 && s2.y < 0) || (s1.y >= 0 && s2.y >= 0))
+		{
+			// s1 and s2 didn't cross
+			continue;
+		}
+
+		ab = s2.x + (s1.x - s2.x) * s2.y / (s2.y - s1.y);
+
+		if (ab < 0 || ab >(u * d))
+		{
+			// s1 and s2 crosses but outside of points p1 and p2
+			continue;
+		}
+
+		// intersected
+		out = p1 + (v * ab);
+		return true;
+	}
+
+	return false;
+}
+
+vertex_t *FLevel::GetSegVertex(int index)
+{
+	if (index & 0x8000)
+	{
+		index = (index & 0x7FFF) + NumGLVertices;
+	}
+
+	//return &GLVertices[index];
+	return nullptr;
+}
+
+bool FLevel::CheckPVS(MapSubsectorEx *s1, MapSubsectorEx *s2)
+{
+	uint8_t *vis;
+	int n1, n2;
+
+	n1 = s1 - GLSubsectors;
+	n2 = s2 - GLSubsectors;
+
+	vis = &mapPVS[(((NumGLSubsectors + 7) / 8) * n1)];
+
+	return ((vis[n2 >> 3] & (1 << (n2 & 7))) != 0);
+}
+
+#if 0
+
 const kexVec3 kexDoomMap::defaultSunColor(1, 1, 1);
 const kexVec3 kexDoomMap::defaultSunDirection(0.45f, 0.3f, 0.9f);
 
@@ -955,3 +1207,5 @@ void kexDoomMap::CleanupThingLights()
         delete thingLights[i];
     }
 }
+
+#endif

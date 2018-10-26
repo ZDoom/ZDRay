@@ -27,7 +27,7 @@
 
 #pragma once
 
-class kexDoomMap;
+struct FLevel;
 
 class kexTrace
 {
@@ -35,7 +35,7 @@ public:
     kexTrace();
     ~kexTrace();
 
-    void                Init(kexDoomMap &doomMap);
+    void                Init(FLevel &doomMap);
     void                Trace(const kexVec3 &startVec, const kexVec3 &endVec);
 
     kexVec3             start;
@@ -51,6 +51,6 @@ private:
     void                TraceSubSector(int num);
     void                TraceSurface(surface_t *surface);
 
-    kexDoomMap          *map;
+	FLevel          *map;
 
 };

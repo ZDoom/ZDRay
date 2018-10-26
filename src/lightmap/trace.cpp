@@ -80,7 +80,7 @@ void kexTrace::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
         return;
     }
 
-    TraceBSPNode(map->numNodes - 1);
+    TraceBSPNode(map->NumGLNodes - 1);
 }
 
 //
@@ -201,7 +201,7 @@ void kexTrace::TraceSubSector(int num)
     int i;
     int j;
 
-    sub = &map->mapSSects[num];
+    sub = &map->GLSubsectors[num];
 
     if(!map->ssLeafBounds[num].LineIntersect(start, end))
     {
@@ -209,18 +209,17 @@ void kexTrace::TraceSubSector(int num)
     }
 
     // test line segments
-    for(i = 0; i < sub->numsegs; i++)
+    for(i = 0; i < (int)sub->numlines; i++)
     {
-        int segnum = sub->firstseg + i;
+        int segnum = sub->firstline + i;
 
         for(j = 0; j < 3; j++)
         {
             if(j == 0)
             {
-                int linenum = map->mapSegs[segnum].linedef;
+                int linenum = map->GLSegs[segnum].linedef;
 
-                if(linenum != NO_LINE_INDEX && map->mapLines[linenum].flags &
-                        (ML_TWOSIDED|ML_TRANSPARENT1|ML_TRANSPARENT2))
+                if(linenum != NO_LINE_INDEX && map->Lines[linenum].flags & (ML_TWOSIDED|ML_TRANSPARENT1|ML_TRANSPARENT2))
                 {
                     // don't trace transparent 2-sided lines
                     continue;
@@ -243,7 +242,7 @@ void kexTrace::TraceSubSector(int num)
 
 void kexTrace::TraceBSPNode(int num)
 {
-    mapNode_t *node;
+    MapNodeEx *node;
     kexVec3 dp1;
     kexVec3 dp2;
     float d;
@@ -260,7 +259,7 @@ void kexTrace::TraceBSPNode(int num)
         return;
     }
 
-    node = &map->nodes[num];
+    node = &map->GLNodes[num];
 
     kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
     kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);

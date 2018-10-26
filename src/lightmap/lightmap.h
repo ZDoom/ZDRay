@@ -32,6 +32,7 @@
 #define LIGHTMAP_MAX_SIZE  1024
 
 class kexTrace;
+class kexWadFile;
 
 class kexLightmapBuilder
 {

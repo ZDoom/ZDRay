@@ -27,6 +27,66 @@
 
 #pragma once
 
+#include "framework/zdray.h"
+#include "level/level.h"
+
+typedef FLevel kexDoomMap;
+typedef MapSubsectorEx mapSubSector_t;
+typedef MapSegGLEx glSeg_t;
+typedef IntSideDef mapSideDef_t;
+typedef IntSector mapSector_t;
+
+enum mapFlags_t
+{
+    ML_BLOCKING             = 1,    // Solid, is an obstacle.
+    ML_BLOCKMONSTERS        = 2,    // Blocks monsters only.
+    ML_TWOSIDED             = 4,    // Backside will not be present at all if not two sided.
+    ML_TRANSPARENT1         = 2048, // 25% or 75% transcluency?
+    ML_TRANSPARENT2         = 4096  // 25% or 75% transcluency?
+};
+
+#define NO_SIDE_INDEX           -1
+#define NO_LINE_INDEX           0xFFFF
+#define NF_SUBSECTOR            0x8000
+
+struct lightDef_t
+{
+	int             doomednum;
+	float           height;
+	float           radius;
+	float           intensity;
+	float           falloff;
+	bool            bCeiling;
+	kexVec3         rgb;
+};
+
+struct mapDef_t
+{
+	int             map;
+	int             sunIgnoreTag;
+	kexVec3         sunDir;
+	kexVec3         sunColor;
+};
+
+struct thingLight_t
+{
+	IntThing        *mapThing;
+	kexVec2         origin;
+	kexVec3         rgb;
+	float           intensity;
+	float           falloff;
+	float           height;
+	float           radius;
+	bool            bCeiling;
+	mapSector_t     *sector;
+	mapSubSector_t  *ssect;
+};
+
+#include "surfaces.h"
+#include "lightSurface.h"
+
+#if 0
+
 #include "wad.h"
 #include "surfaces.h"
 #include "lightSurface.h"
@@ -270,3 +330,5 @@ private:
     static const kexVec3        defaultSunColor;
     static const kexVec3        defaultSunDirection;
 };
+
+#endif

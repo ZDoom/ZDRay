@@ -37,6 +37,7 @@
 #include "lightmap.h"
 #include "worker.h"
 #include "kexlib/binFile.h"
+#include "wad.h"
 
 //#define EXPORT_TEXELS_OBJ
 
@@ -269,7 +270,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
     color.Clear();
 
     // check all thing lights
-    for(unsigned int i = 0; i < map->thingLights.Length(); i++)
+    for(unsigned int i = 0; i < map->thingLights.Size(); i++)
     {
         thingLight_t *tl = map->thingLights[i];
 
@@ -282,8 +283,8 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
         lightOrigin.Set(tl->origin.x,
                         tl->origin.y,
                         !tl->bCeiling ?
-                        tl->sector->floorheight + tl->height :
-                        tl->sector->ceilingheight - tl->height);
+                        tl->sector->data.floorheight + tl->height :
+                        tl->sector->data.ceilingheight - tl->height);
 
         if(plane.Distance(lightOrigin) - plane.d < 0)
         {
@@ -330,7 +331,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
         tracedTexels++;
     }
 
-    if(surface->type != ST_CEILING && map->bSSectsVisibleToSky[surface->subSector - map->mapSSects])
+    if(surface->type != ST_CEILING && map->bSSectsVisibleToSky[surface->subSector - map->GLSubsectors])
     {
         // see if it's exposed to sunlight
         if(EmitFromCeiling(trace, surface, origin, plane.Normal(), &dist))
@@ -346,7 +347,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
     }
 
     // trace against surface lights
-    for(unsigned int i = 0; i < map->lightSurfaces.Length(); ++i)
+    for(unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
     {
         kexLightSurface *surfaceLight = map->lightSurfaces[i];
 
@@ -650,8 +651,7 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 // and against all nearby thing lights
 //
 
-kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace,
-        const kexVec3 &origin, const mapSubSector_t *sub)
+kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const mapSubSector_t *sub)
 {
     kexVec3 color;
     kexVec3 dir;
@@ -666,14 +666,14 @@ kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace,
     kexVec3 org;
 
     mapSector = map->GetSectorFromSubSector(sub);
-    bInSkySector = map->bSkySectors[mapSector - map->mapSectors];
+    bInSkySector = map->bSkySectors[mapSector - &map->Sectors[0]];
 
     trace.Trace(origin, origin + (map->GetSunDirection() * 32768));
 
     // did we traced a ceiling surface with a sky texture?
     if(trace.fraction != 1 && trace.hitSurface != NULL)
     {
-        if(trace.hitSurface->bSky && origin.z + gridSize[2] > mapSector->floorheight)
+        if(trace.hitSurface->bSky && origin.z + gridSize[2] > mapSector->data.floorheight)
         {
             color = map->GetSunColor();
             // this cell is inside a sector with a sky texture and is also exposed to sunlight.
@@ -698,15 +698,15 @@ kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace,
     }
 
     // trace against all thing lights
-    for(unsigned int i = 0; i < map->thingLights.Length(); i++)
+    for(unsigned int i = 0; i < map->thingLights.Size(); i++)
     {
         tl = map->thingLights[i];
 
         lightOrigin.Set(tl->origin.x,
                         tl->origin.y,
                         !tl->bCeiling ?
-                        (float)tl->sector->floorheight + 16 :
-                        (float)tl->sector->ceilingheight - 16);
+                        (float)tl->sector->data.floorheight + 16 :
+                        (float)tl->sector->data.ceilingheight - 16);
 
         radius = tl->radius;
         intensity = tl->intensity * 4;
@@ -748,13 +748,13 @@ kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace,
     // if the cell is sticking out from the ground then at least
     // clamp the origin to the ground level so it can at least
     // have a chance to be sampled by the light
-    if(origin.z + gridSize[2] > mapSector->floorheight)
+    if(origin.z + gridSize[2] > mapSector->data.floorheight)
     {
-        org.z = (float)mapSector->floorheight + 2;
+        org.z = (float)mapSector->data.floorheight + 2;
     }
 
     // trace against all light surfaces
-    for(unsigned int i = 0; i < map->lightSurfaces.Length(); ++i)
+    for(unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
     {
         kexLightSurface *surfaceLight = map->lightSurfaces[i];
 
@@ -824,7 +824,7 @@ void kexLightmapBuilder::LightGrid(const int gridid)
     bInRange = false;
 
     // is this cell even inside the world?
-    for(int i = 0; i < map->numSSects; ++i)
+    for(int i = 0; i < map->NumGLSubsectors; ++i)
     {
         if(bounds.IntersectingBox(map->ssLeafBounds[i]))
         {
@@ -888,7 +888,7 @@ void kexLightmapBuilder::CreateLightGrid()
     kexVec3 mins, maxs;
 
     // get the bounding box of the root BSP node
-    numNodes = map->numNodes-1;
+    numNodes = map->NumGLNodes-1;
     if(numNodes < 0)
     {
         numNodes = 0;

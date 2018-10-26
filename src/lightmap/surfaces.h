@@ -27,7 +27,7 @@
 
 #pragma once
 
-struct mapSubSector_t;
+struct MapSubsectorEx;
 
 enum surfaceType_t
 {
@@ -61,12 +61,11 @@ struct surface_t
     int                     typeIndex;
     void                    *data;
     bool                    bSky;
-    mapSubSector_t          *subSector;
+	MapSubsectorEx          *subSector;
 };
 
 extern kexArray<surface_t*> surfaces;
 
-class kexDoomMap;
-class kexWadFile;
+struct FLevel;
 
-void Surface_AllocateFromMap(kexDoomMap &doomMap);
+void Surface_AllocateFromMap(FLevel &doomMap);

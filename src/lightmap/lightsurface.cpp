@@ -288,7 +288,7 @@ void kexLightSurface::Subdivide(const float divide)
 // kexLightSurface::TraceSurface
 //
 
-bool kexLightSurface::TraceSurface(kexDoomMap *doomMap, kexTrace &trace, const surface_t *surf,
+bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf,
                                    const kexVec3 &origin, float *dist)
 {
     kexVec3 normal;

@@ -31,8 +31,8 @@
 //-----------------------------------------------------------------------------
 
 #include "common.h"
-#include "surfaces.h"
 #include "mapData.h"
+#include "surfaces.h"
 
 //#define EXPORT_OBJ
 
@@ -62,16 +62,16 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
     front = doomMap.GetFrontSector(seg);
     back = doomMap.GetBackSector(seg);
 
-    top = front->ceilingheight;
-    bottom = front->floorheight;
+    top = front->data.ceilingheight;
+    bottom = front->data.floorheight;
 
     v1 = doomMap.GetSegVertex(seg->v1);
     v2 = doomMap.GetSegVertex(seg->v2);
 
     if(back)
     {
-        bTop = back->ceilingheight;
-        bBottom = back->floorheight;
+        bTop = back->data.ceilingheight;
+        bBottom = back->data.floorheight;
 
         if(bTop == top && bBottom == bottom)
         {
@@ -97,8 +97,8 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
                 surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
                 surf->plane.SetDistance(surf->verts[0]);
                 surf->type = ST_LOWERSEG;
-                surf->typeIndex = seg - doomMap.mapSegs;
-                surf->subSector = &doomMap.mapSSects[doomMap.segLeafLookup[seg - doomMap.mapSegs]];
+                surf->typeIndex = seg - doomMap.GLSegs;
+                surf->subSector = &doomMap.GLSubsectors[doomMap.segLeafLookup[seg - doomMap.GLSegs]];
 
                 doomMap.segSurfaces[1][surf->typeIndex] = surf;
                 surf->data = (glSeg_t*)seg;
@@ -113,12 +113,12 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
         if(top > bTop)
         {
             bool bSky = false;
-            int frontidx = front-doomMap.mapSectors;
-            int backidx = back-doomMap.mapSectors;
+            int frontidx = front - &doomMap.Sectors[0];
+            int backidx = back - &doomMap.Sectors[0];
 
             if(doomMap.bSkySectors[frontidx] && doomMap.bSkySectors[backidx])
             {
-                if(front->ceilingheight != back->ceilingheight && side->toptexture[0] == '-')
+                if(front->data.ceilingheight != back->data.ceilingheight && side->toptexture[0] == '-')
                 {
                     bSky = true;
                 }
@@ -140,9 +140,9 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
                 surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
                 surf->plane.SetDistance(surf->verts[0]);
                 surf->type = ST_UPPERSEG;
-                surf->typeIndex = seg - doomMap.mapSegs;
+                surf->typeIndex = seg - doomMap.GLSegs;
                 surf->bSky = bSky;
-                surf->subSector = &doomMap.mapSSects[doomMap.segLeafLookup[seg - doomMap.mapSegs]];
+                surf->subSector = &doomMap.GLSubsectors[doomMap.segLeafLookup[seg - doomMap.GLSegs]];
 
                 doomMap.segSurfaces[2][surf->typeIndex] = surf;
                 surf->data = (glSeg_t*)seg;
@@ -171,8 +171,8 @@ static void Surface_AllocateFromSeg(kexDoomMap &doomMap, glSeg_t *seg)
         surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
         surf->plane.SetDistance(surf->verts[0]);
         surf->type = ST_MIDDLESEG;
-        surf->typeIndex = seg - doomMap.mapSegs;
-        surf->subSector = &doomMap.mapSSects[doomMap.segLeafLookup[seg - doomMap.mapSegs]];
+        surf->typeIndex = seg - doomMap.GLSegs;
+        surf->subSector = &doomMap.GLSubsectors[doomMap.segLeafLookup[seg - doomMap.GLSegs]];
 
         doomMap.segSurfaces[0][surf->typeIndex] = surf;
         surf->data = (glSeg_t*)seg;
@@ -198,21 +198,19 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
 
     printf("------------- Building leaf surfaces -------------\n");
 
-    doomMap.leafSurfaces[0] = (surface_t**)Mem_Calloc(sizeof(surface_t*) *
-                              doomMap.numSSects, hb_static);
-    doomMap.leafSurfaces[1] = (surface_t**)Mem_Calloc(sizeof(surface_t*) *
-                              doomMap.numSSects, hb_static);
+    doomMap.leafSurfaces[0] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSubsectors, hb_static);
+    doomMap.leafSurfaces[1] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSubsectors, hb_static);
 
-    for(i = 0; i < doomMap.numSSects; i++)
+    for(i = 0; i < doomMap.NumGLSubsectors; i++)
     {
-        printf("subsectors: %i / %i\r", i+1, doomMap.numSSects);
+        printf("subsectors: %i / %i\r", i+1, doomMap.NumGLSubsectors);
 
         if(doomMap.ssLeafCount[i] < 3)
         {
             continue;
         }
 
-        sector = doomMap.GetSectorFromSubSector(&doomMap.mapSSects[i]);
+        sector = doomMap.GetSectorFromSubSector(&doomMap.GLSubsectors[i]);
 
         // I will be NOT surprised if some users tries to do something stupid with
         // sector hacks
@@ -225,7 +223,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
         surf->numVerts = doomMap.ssLeafCount[i];
         surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
-        surf->subSector = &doomMap.mapSSects[i];
+        surf->subSector = &doomMap.GLSubsectors[i];
 
         // floor verts
         for(j = 0; j < surf->numVerts; j++)
@@ -234,7 +232,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
 
             surf->verts[j].x = leaf->vertex->x;
             surf->verts[j].y = leaf->vertex->y;
-            surf->verts[j].z = sector->floorheight;
+            surf->verts[j].z = sector->data.floorheight;
         }
 
         surf->plane.SetNormal(kexVec3(0, 0, 1));
@@ -250,9 +248,9 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
         surf->numVerts = doomMap.ssLeafCount[i];
         surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
-        surf->subSector = &doomMap.mapSSects[i];
+        surf->subSector = &doomMap.GLSubsectors[i];
 
-        if(doomMap.bSkySectors[sector-doomMap.mapSectors])
+        if(doomMap.bSkySectors[sector-&doomMap.Sectors[0]])
         {
             surf->bSky = true;
         }
@@ -264,7 +262,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
 
             surf->verts[j].x = leaf->vertex->x;
             surf->verts[j].y = leaf->vertex->y;
-            surf->verts[j].z = sector->ceilingheight;
+            surf->verts[j].z = sector->data.ceilingheight;
         }
 
         surf->plane.SetNormal(kexVec3(0, 0, -1));
@@ -278,7 +276,7 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
         surfaces.Push(surf);
     }
 
-    printf("\nLeaf surfaces: %i\n", surfaces.Length() - doomMap.numSSects);
+    printf("\nLeaf surfaces: %i\n", surfaces.Length() - doomMap.NumGLSubsectors);
 }
 
 //
@@ -287,19 +285,16 @@ static void Surface_AllocateFromLeaf(kexDoomMap &doomMap)
 
 void Surface_AllocateFromMap(kexDoomMap &doomMap)
 {
-    doomMap.segSurfaces[0] = (surface_t**)Mem_Calloc(sizeof(surface_t*) *
-                             doomMap.numSegs, hb_static);
-    doomMap.segSurfaces[1] = (surface_t**)Mem_Calloc(sizeof(surface_t*) *
-                             doomMap.numSegs, hb_static);
-    doomMap.segSurfaces[2] = (surface_t**)Mem_Calloc(sizeof(surface_t*) *
-                             doomMap.numSegs, hb_static);
+    doomMap.segSurfaces[0] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
+    doomMap.segSurfaces[1] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
+    doomMap.segSurfaces[2] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
 
     printf("------------- Building seg surfaces -------------\n");
 
-    for(int i = 0; i < doomMap.numSegs; i++)
+    for(int i = 0; i < doomMap.NumGLSegs; i++)
     {
-        Surface_AllocateFromSeg(doomMap, &doomMap.mapSegs[i]);
-        printf("segs: %i / %i\r", i+1, doomMap.numSegs);
+        Surface_AllocateFromSeg(doomMap, &doomMap.GLSegs[i]);
+        printf("segs: %i / %i\r", i+1, doomMap.NumGLSegs);
     }
 
     printf("\nSeg surfaces: %i\n", surfaces.Length());
