@@ -51,7 +51,7 @@ void FLevel::SetupDlight()
 		}
 	}
 	*/
-	mapDef = &mapDefs[0];
+	//mapDef = &mapDefs[0];
 
 	BuildNodeBounds();
 	BuildLeafs();
@@ -105,12 +105,12 @@ void FLevel::BuildLeafs()
 	IntSector     *sector;
 	int             count;
 
-	leafs = (leaf_t*)Mem_Calloc(sizeof(leaf_t*) * Sectors.Size() * 2, hb_static);
+	leafs = (leaf_t*)Mem_Calloc(sizeof(leaf_t*) * NumGLSegs * 2, hb_static);
 	numLeafs = NumGLSubsectors;
 
 	ss = GLSubsectors;
 
-	segLeafLookup = (int*)Mem_Calloc(sizeof(int) * Sectors.Size(), hb_static);
+	segLeafLookup = (int*)Mem_Calloc(sizeof(int) * NumGLSegs, hb_static);
 	ssLeafLookup = (int*)Mem_Calloc(sizeof(int) * NumGLSubsectors, hb_static);
 	ssLeafCount = (int*)Mem_Calloc(sizeof(int) * NumGLSubsectors, hb_static);
 	ssLeafBounds = (kexBBox*)Mem_Calloc(sizeof(kexBBox) * NumGLSubsectors, hb_static);
@@ -167,9 +167,9 @@ void FLevel::CheckSkySectors()
 	bSkySectors = (bool*)Mem_Calloc(sizeof(bool) * Sectors.Size(), hb_static);
 	bSSectsVisibleToSky = (bool*)Mem_Calloc(sizeof(bool) * NumGLSubsectors, hb_static);
 
-	for (int i = 0; i < NumGLSubsectors; ++i)
+	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{
-		if (mapDef->sunIgnoreTag != 0 && Sectors[i].data.tag == mapDef->sunIgnoreTag)
+		if (mapDef && mapDef->sunIgnoreTag != 0 && Sectors[i].data.tag == mapDef->sunIgnoreTag)
 		{
 			continue;
 		}
@@ -177,7 +177,7 @@ void FLevel::CheckSkySectors()
 		strncpy(name, Sectors[i].data.ceilingpic, 8);
 		name[8] = 0;
 
-		if (!strncmp(name, "F_SKY001", 8))
+		if (!strncmp(name, "F_SKY001", 8) || !strncmp(name, "F_SKY1", 8) || !strncmp(name, "F_SKY", 8))
 		{
 			bSkySectors[i] = true;
 		}
@@ -303,12 +303,14 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 
 	nodenum = NumGLNodes - 1;
 
-	while (!(nodenum & NF_SUBSECTOR))
+	while (!(nodenum & NFX_SUBSECTOR))
 	{
 		node = &GLNodes[nodenum];
 
-		kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
-		kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
+		kexVec3 pt1(F(node->x), F(node->y), 0);
+		kexVec3 pt2(F(node->dx), F(node->dy), 0);
+		//kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
+		//kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
 		kexVec3 pos(F(x << 16), F(y << 16), 0);
 
 		dp1 = pt1 - pos;
@@ -320,7 +322,7 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 		nodenum = node->children[side ^ 1];
 	}
 
-	return &GLSubsectors[nodenum & ~NF_SUBSECTOR];
+	return &GLSubsectors[nodenum & ~NFX_SUBSECTOR];
 }
 
 bool FLevel::PointInsideSubSector(const float x, const float y, const MapSubsectorEx *sub)

@@ -300,8 +300,7 @@ enum mapFlags_t
 };
 
 #define NO_SIDE_INDEX           -1
-#define NO_LINE_INDEX           0xFFFF
-#define NF_SUBSECTOR            0x8000
+#define NO_LINE_INDEX           0xffffffff
 
 struct FLevel
 {

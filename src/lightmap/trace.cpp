@@ -248,21 +248,23 @@ void kexTrace::TraceBSPNode(int num)
     float d;
     byte side;
 
-    if(num & NF_SUBSECTOR)
+    if(num & NFX_SUBSECTOR)
     {
-        TraceSubSector(num & (~NF_SUBSECTOR));
+        TraceSubSector(num & (~NFX_SUBSECTOR));
         return;
     }
 
-    if(!map->nodeBounds[num & (~NF_SUBSECTOR)].LineIntersect(start, end))
+    if(!map->nodeBounds[num & (~NFX_SUBSECTOR)].LineIntersect(start, end))
     {
         return;
     }
 
     node = &map->GLNodes[num];
 
-    kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
-    kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
+    kexVec3 pt1(F(node->x), F(node->y), 0);
+    kexVec3 pt2(F(node->dx), F(node->dy), 0);
+	//kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
+	//kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
 
     dp1 = pt1 - start;
     dp2 = (pt2 + pt1) - start;

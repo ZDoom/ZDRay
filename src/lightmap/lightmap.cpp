@@ -874,7 +874,7 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
         Delay(1000);
     }
 
-    printf("Texels traced: %i\n\n", tracedTexels);
+    printf("Texels traced: %i \n\n", tracedTexels);
     lightmapWorker.Destroy();
 }
 
