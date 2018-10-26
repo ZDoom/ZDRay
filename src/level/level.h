@@ -38,6 +38,8 @@ public:
 
 	void BuildNodes ();
 
+	FLevel Level;
+
 private:
 	void LoadUDMF();
 	void LoadThings ();
@@ -63,8 +65,6 @@ private:
 	void ParseVertex(WideVertex *vt, IntVertex *vtp);
 	void ParseMapProperties();
 	void ParseTextMap(int lump);
-
-	FLevel Level;
 
 	TArray<FNodeBuilder::FPolyStart> PolyStarts;
 	TArray<FNodeBuilder::FPolyStart> PolyAnchors;

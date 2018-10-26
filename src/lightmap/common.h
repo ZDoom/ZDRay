@@ -160,4 +160,3 @@ void Error(const char *error, ...);
 char *Va(const char *str, ...);
 void Delay(int ms);
 const int64_t GetSeconds();
-const kexStr &FilePath();

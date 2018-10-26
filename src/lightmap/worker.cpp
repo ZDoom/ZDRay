@@ -140,8 +140,6 @@ void kexWorker::RunThreads(const int count, void *data, jobFunc_t jobFunc)
 /////////////////////////////////////////////////////////////////////////////
 // Stuff from old main.cpp
 
-static kexStr basePath;
-
 void Error(const char *error, ...)
 {
 	va_list argptr;
@@ -177,15 +175,6 @@ void Delay(int ms)
 const int64_t GetSeconds()
 {
 	return time(0);
-}
-
-//
-// FilePath
-//
-
-const kexStr &FilePath()
-{
-	return basePath;
 }
 
 //

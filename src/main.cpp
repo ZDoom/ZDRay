@@ -7,11 +7,11 @@
 #include "framework/zdray.h"
 #include "wad/wad.h"
 #include "level/level.h"
+#include "lightmap/lightmap.h"
 
 static void ParseArgs(int argc, char **argv);
 static void ShowUsage();
 static void ShowVersion();
-static bool CheckInOutNames();
 
 const char *Map = nullptr;
 const char *InName = nullptr;
@@ -70,6 +70,17 @@ int main(int argc, char **argv)
 			{
 				FLevelLoader loader(inwad, lump);
 				loader.BuildNodes();
+
+				loader.Level.ParseConfigFile("lightconfig.txt");
+				loader.Level.SetupDlight();
+				Surface_AllocateFromMap(loader.Level);
+				loader.Level.CreateLights();
+
+				kexLightmapBuilder builder;
+				builder.CreateLightmaps(loader.Level);
+				builder.WriteTexturesToTGA();
+
+				loader.Level.CleanupThingLights();
 
 				lump = inwad.LumpAfterMap(lump);
 			}
