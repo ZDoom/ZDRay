@@ -7,7 +7,6 @@
 #include "framework/zdray.h"
 #include "wad/wad.h"
 #include "level/level.h"
-#include "lightmap/lightmap.h"
 
 static void ParseArgs(int argc, char **argv);
 static void ShowUsage();
@@ -18,6 +17,18 @@ const char *InName = nullptr;
 const char *OutName = "zdray.bin";
 bool ShowMap = false;
 bool ShowWarnings = false;
+
+bool BuildGLNodes = true;
+bool ConformNodes = false;
+bool GLOnly = true;
+bool CompressNodes = true;
+bool CompressGLNodes = true;
+bool ForceCompression = true;
+bool V5GLNodes = true;
+bool HaveSSE1 = true;
+bool HaveSSE2 = true;
+int SSELevel = 2;
+bool WriteComments = true;
 
 // Constants that used to be args in zdbsp
 bool NoPrune = false;
@@ -68,21 +79,9 @@ int main(int argc, char **argv)
 		{
 			if (inwad.IsMap(lump) && (!Map || stricmp(inwad.LumpName(lump), Map) == 0))
 			{
-				FLevelLoader loader(inwad, lump);
-				loader.BuildNodes();
-
-				loader.Level.ParseConfigFile("lightconfig.txt");
-				loader.Level.SetupDlight();
-				Surface_AllocateFromMap(loader.Level);
-				loader.Level.CreateLights();
-
-				kexLightmapBuilder builder;
-				builder.CreateLightmaps(loader.Level);
-				builder.WriteTexturesToTGA();
-
-				builder.WriteMeshToOBJ();
-
-				loader.Level.CleanupThingLights();
+				FProcessor processor(inwad, lump);
+				processor.BuildNodes();
+				processor.BuildLightmaps("lightconfig.txt");
 
 				lump = inwad.LumpAfterMap(lump);
 			}
