@@ -283,6 +283,10 @@ static void Surface_AllocateFromLeaf(FLevel &doomMap)
 
 void Surface_AllocateFromMap(FLevel &doomMap)
 {
+	for (unsigned int i = 0; i < surfaces.Length(); i++)
+		Mem_Free(surfaces[i]);
+	surfaces = {};
+
     doomMap.segSurfaces[0] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
     doomMap.segSurfaces[1] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
     doomMap.segSurfaces[2] = (surface_t**)Mem_Calloc(sizeof(surface_t*) * doomMap.NumGLSegs, hb_static);
