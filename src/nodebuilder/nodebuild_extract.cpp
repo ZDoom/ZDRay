@@ -521,8 +521,6 @@ int FNodeBuilder::StripMinisegs (TArray<MapSegEx> &segs, int subsector, short bb
 				newseg.side = ld->sidenum[1] == org->sidedef ? 1 : 0;
 			}
 
-
-			newseg.side = Level.Lines[org->linedef].sidenum[1] == org->sidedef ? 1 : 0;
 			segs.Push (newseg);
 			++count;
 		}
