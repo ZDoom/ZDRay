@@ -30,7 +30,9 @@
 #include <thread>
 #include <mutex>
 
-#define MAX_THREADS     128
+// There's a race condition in the code that causes it to sometimes fail if using multiple threads
+//#define MAX_THREADS     128
+#define MAX_THREADS     1
 
 class kexWorker;
 

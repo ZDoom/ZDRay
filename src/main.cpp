@@ -106,11 +106,11 @@ bool			 CheckPolyobjs = true;
 bool			 ShowMap = false;
 bool			 ShowWarnings = false;
 bool			 NoTiming = false;
-bool			 CompressNodes = false;
-bool			 CompressGLNodes = false;
-bool			 ForceCompression = false;
+bool			 CompressNodes = true;// false;
+bool			 CompressGLNodes = true;// false;
+bool			 ForceCompression = true;// false;
 bool			 GLOnly = true;// false;
-bool			 V5GLNodes = true;// false;
+bool			 V5GLNodes = false;
 bool			 HaveSSE1, HaveSSE2;
 int				 SSELevel;
 
