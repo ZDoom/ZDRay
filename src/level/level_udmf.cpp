@@ -602,5 +602,12 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 			out.CopyLump(Wad, i);
 		}
 	}
+
+	if (LightmapsBuilt)
+	{
+		LMBuilder.AddLightGridLump(out);
+		LMBuilder.AddLightmapLumps(out);
+	}
+
 	out.CreateLabel("ENDMAP");
 }

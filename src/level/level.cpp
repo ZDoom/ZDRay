@@ -603,8 +603,8 @@ void FProcessor::BuildLightmaps(const char *configFile)
 
 	LMBuilder.CreateLightmaps(Level);
 
-	LMBuilder.WriteTexturesToTGA();
-	LMBuilder.WriteMeshToOBJ();
+	//LMBuilder.WriteTexturesToTGA();
+	//LMBuilder.WriteMeshToOBJ();
 
 	LightmapsBuilt = true;
 }
@@ -802,6 +802,11 @@ void FProcessor::Write (FWadWriter &out)
 		{
 			out.CopyLump (Wad, Wad.FindMapLump ("BEHAVIOR", Lump));
 			out.CopyLump (Wad, Wad.FindMapLump ("SCRIPTS", Lump));
+		}
+		if (LightmapsBuilt)
+		{
+			LMBuilder.AddLightGridLump(out);
+			LMBuilder.AddLightmapLumps(out);
 		}
 		if (Level.GLNodes != NULL && !compressGL)
 		{

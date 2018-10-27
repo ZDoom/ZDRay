@@ -937,7 +937,7 @@ void kexLightmapBuilder::CreateLightGrid()
 // kexLightmapBuilder::AddLightGridLump
 //
 
-void kexLightmapBuilder::AddLightGridLump(kexWadFile &wadFile)
+void kexLightmapBuilder::AddLightGridLump(FWadWriter &wadFile)
 {
     kexBinFile lumpFile;
     int lumpSize = 0;
@@ -1040,14 +1040,14 @@ void kexLightmapBuilder::AddLightGridLump(kexWadFile &wadFile)
     }
 #endif
 
-    wadFile.AddLump("LM_CELLS", lumpFile.BufferAt() - lumpFile.Buffer(), data);
+    wadFile.WriteLump("LM_CELLS", data, lumpFile.BufferAt() - lumpFile.Buffer());
 }
 
 //
 // kexLightmapBuilder::CreateLightmapLump
 //
 
-void kexLightmapBuilder::AddLightmapLumps(kexWadFile &wadFile)
+void kexLightmapBuilder::AddLightmapLumps(FWadWriter &wadFile)
 {
     int lumpSize = 0;
     unsigned int i;
@@ -1073,7 +1073,7 @@ void kexLightmapBuilder::AddLightmapLumps(kexWadFile &wadFile)
     lumpFile.SetBuffer(data);
 
     lumpFile.WriteVector(map->GetSunDirection());
-    wadFile.AddLump("LM_SUN", sizeof(kexVec3), data);
+    wadFile.WriteLump("LM_SUN", data, sizeof(kexVec3));
 
     offs = lumpFile.BufferAt() - lumpFile.Buffer();
     surfs = data + offs;
@@ -1095,7 +1095,7 @@ void kexLightmapBuilder::AddLightmapLumps(kexWadFile &wadFile)
     }
 
     offs = lumpFile.BufferAt() - lumpFile.Buffer();
-    wadFile.AddLump("LM_SURFS", size, data);
+    wadFile.WriteLump("LM_SURFS", data, size);
     txcrd = data + offs;
 
     size = 0;
@@ -1111,7 +1111,7 @@ void kexLightmapBuilder::AddLightmapLumps(kexWadFile &wadFile)
     }
 
     offs = (lumpFile.BufferAt() - lumpFile.Buffer()) - offs;
-    wadFile.AddLump("LM_TXCRD", size, txcrd);
+    wadFile.WriteLump("LM_TXCRD", txcrd, size);
     lmaps = txcrd + offs;
 
     // begin writing LM_LMAPS lump
@@ -1131,7 +1131,7 @@ void kexLightmapBuilder::AddLightmapLumps(kexWadFile &wadFile)
     }
 
     offs = (lumpFile.BufferAt() - lumpFile.Buffer()) - offs;
-    wadFile.AddLump("LM_LMAPS", size, lmaps);
+    wadFile.WriteLump("LM_LMAPS", lmaps, size);
 }
 
 //

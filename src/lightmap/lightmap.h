@@ -32,7 +32,7 @@
 #define LIGHTMAP_MAX_SIZE  1024
 
 class kexTrace;
-class kexWadFile;
+class FWadWriter;
 
 class kexLightmapBuilder
 {
@@ -48,8 +48,8 @@ public:
     void                    LightGrid(const int gridid);
     void                    WriteTexturesToTGA();
 	void                    WriteMeshToOBJ();
-    void                    AddLightGridLump(kexWadFile &wadFile);
-    void                    AddLightmapLumps(kexWadFile &wadFile);
+    void                    AddLightGridLump(FWadWriter &wadFile);
+    void                    AddLightmapLumps(FWadWriter &wadFile);
 
     int                     samples;
     float                   ambience;
