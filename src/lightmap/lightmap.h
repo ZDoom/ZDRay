@@ -47,6 +47,7 @@ public:
     void                    LightSurface(const int surfid);
     void                    LightGrid(const int gridid);
     void                    WriteTexturesToTGA();
+	void                    WriteMeshToOBJ();
     void                    AddLightGridLump(kexWadFile &wadFile);
     void                    AddLightmapLumps(kexWadFile &wadFile);
 

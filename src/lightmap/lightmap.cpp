@@ -39,6 +39,8 @@
 #include "kexlib/binFile.h"
 #include "wad.h"
 #include "framework/templates.h"
+#include <map>
+#include <vector>
 
 //#define EXPORT_TEXELS_OBJ
 
@@ -1161,6 +1163,81 @@ void kexLightmapBuilder::WriteTexturesToTGA()
         }
         file.Close();
     }
+}
+
+void kexLightmapBuilder::WriteMeshToOBJ()
+{
+	FILE *f = fopen("mesh.obj", "w");
+
+	std::map<int, std::vector<surface_t*>> sortedSurfs;
+
+	for (unsigned int i = 0; i < surfaces.Length(); i++)
+		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i]);
+
+	for (const auto &it : sortedSurfs)
+	{
+		for (const auto &s : it.second)
+		{
+			for (int j = 0; j < s->numVerts; j++)
+			{
+				fprintf(f, "v %f %f %f\n", s->verts[j].x, s->verts[j].z + 100.0f, s->verts[j].y);
+			}
+		}
+	}
+
+	for (const auto &it : sortedSurfs)
+	{
+		for (const auto &s : it.second)
+		{
+			for (int j = 0; j < s->numVerts; j++)
+			{
+				fprintf(f, "vt %f %f\n", s->lightmapCoords[j * 2], s->lightmapCoords[j * 2 + 1]);
+			}
+		}
+	}
+
+	int voffset = 1;
+	for (const auto &it : sortedSurfs)
+	{
+		int lightmapNum = it.first;
+
+		if (lightmapNum != -1)
+			fprintf(f, "usemtl lightmap_%02d\n", lightmapNum);
+		else
+			fprintf(f, "usemtl black\n");
+
+		for (const auto &s : it.second)
+		{
+			switch (s->type)
+			{
+			case ST_FLOOR:
+				for (int j = 2; j < s->numVerts; j++)
+				{
+					fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j, voffset + j, voffset + j - 1, voffset + j - 1, voffset, voffset);
+				}
+				break;
+			case ST_CEILING:
+				for (int j = 2; j < s->numVerts; j++)
+				{
+					fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset, voffset, voffset + j - 1, voffset + j - 1, voffset + j, voffset + j);
+				}
+				break;
+			default:
+				for (int j = 2; j < s->numVerts; j++)
+				{
+					if (j % 2 == 0)
+						fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j - 2, voffset + j - 2, voffset + j - 1, voffset + j - 1, voffset + j, voffset + j);
+					else
+						fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j, voffset + j, voffset + j - 1, voffset + j - 1, voffset + j - 2, voffset + j - 2);
+				}
+				break;
+			}
+
+			voffset += s->numVerts;
+		}
+	}
+
+	fclose(f);
 }
 
 //

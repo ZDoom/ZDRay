@@ -80,6 +80,8 @@ int main(int argc, char **argv)
 				builder.CreateLightmaps(loader.Level);
 				builder.WriteTexturesToTGA();
 
+				builder.WriteMeshToOBJ();
+
 				loader.Level.CleanupThingLights();
 
 				lump = inwad.LumpAfterMap(lump);
