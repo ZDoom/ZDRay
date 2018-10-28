@@ -30,4 +30,4 @@
 #include "framework/zdray.h"
 #include "level/level.h"
 #include "surfaces.h"
-#include "lightSurface.h"
+#include "lightsurface.h"

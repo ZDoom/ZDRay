@@ -152,7 +152,7 @@ typedef union
 #define d_inline
 #endif
 
-#include "kexlib/memHeap.h"
+#include "kexlib/memheap.h"
 #include "kexlib/kstring.h"
 #include "kexlib/math/mathlib.h"
 

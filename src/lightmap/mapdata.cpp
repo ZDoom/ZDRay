@@ -33,8 +33,8 @@
 #include "common.h"
 #include "wad.h"
 #include "kexlib/parser.h"
-#include "mapData.h"
-#include "lightSurface.h"
+#include "mapdata.h"
+#include "lightsurface.h"
 
 static const kexVec3 defaultSunColor(1, 1, 1);
 static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);

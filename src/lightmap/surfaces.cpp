@@ -31,7 +31,7 @@
 //-----------------------------------------------------------------------------
 
 #include "common.h"
-#include "mapData.h"
+#include "mapdata.h"
 #include "surfaces.h"
 
 //#define EXPORT_OBJ

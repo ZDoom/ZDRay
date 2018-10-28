@@ -33,10 +33,10 @@
 #include "common.h"
 #include "surfaces.h"
 #include "trace.h"
-#include "mapData.h"
+#include "mapdata.h"
 #include "lightmap.h"
 #include "worker.h"
-#include "kexlib/binFile.h"
+#include "kexlib/binfile.h"
 #include "wad.h"
 #include "framework/templates.h"
 #include <map>

@@ -32,7 +32,7 @@
 //-----------------------------------------------------------------------------
 
 #include "common.h"
-#include "mapData.h"
+#include "mapdata.h"
 #include "trace.h"
 
 //

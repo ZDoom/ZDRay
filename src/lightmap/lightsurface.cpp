@@ -33,9 +33,9 @@
 //-----------------------------------------------------------------------------
 
 #include "common.h"
-#include "mapData.h"
+#include "mapdata.h"
 #include "trace.h"
-#include "lightSurface.h"
+#include "lightsurface.h"
 
 //
 // kexLightSurface::kexLightSurface

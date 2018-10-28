@@ -31,7 +31,7 @@
 //-----------------------------------------------------------------------------
 
 #include "lightmap/common.h"
-#include "lightmap/kexlib/binFile.h"
+#include "lightmap/kexlib/binfile.h"
 
 //
 // kexBinFile::kexBinFile
