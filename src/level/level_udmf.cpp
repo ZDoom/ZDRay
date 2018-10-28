@@ -207,6 +207,10 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		{
 			ld->args[0] = CheckInt(key);
 		}
+		else if (Extended && !stricmp(key, "id"))
+		{
+			ld->args[1] = CheckInt(key);
+		}
 		else if (!stricmp(key, "blocking") && !stricmp(value, "true"))
 		{
 			ld->flags |= ML_BLOCKING;

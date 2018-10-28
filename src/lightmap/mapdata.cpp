@@ -567,11 +567,14 @@ void FLevel::ParseConfigFile(const char *file)
 			surfaceLight.outerCone = 1.0f;
 			surfaceLight.innerCone = 0;
 			surfaceLight.falloff = 1.0f;
-			surfaceLight.intensity = 1.0f;
-			surfaceLight.distance = 32.0f;
+			surfaceLight.intensity = 10.0f;
+			surfaceLight.distance = 150.0f;
 			surfaceLight.bIgnoreCeiling = false;
 			surfaceLight.bIgnoreFloor = false;
 			surfaceLight.bNoCenterPoint = false;
+			surfaceLight.rgb.x = 1.0f;
+			surfaceLight.rgb.y = 1.0f;
+			surfaceLight.rgb.z = 1.0f;
 
 			lexer->ExpectNextToken(TK_LBRACK);
 			lexer->Find();
