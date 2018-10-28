@@ -182,6 +182,7 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 {
 	SC_MustGetStringName("{");
 	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
+	ld->flags = 0;
 	ld->special = 0;
 	while (!SC_CheckString("}"))
 	{
@@ -206,6 +207,19 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		{
 			ld->args[0] = CheckInt(key);
 		}
+		else if (!stricmp(key, "blocking") && !stricmp(value, "true"))
+		{
+			ld->flags |= ML_BLOCKING;
+		}
+		else if (!stricmp(key, "blockmonsters") && !stricmp(value, "true"))
+		{
+			ld->flags |= ML_BLOCKMONSTERS;
+		}
+		else if (!stricmp(key, "twosided") && !stricmp(value, "true"))
+		{
+			ld->flags |= ML_TWOSIDED;
+		}
+
 		if (!stricmp(key, "sidefront"))
 		{
 			ld->sidenum[0] = CheckInt(key);
@@ -256,16 +270,64 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 //
 //===========================================================================
 
+static void CopyUDMFString(char *dest, int destlen, const char *udmfvalue)
+{
+	destlen--;
+
+	char endchar = 0;
+	if (udmfvalue[0] == '"' || udmfvalue[0] == '\'')
+	{
+		endchar = udmfvalue[0];
+		udmfvalue++;
+	}
+
+	for (int i = 0; i < destlen && udmfvalue[i] != 0 && udmfvalue[i] != endchar; i++)
+	{
+		*(dest++) = udmfvalue[i];
+	}
+
+	*dest = 0;
+}
+
 void FProcessor::ParseSector(IntSector *sec)
 {
+	memset(&sec->data, 0, sizeof(sec->data));
+	sec->data.lightlevel = 160;
+
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
 	{
 		const char *value;
 		const char *key = ParseKey(value);
 
-		// No specific sector properties are ever used by the node builder
-		// so everything can go directly to the props array.
+		if (stricmp(key, "textureceiling") == 0)
+		{
+			CopyUDMFString(sec->data.ceilingpic, 8, value);
+		}
+		else if (stricmp(key, "texturefloor") == 0)
+		{
+			CopyUDMFString(sec->data.floorpic, 8, value);
+		}
+		else if (stricmp(key, "heightceiling") == 0)
+		{
+			sec->data.ceilingheight = CheckFloat(key);
+		}
+		else if (stricmp(key, "heightfloor") == 0)
+		{
+			sec->data.floorheight = CheckFloat(key);
+		}
+		else if (stricmp(key, "lightlevel") == 0)
+		{
+			sec->data.lightlevel = CheckInt(key);
+		}
+		else if (stricmp(key, "special") == 0)
+		{
+			sec->data.special = CheckInt(key);
+		}
+		else if (stricmp(key, "id") == 0)
+		{
+			sec->data.tag = CheckInt(key);
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};

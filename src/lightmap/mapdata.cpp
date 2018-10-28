@@ -259,7 +259,7 @@ IntSector *FLevel::GetBackSector(const MapSegGLEx *seg)
 
 	IntLineDef *line = &Lines[seg->linedef];
 
-	if (line->flags & ML_TWOSIDED)
+	if ((line->flags & ML_TWOSIDED) && line->sidenum[seg->side ^ 1] != 0xffffffff)
 	{
 		IntSideDef *backSide = &Sides[line->sidenum[seg->side ^ 1]];
 		return &Sectors[backSide->sector];

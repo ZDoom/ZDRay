@@ -902,8 +902,8 @@ void kexLightmapBuilder::CreateLightGrid()
     // determine the size of the grid block
     for(int i = 0; i < 3; ++i)
     {
-        mins[i] = gridSize[i] * kexMath::Ceil(worldGrid.min[i] / gridSize[i]);
-        maxs[i] = gridSize[i] * kexMath::Floor(worldGrid.max[i] / gridSize[i]);
+        mins[i] = gridSize[i] * kexMath::Floor(worldGrid.min[i] / gridSize[i]);
+        maxs[i] = gridSize[i] * kexMath::Ceil(worldGrid.max[i] / gridSize[i]);
         gridBlock[i] = (maxs[i] - mins[i]) / gridSize[i] + 1;
     }
 
