@@ -151,6 +151,7 @@ set( SOURCES
 	src/lightmap/trace.cpp
 	src/lightmap/wad.cpp
 	src/lightmap/worker.cpp
+	src/lightmap/collision.cpp
 	src/lightmap/kexlib/binfile.cpp
 	src/lightmap/kexlib/kstring.cpp
 	src/lightmap/kexlib/memheap.cpp
@@ -193,6 +194,7 @@ set( HEADERS
 	src/lightmap/trace.h
 	src/lightmap/wad.h
 	src/lightmap/worker.h
+	src/lightmap/collision.h
 	src/lightmap/kexlib/array.h
 	src/lightmap/kexlib/binfile.h
 	src/lightmap/kexlib/kstring.h
