@@ -417,7 +417,6 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 		curDist = 1.0f - d / distance;
 		if (curDist < 0.0f) curDist = 0.0f;
 
-		/*
         if(curDist >= 1)
         {
             curDist = 1;
@@ -445,7 +444,6 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
                 curDist *= angle;
             }
         }
-		*/
 
         if(curDist > *dist)
         {

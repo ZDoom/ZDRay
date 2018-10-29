@@ -564,11 +564,11 @@ void FLevel::ParseConfigFile(const char *file)
 			surfaceLightDef surfaceLight;
 
 			surfaceLight.tag = 0;
-			surfaceLight.outerCone = 1.0f;
-			surfaceLight.innerCone = 0;
+			surfaceLight.outerCone = 0.0f;
+			surfaceLight.innerCone = 0.0f;
 			surfaceLight.falloff = 1.0f;
 			surfaceLight.intensity = 1.0f;
-			surfaceLight.distance = 1000.0f;
+			surfaceLight.distance = 400.0f;
 			surfaceLight.bIgnoreCeiling = false;
 			surfaceLight.bIgnoreFloor = false;
 			surfaceLight.bNoCenterPoint = false;

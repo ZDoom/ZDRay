@@ -509,6 +509,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
                   (surface->lightmapSteps[1] * (float)i);
 
             kexVec3 c = LightTexelSample(trace, pos, surface);
+			kexMath::Clamp(c, 0, 1);
 
             // if nothing at all was traced and color is completely black
             // then this surface will not go through the extra rendering
