@@ -34,13 +34,7 @@
 #include "mapdata.h"
 #include "surfaces.h"
 
-//#define EXPORT_OBJ
-
 kexArray<surface_t*> surfaces;
-
-//
-// Surface_AllocateFromSeg
-//
 
 static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
 {
@@ -277,9 +271,21 @@ static void Surface_AllocateFromLeaf(FLevel &doomMap)
     printf("\nLeaf surfaces: %i\n", surfaces.Length() - doomMap.NumGLSubsectors);
 }
 
-//
-// Surface_AllocateFromMap
-//
+static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2)
+{
+	// A degenerate triangle has a zero cross product for two of its sides.
+	float ax = v1.x - v0.x;
+	float ay = v1.y - v0.y;
+	float az = v1.z - v0.z;
+	float bx = v2.x - v0.x;
+	float by = v2.y - v0.y;
+	float bz = v2.z - v0.z;
+	float crossx = ay * bz - az * by;
+	float crossy = az * bx - ax * bz;
+	float crossz = ax * by - ay * bx;
+	float crosslengthsqr = crossx * crossx + crossy * crossy + crossz * crossz;
+	return crosslengthsqr <= 1.e-6f;
+}
 
 void Surface_AllocateFromMap(FLevel &doomMap)
 {
@@ -301,61 +307,52 @@ void Surface_AllocateFromMap(FLevel &doomMap)
 
     printf("\nSeg surfaces: %i\n", surfaces.Length());
 
-#ifdef EXPORT_OBJ
-    FILE *f = fopen("level.obj", "w");
-    int curLen = surfaces.Length();
-    for(unsigned int i = 0; i < surfaces.Length(); i++)
-    {
-        for(int j = 0; j < surfaces[i]->numVerts; j++)
-        {
-            fprintf(f, "v %f %f %f\n",
-                    -surfaces[i]->verts[j].y / 256.0f,
-                    surfaces[i]->verts[j].z / 256.0f,
-                    -surfaces[i]->verts[j].x / 256.0f);
-        }
-    }
-
-    int tri;
-
-    for(unsigned int i = 0; i < surfaces.Length(); i++)
-    {
-        fprintf(f, "o surf%i_seg%i\n", i, i);
-        fprintf(f, "f %i %i %i\n", 0+(i*4)+1, 1+(i*4)+1, 2+(i*4)+1);
-        fprintf(f, "f %i %i %i\n", 1+(i*4)+1, 3+(i*4)+1, 2+(i*4)+1);
-
-        tri = 3+(i*4)+1;
-    }
-
-    tri++;
-#endif
-
     Surface_AllocateFromLeaf(doomMap);
 
     printf("Surfaces total: %i\n\n", surfaces.Length());
 
-#ifdef EXPORT_OBJ
-    for(unsigned int i = curLen; i < surfaces.Length(); i++)
-    {
-        for(int j = 0; j < surfaces[i]->numVerts; j++)
-        {
-            fprintf(f, "v %f %f %f\n",
-                    -surfaces[i]->verts[j].y / 256.0f,
-                    surfaces[i]->verts[j].z / 256.0f,
-                    -surfaces[i]->verts[j].x / 256.0f);
-        }
-    }
+	printf("Building collision mesh..\n\n");
 
-    for(unsigned int i = curLen; i < surfaces.Length(); i++)
-    {
-        fprintf(f, "o surf%i_ssect%i\n", i, i - curLen);
-        fprintf(f, "f ");
-        for(int j = 0; j < surfaces[i]->numVerts; j++)
-        {
-            fprintf(f, "%i ", tri++);
-        }
-        fprintf(f, "\n");
-    }
+	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	{
+		const auto &s = surfaces[i];
+		int numVerts = s->numVerts;
+		unsigned int pos = doomMap.MeshVertices.Size();
 
-    fclose(f);
-#endif
+		for (int j = 0; j < numVerts; j++)
+			doomMap.MeshVertices.Push(s->verts[j]);
+
+		if (s->type == ST_FLOOR || s->type == ST_CEILING)
+		{
+			for (int j = 2; j < numVerts; j++)
+			{
+				if (!IsDegenerate(s->verts[0], s->verts[j - 1], s->verts[j]))
+				{
+					doomMap.MeshElements.Push(pos);
+					doomMap.MeshElements.Push(pos + j - 1);
+					doomMap.MeshElements.Push(pos + j);
+					doomMap.MeshSurfaces.Push(i);
+				}
+			}
+		}
+		else if (s->type == ST_MIDDLESEG || s->type == ST_UPPERSEG || s->type == ST_LOWERSEG)
+		{
+			if (!IsDegenerate(s->verts[0], s->verts[1], s->verts[2]))
+			{
+				doomMap.MeshElements.Push(pos + 0);
+				doomMap.MeshElements.Push(pos + 1);
+				doomMap.MeshElements.Push(pos + 2);
+				doomMap.MeshSurfaces.Push(i);
+			}
+			if (!IsDegenerate(s->verts[1], s->verts[2], s->verts[3]))
+			{
+				doomMap.MeshElements.Push(pos + 1);
+				doomMap.MeshElements.Push(pos + 2);
+				doomMap.MeshElements.Push(pos + 3);
+				doomMap.MeshSurfaces.Push(i);
+			}
+		}
+	}
+
+	doomMap.CollisionMesh.reset(new TriangleMeshShape(&doomMap.MeshVertices[0], doomMap.MeshVertices.Size(), &doomMap.MeshElements[0], doomMap.MeshElements.Size(), &doomMap.MeshSurfaces[0]));
 }

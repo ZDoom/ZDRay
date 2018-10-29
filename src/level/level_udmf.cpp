@@ -28,6 +28,24 @@ typedef unsigned int uint32;
 typedef signed int int32;
 #include "framework/xs_Float.h"
 
+static void CopyUDMFString(char *dest, int destlen, const char *udmfvalue)
+{
+	destlen--;
+
+	char endchar = 0;
+	if (udmfvalue[0] == '"' || udmfvalue[0] == '\'')
+	{
+		endchar = udmfvalue[0];
+		udmfvalue++;
+	}
+
+	for (int i = 0; i < destlen && udmfvalue[i] != 0 && udmfvalue[i] != endchar; i++)
+	{
+		*(dest++) = udmfvalue[i];
+	}
+
+	*dest = 0;
+}
 
 class StringBuffer
 {
@@ -251,6 +269,14 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 {
 	SC_MustGetStringName("{");
 	sd->sector = NO_INDEX;
+	sd->textureoffset = 0;
+	sd->rowoffset = 0;
+	sd->toptexture[0] = '-';
+	sd->toptexture[1] = 0;
+	sd->midtexture[0] = '-';
+	sd->midtexture[1] = 0;
+	sd->bottomtexture[0] = '-';
+	sd->bottomtexture[1] = 0;
 	while (!SC_CheckString("}"))
 	{
 		const char *value;
@@ -260,6 +286,27 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 		{
 			sd->sector = CheckInt(key);
 			continue;	// do not store in props
+		}
+
+		if (stricmp(key, "texturetop") == 0)
+		{
+			CopyUDMFString(sd->toptexture, 8, value);
+		}
+		else if (stricmp(key, "texturemiddle") == 0)
+		{
+			CopyUDMFString(sd->midtexture, 8, value);
+		}
+		else if (stricmp(key, "texturebottom") == 0)
+		{
+			CopyUDMFString(sd->bottomtexture, 8, value);
+		}
+		else if (stricmp(key, "offsetx_mid") == 0)
+		{
+			sd->textureoffset = CheckInt(key);
+		}
+		else if (stricmp(key, "offsety_mid") == 0)
+		{
+			sd->rowoffset = CheckInt(key);
 		}
 
 		// now store the key in its unprocessed form
@@ -273,25 +320,6 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 // Parse a sidedef block
 //
 //===========================================================================
-
-static void CopyUDMFString(char *dest, int destlen, const char *udmfvalue)
-{
-	destlen--;
-
-	char endchar = 0;
-	if (udmfvalue[0] == '"' || udmfvalue[0] == '\'')
-	{
-		endchar = udmfvalue[0];
-		udmfvalue++;
-	}
-
-	for (int i = 0; i < destlen && udmfvalue[i] != 0 && udmfvalue[i] != endchar; i++)
-	{
-		*(dest++) = udmfvalue[i];
-	}
-
-	*dest = 0;
-}
 
 void FProcessor::ParseSector(IntSector *sec)
 {

@@ -3,6 +3,8 @@
 
 #include "framework/tarray.h"
 #include "lightmap/kexlib/math/mathlib.h"
+#include "lightmap/collision.h"
+#include <memory>
 #undef MIN
 #undef MAX
 
@@ -344,6 +346,11 @@ struct FLevel
 	int NumThings() const { return Things.Size(); }
 
 	// Dlight helpers
+
+	TArray<kexVec3> MeshVertices;
+	TArray<unsigned int> MeshElements;
+	TArray<int> MeshSurfaces;
+	std::unique_ptr<TriangleMeshShape> CollisionMesh;
 
 	leaf_t *leafs = nullptr;
 	uint8_t *mapPVS = nullptr;

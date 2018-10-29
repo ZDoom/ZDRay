@@ -69,6 +69,15 @@ void kexTrace::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
 {
     start = startVec;
     end = endVec;
+
+	TraceHit hit = TriangleMeshShape::find_first_hit(map->CollisionMesh.get(), start, end);
+	fraction = hit.fraction;
+	if (fraction < 1.0f)
+		hitSurface = surfaces[hit.surface];
+	else
+		hitSurface = nullptr;
+
+/*
     dir = (end - start).Normalize();
     hitNormal.Clear();
     hitVector.Clear();
@@ -80,9 +89,11 @@ void kexTrace::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
         return;
     }
 
-    TraceBSPNode(map->NumGLNodes - 1);
+	TraceBSPNode(map->NumGLNodes - 1);
+*/
 }
 
+#if 0
 //
 // kexTrace::TraceSurface
 //
@@ -284,3 +295,4 @@ void kexTrace::TraceBSPNode(int num)
         TraceBSPNode(node->children[side]);
     }
 }
+#endif

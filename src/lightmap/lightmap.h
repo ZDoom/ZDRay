@@ -64,7 +64,7 @@ private:
     kexBBox                 GetBoundsFromSurface(const surface_t *surface);
     kexVec3                 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
     kexVec3                 LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const MapSubsectorEx *sub);
-    bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, float *dist);
+    bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
     void                    ExportTexelsToObjFile(FILE *f, const kexVec3 &org, int indices);
     void                    WriteBlock(FILE *f, const int i, const kexVec3 &org, int indices, kexBBox &box);
 

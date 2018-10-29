@@ -40,17 +40,19 @@ public:
 
     kexVec3             start;
     kexVec3             end;
-    kexVec3             dir;
-    kexVec3             hitNormal;
-    kexVec3             hitVector;
-    surface_t           *hitSurface;
-    float               fraction;
+	surface_t           *hitSurface;
+	float               fraction;
 
 private:
+	FLevel          *map;
+
+#if 0
+	kexVec3             dir;
+    kexVec3             hitNormal;
+    kexVec3             hitVector;
+
     void                TraceBSPNode(int num);
     void                TraceSubSector(int num);
     void                TraceSurface(surface_t *surface);
-
-	FLevel          *map;
-
+#endif
 };

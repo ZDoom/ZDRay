@@ -42,8 +42,6 @@
 #include <map>
 #include <vector>
 
-//#define EXPORT_TEXELS_OBJ
-
 kexWorker lightmapWorker;
 
 const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
@@ -223,22 +221,22 @@ kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 // light if the surface that was traced is a sky
 //
 
-bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin,
-        const kexVec3 &normal, float *dist)
+bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
 {
-    *dist = normal.Dot(map->GetSunDirection());
+    float dist = normal.Dot(map->GetSunDirection());
 
-    if(*dist <= 0)
+    if(dist <= 0)
     {
         // plane is not even facing the sunlight
         return false;
     }
 
-    trace.Trace(origin, origin + (map->GetSunDirection() * 32768));
+    trace.Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
 
-    if(trace.fraction == 1 || trace.hitSurface == NULL)
+    if(trace.fraction == 1.0f)
     {
         // nothing was hit
+		//color.x += 1.0f;
         return false;
     }
 
@@ -247,6 +245,8 @@ bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surfa
         // not a ceiling/sky surface
         return false;
     }
+
+	color += map->GetSunColor() * dist;
 
     return true;
 }
@@ -336,15 +336,8 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
     if(surface->type != ST_CEILING && map->bSSectsVisibleToSky[surface->subSector - map->GLSubsectors])
     {
         // see if it's exposed to sunlight
-        if(EmitFromCeiling(trace, surface, origin, plane.Normal(), &dist))
-        {
-            dist = (dist * 4);
-            kexMath::Clamp(dist, 0, 1);
-
-            color += map->GetSunColor() * dist;
-
+        if(EmitFromCeiling(trace, surface, origin, plane.Normal(), color))
             tracedTexels++;
-        }
     }
 
     // trace against surface lights
@@ -504,13 +497,6 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 
     normal = surface->plane.Normal();
 
-    // debugging stuff - used to help visualize where texels are positioned in the level
-#ifdef EXPORT_TEXELS_OBJ
-    static int cnt = 0;
-    FILE *f = fopen(Va("texels_%02d.obj", cnt++), "w");
-    int indices = 0;
-#endif
-
     // start walking through each texel
     for(i = 0; i < sampleHeight; i++)
     {
@@ -522,13 +508,6 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
                   (surface->lightmapSteps[0] * (float)j) +
                   (surface->lightmapSteps[1] * (float)i);
 
-            // debugging stuff
-#ifdef EXPORT_TEXELS_OBJ
-            ExportTexelsToObjFile(f, pos, indices);
-            indices += 8;
-#endif
-
-            // accumulate color samples
             kexVec3 c = LightTexelSample(trace, pos, surface);
 
             // if nothing at all was traced and color is completely black
@@ -542,10 +521,6 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 			colorSamples[i][j] = c;
 		}
     }
-
-#ifdef EXPORT_TEXELS_OBJ
-    fclose(f);
-#endif
 
     // SVE redraws the scene for lightmaps, so for optimizations,
     // tell the engine to ignore this surface if completely black

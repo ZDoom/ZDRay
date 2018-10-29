@@ -35,10 +35,16 @@ public:
 	float radius = 0.0f;
 };
 
+struct TraceHit
+{
+	float fraction = 1.0f;
+	int surface = -1;
+};
+
 class TriangleMeshShape
 {
 public:
-	TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements);
+	TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements, const int *surfaces);
 
 	int get_min_depth();
 	int get_max_depth();
@@ -51,25 +57,28 @@ public:
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2);
 	static bool find_any_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end);
 
+	static TraceHit find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end);
+
 	struct Node
 	{
-		Node() : left(-1), right(-1), element_index(-1) { }
-		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int element_index) : aabb(aabb_min, aabb_max), left(-1), right(-1), element_index(element_index) { }
-		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int left, int right) : aabb(aabb_min, aabb_max), left(left), right(right), element_index(-1) { }
+		Node() = default;
+		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int element_index) : aabb(aabb_min, aabb_max), element_index(element_index) { }
+		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int left, int right) : aabb(aabb_min, aabb_max), left(left), right(right) { }
 
 		kexBBox aabb;
-		int left;
-		int right;
-		int element_index;
+		int left = -1;
+		int right = -1;
+		int element_index = -1;
 	};
 
-	const kexVec3 *vertices;
-	const int num_vertices;
-	const unsigned int *elements;
-	int num_elements;
+	const kexVec3 *vertices = nullptr;
+	const int num_vertices = 0;
+	const unsigned int *elements = nullptr;
+	int num_elements = 0;
+	const int *surfaces = nullptr;
 
 	std::vector<Node> nodes;
-	int root;
+	int root = -1;
 
 private:
 	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
@@ -77,6 +86,8 @@ private:
 	static bool find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2, int a);
 	static bool find_any_hit(TriangleMeshShape *shape1, const kexVec3 &ray_start, const kexVec3 &ray_end, int a);
+
+	static void find_first_hit(TriangleMeshShape *shape1, const kexVec3 &ray_start, const kexVec3 &ray_end, int a, TraceHit *hit);
 
 	inline static bool overlap_bv_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a);
 	inline static float intersect_triangle_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a);

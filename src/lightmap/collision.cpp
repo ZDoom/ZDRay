@@ -26,8 +26,8 @@
 #undef min
 #undef max
 
-TriangleMeshShape::TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements)
-	: vertices(vertices), num_vertices(num_vertices), elements(elements), num_elements(num_elements), root(-1)
+TriangleMeshShape::TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements, const int *surfaces)
+	: vertices(vertices), num_vertices(num_vertices), elements(elements), num_elements(num_elements), surfaces(surfaces)
 {
 	int num_triangles = num_elements / 3;
 	if (num_triangles <= 0)
@@ -69,6 +69,15 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, SphereShape *sha
 bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end)
 {
 	return find_any_hit(shape, ray_start, ray_end, shape->root);
+}
+
+TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end)
+{
+	TraceHit hit;
+	find_first_hit(shape, ray_start, ray_end, shape->root, &hit);
+	if (hit.surface != -1)
+		hit.surface = shape->surfaces[hit.surface / 3];
+	return hit;
 }
 
 float TriangleMeshShape::sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target)
@@ -178,6 +187,27 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const kexVec3 &ra
 	return false;
 }
 
+void TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a, TraceHit *hit)
+{
+	if (overlap_bv_ray(shape, ray_start, ray_end, a))
+	{
+		if (shape->is_leaf(a))
+		{
+			float t = intersect_triangle_ray(shape, ray_start, ray_end, a);
+			if (t < hit->fraction)
+			{
+				hit->fraction = t;
+				hit->surface = shape->nodes[a].element_index;
+			}
+		}
+		else
+		{
+			find_first_hit(shape, ray_start, ray_end, shape->nodes[a].left, hit);
+			find_first_hit(shape, ray_start, ray_end, shape->nodes[a].right, hit);
+		}
+	}
+}
+
 bool TriangleMeshShape::overlap_bv_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a)
 {
 	return IntersectionTest::ray_aabb(ray_start, ray_end, shape->nodes[a].aabb) == IntersectionTest::overlap;
@@ -194,6 +224,49 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 		shape->vertices[shape->elements[start_element + 2]]
 	};
 
+#if 1
+
+	kexVec3 e1 = p[1] - p[0];
+	kexVec3 e2 = p[2] - p[0];
+
+	kexVec3 triangleNormal = kexVec3::Cross(e1, e2);
+	float dist = kexVec3::Dot(p[0], triangleNormal);
+	float distA = kexVec3::Dot(ray_start, triangleNormal) - dist;
+	float distB = kexVec3::Dot(ray_end, triangleNormal) - dist;
+
+	if (distA * distB >= 0.0f)
+		return 1.0f;
+
+	// Backface check
+	//if (distA < 0.0f)
+	//	return 1.0f;
+
+	float projLength = distA - distB;
+	float distance = (distA) / (projLength);
+	if (distance > 1.0f)
+		return 1.0f;
+
+	float edgeTolerance = triangleNormal.LengthSq() * -0.0001f;
+	kexVec3 point = ray_start * (1.0f - distance) + ray_end * distance;
+
+	kexVec3 v0p = p[0] - point;
+	kexVec3 v1p = p[1] - point;
+	kexVec3 cp0 = kexVec3::Cross(v0p, v1p);
+	if (kexVec3::Dot(cp0, triangleNormal) < edgeTolerance)
+		return 1.0f;
+
+	kexVec3 v2p = p[2] - point;
+	kexVec3 cp1 = kexVec3::Cross(v1p, v2p);
+	if (kexVec3::Dot(cp1, triangleNormal) < edgeTolerance)
+		return 1.0f;
+
+	kexVec3 cp2 = kexVec3::Cross(v2p, v0p);
+	if (kexVec3::Dot(cp2, triangleNormal) < edgeTolerance)
+		return 1.0f;
+
+	return distance;
+
+#else
 	// Moeller–Trumbore ray-triangle intersection algorithm:
 
 	kexVec3 D = ray_end - ray_start;
@@ -205,6 +278,10 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 	// Begin calculating determinant - also used to calculate u parameter
 	kexVec3 P = kexVec3::Cross(D, e2);
 	float det = kexVec3::Dot(e1, P);
+
+	// Backface check
+	//if (det < 0.0f)
+	//	return 1.0f;
 
 	// If determinant is near zero, ray lies in plane of triangle
 	if (det > -FLT_EPSILON && det < FLT_EPSILON)
@@ -238,6 +315,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 
 	// No hit, no win
 	return 1.0f;
+#endif
 }
 
 bool TriangleMeshShape::sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target)
