@@ -328,8 +328,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
         }
 
         // accumulate results
-        color = color.Lerp(tl->rgb, colorAdd);
-        kexMath::Clamp(color, 0, 1);
+        color += tl->rgb * colorAdd;
 
         tracedTexels++;
     }
@@ -342,8 +341,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
             dist = (dist * 4);
             kexMath::Clamp(dist, 0, 1);
 
-            color = color.Lerp(map->GetSunColor(), dist);
-            kexMath::Clamp(color, 0, 1);
+            color += map->GetSunColor() * dist;
 
             tracedTexels++;
         }
@@ -362,11 +360,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 
         if(surfaceLight->TraceSurface(map, trace, surface, origin, &dist))
         {
-            dist = (dist * surfaceLight->Intensity());
-            kexMath::Clamp(dist, 0, 1);
-
-            color = color.Lerp(surfaceLight->GetRGB(), kexMath::Pow(dist, surfaceLight->FallOff()));
-            kexMath::Clamp(color, 0, 1);
+            color += surfaceLight->GetRGB() * kexMath::Pow(dist * surfaceLight->Intensity(), surfaceLight->FallOff());
 
             tracedTexels++;
         }
@@ -503,7 +497,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
     bool bShouldLookupTexture = false;
 
     trace.Init(*map);
-    memset(colorSamples, 0, sizeof(colorSamples));
+    //memset(colorSamples, 0, sizeof(colorSamples));
 
     sampleWidth = surface->lightmapDims[0];
     sampleHeight = surface->lightmapDims[1];
@@ -535,16 +529,18 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 #endif
 
             // accumulate color samples
-            colorSamples[i][j] += LightTexelSample(trace, pos, surface);
+            kexVec3 c = LightTexelSample(trace, pos, surface);
 
             // if nothing at all was traced and color is completely black
             // then this surface will not go through the extra rendering
             // step in rendering the lightmap
-            if(colorSamples[i][j].UnitSq() != 0)
+            if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
             {
                 bShouldLookupTexture = true;
             }
-        }
+
+			colorSamples[i][j] = c;
+		}
     }
 
 #ifdef EXPORT_TEXELS_OBJ

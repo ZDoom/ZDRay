@@ -597,7 +597,7 @@ void FProcessor::BuildNodes()
 void FProcessor::BuildLightmaps(const char *configFile)
 {
 	LMBuilder.ambience = 0.0f;
-	LMBuilder.samples = 64;
+	LMBuilder.samples = 8;
 	LMBuilder.textureWidth = LIGHTMAP_MAX_SIZE;
 	LMBuilder.textureHeight = LIGHTMAP_MAX_SIZE;
 

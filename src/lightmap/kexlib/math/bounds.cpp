@@ -98,6 +98,14 @@ kexVec3 kexBBox::Center() const
                (max.z + min.z) * 0.5f);
 }
 
+kexVec3 kexBBox::Extents() const
+{
+	return kexVec3(
+		(max.x - min.x) * 0.5f,
+		(max.y - min.y) * 0.5f,
+		(max.z - min.z) * 0.5f);
+}
+
 //
 // kexBBox::Radius
 //

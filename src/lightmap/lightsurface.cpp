@@ -288,8 +288,7 @@ void kexLightSurface::Subdivide(const float divide)
 // kexLightSurface::TraceSurface
 //
 
-bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf,
-                                   const kexVec3 &origin, float *dist)
+bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf, const kexVec3 &origin, float *dist)
 {
     kexVec3 normal;
     kexVec3 lnormal;
@@ -415,17 +414,10 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 
         float d = origin.Distance(center);
 
-        if(d <= 0)
-        {
-            // this origin point must be right on the light surface so just mark it as
-            // full bright if that's the case
-            curDist = 1;
-        }
-        else
-        {
-            curDist = distance / d;
-        }
+		curDist = 1.0f - d / distance;
+		if (curDist < 0.0f) curDist = 0.0f;
 
+		/*
         if(curDist >= 1)
         {
             curDist = 1;
@@ -453,6 +445,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
                 curDist *= angle;
             }
         }
+		*/
 
         if(curDist > *dist)
         {
