@@ -28,6 +28,7 @@
 #pragma once
 
 #include "surfaces.h"
+#include <mutex>
 
 #define LIGHTMAP_MAX_SIZE  1024
 
@@ -87,4 +88,6 @@ private:
     kexBBox                 worldGrid;
     kexBBox                 gridBound;
     kexVec3                 gridBlock;
+
+	std::mutex mutex;
 };

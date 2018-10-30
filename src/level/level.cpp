@@ -22,6 +22,9 @@
 //#include "rejectbuilder.h"
 #include <memory>
 
+extern int LMDims;
+extern int Samples;
+
 extern void ShowView (FLevel *level);
 
 enum
@@ -597,9 +600,9 @@ void FProcessor::BuildNodes()
 void FProcessor::BuildLightmaps(const char *configFile)
 {
 	LMBuilder.ambience = 0.0f;
-	LMBuilder.samples = 8;
-	LMBuilder.textureWidth = LIGHTMAP_MAX_SIZE;
-	LMBuilder.textureHeight = LIGHTMAP_MAX_SIZE;
+	LMBuilder.samples = Samples;
+	LMBuilder.textureWidth = LMDims;
+	LMBuilder.textureHeight = LMDims;
 
 	Level.ParseConfigFile(configFile);
 	Level.SetupDlight();

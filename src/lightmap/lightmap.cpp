@@ -42,29 +42,7 @@
 #include <map>
 #include <vector>
 
-kexWorker lightmapWorker;
-
 const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
-
-//
-// LightmapWorkerFunc
-//
-
-static void LightmapWorkerFunc(void *data, int id)
-{
-    kexLightmapBuilder *builder = static_cast<kexLightmapBuilder*>(data);
-    builder->LightSurface(id);
-}
-
-//
-// LightGridWorkerFunc
-//
-
-static void LightGridWorkerFunc(void *data, int id)
-{
-    kexLightmapBuilder *builder = static_cast<kexLightmapBuilder*>(data);
-    builder->LightGrid(id);
-}
 
 //
 // kexLightmapBuilder::kexLightmapBuilder
@@ -536,22 +514,24 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
         int width = surface->lightmapDims[0];
         int height = surface->lightmapDims[1];
 
+		std::unique_lock<std::mutex> lock(mutex);
+
         // now that we know the width and height of this block, see if we got
         // room for it in the light map texture. if not, then we must allocate
         // a new texture
         if(!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
         {
             // allocate a new texture for this block
-            lightmapWorker.LockMutex();
             NewTexture();
-            lightmapWorker.UnlockMutex();
 
             if(!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
             {
-                Error("Lightmap allocation failed\n");
+				Error("Lightmap allocation failed\n");
                 return;
             }
         }
+
+		lock.unlock();
 
         // calculate texture coordinates
         for(i = 0; i < surface->numVerts; i++)
@@ -567,9 +547,9 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
         surface->lightmapOffs[1] = y;
     }
 
-    lightmapWorker.LockMutex();
+	std::unique_lock<std::mutex> lock(mutex);
     currentTexture = textures[surface->lightmapNum];
-    lightmapWorker.UnlockMutex();
+	lock.unlock();
 
     // store results to lightmap texture
     for(i = 0; i < sampleHeight; i++)
@@ -581,9 +561,9 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
                          surface->lightmapOffs[0]) * 3);
 
             // convert RGB to bytes
-            rgb[0] = (byte)(colorSamples[i][j][0] * 255);
-            rgb[1] = (byte)(colorSamples[i][j][1] * 255);
-            rgb[2] = (byte)(colorSamples[i][j][2] * 255);
+            rgb[0] = (uint32_t)(colorSamples[i][j][0] * 255 + 0.5f);
+            rgb[1] = (uint32_t)(colorSamples[i][j][1] * 255 + 0.5f);
+            rgb[2] = (uint32_t)(colorSamples[i][j][2] * 255 + 0.5f);
 
             currentTexture[offs + j * 3 + 0] = rgb[0];
             currentTexture[offs + j * 3 + 1] = rgb[1];
@@ -611,12 +591,12 @@ void kexLightmapBuilder::LightSurface(const int surfid)
     BuildSurfaceParams(surfaces[surfid]);
     TraceSurface(surfaces[surfid]);
 
-    lightmapWorker.LockMutex();
+	std::unique_lock<std::mutex> lock(mutex);
+
     remaining = (float)processed / (float)numsurfs;
     processed++;
 
     printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
-    lightmapWorker.UnlockMutex();
 }
 
 //
@@ -822,11 +802,11 @@ void kexLightmapBuilder::LightGrid(const int gridid)
 
     kexMath::Clamp(gridMap[gridid].color, 0, 1);
 
-    lightmapWorker.LockMutex();
+	std::unique_lock<std::mutex> lock(mutex);
+
     remaining = (float)processed / (float)numLightGrids;
 
     printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
-    lightmapWorker.UnlockMutex();
 }
 
 //
@@ -841,15 +821,12 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
     CreateLightGrid();
 
     printf("------------- Tracing surfaces -------------\n");
-    lightmapWorker.RunThreads(surfaces.Length(), this, LightmapWorkerFunc);
 
-    while(!lightmapWorker.FinishedAllJobs())
-    {
-        Delay(1000);
-    }
+	kexWorker::RunJob(surfaces.Length(), [=](int id) {
+		LightSurface(id);
+	});
 
     printf("Texels traced: %i \n\n", tracedTexels);
-    lightmapWorker.Destroy();
 }
 
 //
@@ -895,12 +872,9 @@ void kexLightmapBuilder::CreateLightGrid()
                   (int)(gridBlock.x * gridBlock.y), hb_static);
 
     // process all grid cells
-    lightmapWorker.RunThreads(count, this, LightGridWorkerFunc);
-
-    while(!lightmapWorker.FinishedAllJobs())
-    {
-        Delay(1000);
-    }
+	kexWorker::RunJob(count, [=](int id) {
+		LightGrid(id);
+	});
 
     printf("\nGrid cells: %i\n\n", count);
 }
