@@ -334,6 +334,8 @@ bool FLevel::PointInsideSubSector(const float x, const float y, const MapSubsect
 	kexVec2 pt1, pt2;
 
 	surf = leafSurfaces[0][sub - GLSubsectors];
+	if (!surf)
+		return false;
 
 	// check to see if the point is inside the subsector leaf
 	for (i = 0; i < surf->numVerts; i++)
