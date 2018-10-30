@@ -74,7 +74,25 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const kexVec3 &ra
 TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end)
 {
 	TraceHit hit;
-	find_first_hit(shape, ray_start, ray_end, shape->root, &hit);
+
+	// Perform segmented tracing to keep the ray AABB box smaller
+
+	kexVec3 ray_dir = ray_end - ray_start;
+	float tracedist = ray_dir.Length();
+	float segmentlen = std::max(100.0f, tracedist / 20.0f);
+	for (float t = 0.0f; t < tracedist; t += segmentlen)
+	{
+		float segstart = t / tracedist;
+		float segend = std::min(t + segmentlen, tracedist) / tracedist;
+
+		find_first_hit(shape, ray_start + ray_dir * segstart, ray_start + ray_dir * segend, shape->root, &hit);
+		if (hit.fraction < 1.0f)
+		{
+			hit.fraction = segstart * (1.0f - hit.fraction) + segend * hit.fraction;
+			break;
+		}
+	}
+
 	if (hit.surface != -1)
 		hit.surface = shape->surfaces[hit.surface / 3];
 	return hit;
