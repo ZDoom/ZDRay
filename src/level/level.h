@@ -38,7 +38,7 @@ public:
 	FProcessor(FWadReader &inwad, int lump);
 
 	void BuildNodes();
-	void BuildLightmaps(const char *configFile);
+	void BuildLightmaps();
 	void Write(FWadWriter &out);
 
 private:

@@ -32,7 +32,6 @@
 
 #include "common.h"
 #include "wad.h"
-#include "kexlib/parser.h"
 #include "mapdata.h"
 #include "lightsurface.h"
 
@@ -41,18 +40,6 @@ static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
 
 void FLevel::SetupDlight()
 {
-	/*
-	for (unsigned int i = 0; i < mapDefs.Size(); ++i)
-	{
-		if (mapDefs[i].map == wadFile.currentmap)
-		{
-			mapDef = &mapDefs[i];
-			break;
-		}
-	}
-	*/
-	//mapDef = &mapDefs[0];
-
 	BuildNodeBounds();
 	BuildLeafs();
 	BuildPVS();
@@ -169,10 +156,8 @@ void FLevel::CheckSkySectors()
 
 	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{
-		if (mapDef && mapDef->sunIgnoreTag != 0 && Sectors[i].data.tag == mapDef->sunIgnoreTag)
-		{
-			continue;
-		}
+		//if (mapDef && mapDef->sunIgnoreTag != 0 && Sectors[i].data.tag == mapDef->sunIgnoreTag)
+		//	continue;
 
 		strncpy(name, Sectors[i].data.ceilingpic, 8);
 		name[8] = 0;
@@ -207,21 +192,11 @@ void FLevel::CheckSkySectors()
 
 const kexVec3 &FLevel::GetSunColor() const
 {
-	if (mapDef != NULL)
-	{
-		return mapDef->sunColor;
-	}
-
 	return defaultSunColor;
 }
 
 const kexVec3 &FLevel::GetSunDirection() const
 {
-	if (mapDef != NULL)
-	{
-		return mapDef->sunDir;
-	}
-
 	return defaultSunDirection;
 }
 
@@ -458,187 +433,8 @@ bool FLevel::CheckPVS(MapSubsectorEx *s1, MapSubsectorEx *s2)
 	return ((vis[n2 >> 3] & (1 << (n2 & 7))) != 0);
 }
 
-void FLevel::ParseConfigFile(const char *file)
-{
-	kexLexer *lexer;
-
-	if (!(lexer = parser->Open(file)))
-	{
-		Error("FLevel::ParseConfigFile: %s not found\n", file);
-		return;
-	}
-
-	while (lexer->CheckState())
-	{
-		lexer->Find();
-
-		// check for mapdef block
-		if (lexer->Matches("mapdef"))
-		{
-			mapDef_t mapDef;
-
-			mapDef.map = -1;
-			mapDef.sunIgnoreTag = 0;
-
-			lexer->ExpectNextToken(TK_LBRACK);
-			lexer->Find();
-
-			while (lexer->TokenType() != TK_RBRACK)
-			{
-				if (lexer->Matches("map"))
-				{
-					mapDef.map = lexer->GetNumber();
-				}
-				else if (lexer->Matches("sun_ignore_tag"))
-				{
-					mapDef.sunIgnoreTag = lexer->GetNumber();
-				}
-				else if (lexer->Matches("sun_direction"))
-				{
-					mapDef.sunDir = lexer->GetVectorString3();
-				}
-				else if (lexer->Matches("sun_color"))
-				{
-					mapDef.sunColor = lexer->GetVectorString3();
-					mapDef.sunColor /= 255.0f;
-				}
-
-				lexer->Find();
-			}
-
-			mapDefs.Push(mapDef);
-		}
-
-		// check for lightdef block
-		if (lexer->Matches("lightdef"))
-		{
-			lightDef_t lightDef;
-
-			lightDef.doomednum = -1;
-			lightDef.height = 0;
-			lightDef.intensity = 2;
-			lightDef.falloff = 1;
-			lightDef.bCeiling = false;
-
-			lexer->ExpectNextToken(TK_LBRACK);
-			lexer->Find();
-
-			while (lexer->TokenType() != TK_RBRACK)
-			{
-				if (lexer->Matches("doomednum"))
-				{
-					lightDef.doomednum = lexer->GetNumber();
-				}
-				else if (lexer->Matches("rgb"))
-				{
-					lightDef.rgb = lexer->GetVectorString3();
-					lightDef.rgb /= 255.0f;
-				}
-				else if (lexer->Matches("height"))
-				{
-					lightDef.height = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("radius"))
-				{
-					lightDef.radius = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("intensity"))
-				{
-					lightDef.intensity = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("falloff"))
-				{
-					lightDef.falloff = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("ceiling"))
-				{
-					lightDef.bCeiling = true;
-				}
-
-				lexer->Find();
-			}
-
-			lightDefs.Push(lightDef);
-		}
-
-		if (lexer->Matches("surfaceLight"))
-		{
-			surfaceLightDef surfaceLight;
-
-			surfaceLight.tag = 0;
-			surfaceLight.outerCone = 0.0f;
-			surfaceLight.innerCone = 0.0f;
-			surfaceLight.falloff = 1.0f;
-			surfaceLight.intensity = 1.0f;
-			surfaceLight.distance = 400.0f;
-			surfaceLight.bIgnoreCeiling = false;
-			surfaceLight.bIgnoreFloor = false;
-			surfaceLight.bNoCenterPoint = false;
-			surfaceLight.rgb.x = 1.0f;
-			surfaceLight.rgb.y = 1.0f;
-			surfaceLight.rgb.z = 1.0f;
-
-			lexer->ExpectNextToken(TK_LBRACK);
-			lexer->Find();
-
-			while (lexer->TokenType() != TK_RBRACK)
-			{
-				if (lexer->Matches("tag"))
-				{
-					surfaceLight.tag = lexer->GetNumber();
-				}
-				else if (lexer->Matches("rgb"))
-				{
-					surfaceLight.rgb = lexer->GetVectorString3();
-					surfaceLight.rgb /= 255.0f;
-				}
-				else if (lexer->Matches("cone_outer"))
-				{
-					surfaceLight.outerCone = (float)lexer->GetFloat() / 180.0f;
-				}
-				else if (lexer->Matches("cone_inner"))
-				{
-					surfaceLight.innerCone = (float)lexer->GetFloat() / 180.0f;
-				}
-				else if (lexer->Matches("falloff"))
-				{
-					surfaceLight.falloff = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("intensity"))
-				{
-					surfaceLight.intensity = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("distance"))
-				{
-					surfaceLight.distance = (float)lexer->GetFloat();
-				}
-				else if (lexer->Matches("bIgnoreCeiling"))
-				{
-					surfaceLight.bIgnoreCeiling = true;
-				}
-				else if (lexer->Matches("bIgnoreFloor"))
-				{
-					surfaceLight.bIgnoreFloor = true;
-				}
-				else if (lexer->Matches("bNoCenterPoint"))
-				{
-					surfaceLight.bNoCenterPoint = true;
-				}
-
-				lexer->Find();
-			}
-
-			surfaceLightDefs.Push(surfaceLight);
-		}
-	}
-
-	// we're done with the file
-	parser->Close();
-}
-
 void FLevel::CreateLights()
 {
-	IntThing *thing;
 	thingLight_t *thingLight;
 	unsigned int j;
 	int numSurfLights;
@@ -649,50 +445,51 @@ void FLevel::CreateLights()
 	//
 	for (int i = 0; i < (int)Things.Size(); ++i)
 	{
-		lightDef_t *lightDef = NULL;
+		IntThing *thing = &Things[i];
 
-		thing = &Things[i];
+		uint32_t lightcolor = 0xffffff;
+		float lightintensity = 1.0f;
+		float lightdistance = 0.0f;
 
-		for (j = 0; j < (int)lightDefs.Size(); ++j)
+		for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 		{
-			if (thing->type == lightDefs[j].doomednum)
+			const UDMFKey &key = thing->props[propIndex];
+			if (!stricmp(key.key, "lightcolor"))
 			{
-				lightDef = &lightDefs[j];
-				break;
+				lightcolor = atoi(key.value);
+			}
+			else if (!stricmp(key.key, "lightintensity"))
+			{
+				lightintensity = atof(key.value);
+			}
+			else if (!stricmp(key.key, "lightdistance"))
+			{
+				lightdistance = atof(key.value);
 			}
 		}
 
-		if (!lightDef)
+		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 		{
-			continue;
+			int x = thing->x >> FRACBITS;
+			int y = thing->y >> FRACBITS;
+
+			thingLight = new thingLight_t();
+
+			thingLight->mapThing = thing;
+			thingLight->rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+			thingLight->rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+			thingLight->rgb.z = (lightcolor & 0xff) / 255.0f;
+			thingLight->intensity = lightintensity;
+			thingLight->falloff = 1.0f;
+			thingLight->radius = lightdistance;
+			thingLight->height = thing->height;
+			thingLight->bCeiling = false;
+			thingLight->ssect = PointInSubSector(x, y);
+			thingLight->sector = GetSectorFromSubSector(thingLight->ssect);
+
+			thingLight->origin.Set(x, y);
+			thingLights.Push(thingLight);
 		}
-
-		if (lightDef->radius >= 0)
-		{
-			// ignore if all skills aren't set
-			if (!(thing->flags & 7))
-			{
-				continue;
-			}
-		}
-
-		int x = thing->x >> FRACBITS;
-		int y = thing->y >> FRACBITS;
-
-		thingLight = new thingLight_t;
-
-		thingLight->mapThing = thing;
-		thingLight->rgb = lightDef->rgb;
-		thingLight->intensity = lightDef->intensity;
-		thingLight->falloff = lightDef->falloff;
-		thingLight->radius = lightDef->radius >= 0 ? lightDef->radius : thing->angle;
-		thingLight->height = lightDef->height;
-		thingLight->bCeiling = lightDef->bCeiling;
-		thingLight->ssect = PointInSubSector(x, y);
-		thingLight->sector = GetSectorFromSubSector(thingLight->ssect);
-
-		thingLight->origin.Set(x, y);
-		thingLights.Push(thingLight);
 	}
 
 	printf("Thing lights: %i\n", thingLights.Size());
@@ -706,50 +503,123 @@ void FLevel::CreateLights()
 	{
 		surface_t *surface = surfaces[j];
 
-		for (unsigned int k = 0; k < surfaceLightDefs.Size(); ++k)
+		if (surface->type >= ST_MIDDLESEG && surface->type <= ST_LOWERSEG)
 		{
-			surfaceLightDef *surfaceLightDef = &surfaceLightDefs[k];
+			IntLineDef *line = nullptr;
+			if (GLSegs[surface->typeIndex].linedef != NO_LINE_INDEX)
+				line = &Lines[GLSegs[surface->typeIndex].linedef];
 
-			if (surface->type >= ST_MIDDLESEG && surface->type <= ST_LOWERSEG)
+			if (line)
 			{
-				MapSegGLEx *seg = (MapSegGLEx*)surface->data;
+				uint32_t lightcolor = 0xffffff;
+				float lightintensity = 1.0f;
+				float lightdistance = 0.0f;
 
-				if (Lines[seg->linedef].args[1] == surfaceLightDef->tag)
+				for (unsigned int propIndex = 0; propIndex < line->props.Size(); propIndex++)
 				{
-					kexLightSurface *lightSurface = new kexLightSurface;
+					const UDMFKey &key = line->props[propIndex];
+					if (!stricmp(key.key, "lightcolor"))
+					{
+						lightcolor = atoi(key.value);
+					}
+					else if (!stricmp(key.key, "lightintensity"))
+					{
+						lightintensity = atof(key.value);
+					}
+					else if (!stricmp(key.key, "lightdistance"))
+					{
+						lightdistance = atof(key.value);
+					}
+				}
 
-					lightSurface->Init(*surfaceLightDef, surface, true, false);
+				if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
+				{
+					surfaceLightDef desc;
+					desc.tag = 0;
+					desc.outerCone = 0.0f;
+					desc.innerCone = 0.0f;
+					desc.falloff = 1.0f;
+					desc.intensity = lightintensity;
+					desc.distance = lightdistance;
+					desc.bIgnoreCeiling = false;
+					desc.bIgnoreFloor = false;
+					desc.bNoCenterPoint = false;
+					desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
+
+					kexLightSurface *lightSurface = new kexLightSurface();
+					lightSurface->Init(desc, surface, true, false);
 					lightSurface->CreateCenterOrigin();
 					lightSurfaces.Push(lightSurface);
 					numSurfLights++;
 				}
 			}
-			else
+		}
+		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+		{
+			MapSubsectorEx *sub = surface->subSector;
+			IntSector *sector = GetSectorFromSubSector(sub);
+
+			if (sector && surface->numVerts > 0)
 			{
-				MapSubsectorEx *sub = surface->subSector;
-				IntSector *sector = GetSectorFromSubSector(sub);
+				uint32_t lightcolor = 0xffffff;
+				float lightintensity = 1.0f;
+				float lightdistance = 0.0f;
 
-				if (!sector || surface->numVerts <= 0)
+				for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
 				{
-					// eh....
-					continue;
+					const UDMFKey &key = sector->props[propIndex];
+					if (surface->type == ST_FLOOR)
+					{
+						if (!stricmp(key.key, "lightcolorfloor"))
+						{
+							lightcolor = atoi(key.value);
+						}
+						else if (!stricmp(key.key, "lightintensityfloor"))
+						{
+							lightintensity = atof(key.value);
+						}
+						else if (!stricmp(key.key, "lightdistancefloor"))
+						{
+							lightdistance = atof(key.value);
+						}
+					}
+					else
+					{
+						if (!stricmp(key.key, "lightcolorceiling"))
+						{
+							lightcolor = atoi(key.value);
+						}
+						else if (!stricmp(key.key, "lightintensityceiling"))
+						{
+							lightintensity = atof(key.value);
+						}
+						else if (!stricmp(key.key, "lightdistanceceiling"))
+						{
+							lightdistance = atof(key.value);
+						}
+					}
 				}
 
-				if (surface->type == ST_CEILING && surfaceLightDef->bIgnoreCeiling)
+				if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 				{
-					continue;
-				}
+					surfaceLightDef desc;
+					desc.tag = 0;
+					desc.outerCone = 0.0f;
+					desc.innerCone = 0.0f;
+					desc.falloff = 1.0f;
+					desc.intensity = lightintensity;
+					desc.distance = lightdistance;
+					desc.bIgnoreCeiling = false;
+					desc.bIgnoreFloor = false;
+					desc.bNoCenterPoint = false;
+					desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
-				if (surface->type == ST_FLOOR && surfaceLightDef->bIgnoreFloor)
-				{
-					continue;
-				}
-
-				if (sector->data.tag == surfaceLightDef->tag)
-				{
-					kexLightSurface *lightSurface = new kexLightSurface;
-
-					lightSurface->Init(*surfaceLightDef, surface, false, surfaceLightDef->bNoCenterPoint);
+					kexLightSurface *lightSurface = new kexLightSurface();
+					lightSurface->Init(desc, surface, false, desc.bNoCenterPoint);
 					lightSurface->Subdivide(16);
 					lightSurfaces.Push(lightSurface);
 					numSurfLights++;

@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 					START_COUNTER(t2a, t2b, t2c)
 					FProcessor builder(inwad, lump);
 					builder.BuildNodes();
-					builder.BuildLightmaps("lightconfig.txt");
+					builder.BuildLightmaps();
 					builder.Write(outwad);
 					END_COUNTER(t2a, t2b, t2c, "   %.3f seconds.\n")
 

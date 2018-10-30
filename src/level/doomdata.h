@@ -217,6 +217,8 @@ struct IntThing
 	char		special;
 	char		args[5];
 
+	float height; // UDMF
+
 	TArray<UDMFKey> props;
 };
 
@@ -374,7 +376,6 @@ struct FLevel
 	TArray<kexLightSurface*> lightSurfaces;
 
 	void SetupDlight();
-	void ParseConfigFile(const char *file);
 	void CreateLights();
 	void CleanupThingLights();
 
@@ -395,12 +396,6 @@ private:
 	void BuildLeafs();
 	void BuildPVS();
 	void CheckSkySectors();
-
-	TArray<lightDef_t> lightDefs;
-	TArray<surfaceLightDef> surfaceLightDefs;
-	TArray<mapDef_t> mapDefs;
-
-	mapDef_t *mapDef = nullptr;
 };
 
 const int BLOCKSIZE = 128;

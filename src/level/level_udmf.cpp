@@ -183,6 +183,10 @@ void FProcessor::ParseThing(IntThing *th)
 		{
 			th->type = (short)CheckInt(key);
 		}
+		if (!stricmp(key, "height"))
+		{
+			th->height = CheckFloat(key);
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};

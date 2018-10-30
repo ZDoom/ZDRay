@@ -597,14 +597,13 @@ void FProcessor::BuildNodes()
 	}
 }
 
-void FProcessor::BuildLightmaps(const char *configFile)
+void FProcessor::BuildLightmaps()
 {
 	LMBuilder.ambience = 0.0f;
 	LMBuilder.samples = Samples;
 	LMBuilder.textureWidth = LMDims;
 	LMBuilder.textureHeight = LMDims;
 
-	Level.ParseConfigFile(configFile);
 	Level.SetupDlight();
 	Surface_AllocateFromMap(Level);
 	Level.CreateLights();

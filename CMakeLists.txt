@@ -155,7 +155,6 @@ set( SOURCES
 	src/lightmap/kexlib/binfile.cpp
 	src/lightmap/kexlib/kstring.cpp
 	src/lightmap/kexlib/memheap.cpp
-	src/lightmap/kexlib/parser.cpp
 	src/lightmap/kexlib/math/angle.cpp
 	src/lightmap/kexlib/math/bounds.cpp
 	src/lightmap/kexlib/math/mathlib.cpp
@@ -199,7 +198,6 @@ set( HEADERS
 	src/lightmap/kexlib/binfile.h
 	src/lightmap/kexlib/kstring.h
 	src/lightmap/kexlib/memheap.h
-	src/lightmap/kexlib/parser.h
 	src/lightmap/kexlib/math/mathlib.h
 )
 
