@@ -90,4 +90,5 @@ private:
     kexVec3                 gridBlock;
 
 	std::mutex mutex;
+	int processed = 0;
 };

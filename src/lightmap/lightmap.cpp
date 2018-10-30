@@ -454,7 +454,8 @@ void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
 
 void kexLightmapBuilder::TraceSurface(surface_t *surface)
 {
-    kexVec3 colorSamples[256][256];
+    static thread_local kexVec3 colorSamples[1024 * 1024];
+
     int sampleWidth;
     int sampleHeight;
     kexVec3 normal;
@@ -464,11 +465,9 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
     int j;
     kexTrace trace;
     byte *currentTexture;
-    byte rgb[3];
     bool bShouldLookupTexture = false;
 
     trace.Init(*map);
-    //memset(colorSamples, 0, sizeof(colorSamples));
 
     sampleWidth = surface->lightmapDims[0];
     sampleHeight = surface->lightmapDims[1];
@@ -497,7 +496,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
                 bShouldLookupTexture = true;
             }
 
-			colorSamples[i][j] = c;
+			colorSamples[i * 1024 + j] = c;
 		}
     }
 
@@ -557,17 +556,12 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
         for(j = 0; j < sampleWidth; j++)
         {
             // get texture offset
-            int offs = (((textureWidth * (i + surface->lightmapOffs[1])) +
-                         surface->lightmapOffs[0]) * 3);
+            int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
 
             // convert RGB to bytes
-            rgb[0] = (uint32_t)(colorSamples[i][j][0] * 255 + 0.5f);
-            rgb[1] = (uint32_t)(colorSamples[i][j][1] * 255 + 0.5f);
-            rgb[2] = (uint32_t)(colorSamples[i][j][2] * 255 + 0.5f);
-
-            currentTexture[offs + j * 3 + 0] = rgb[0];
-            currentTexture[offs + j * 3 + 1] = rgb[1];
-            currentTexture[offs + j * 3 + 2] = rgb[2];
+            currentTexture[offs + j * 3 + 0] = (uint32_t)(colorSamples[i * 1024 + j].x * 255 + 0.5f);
+            currentTexture[offs + j * 3 + 1] = (uint32_t)(colorSamples[i * 1024 + j].y * 255 + 0.5f);
+            currentTexture[offs + j * 3 + 2] = (uint32_t)(colorSamples[i * 1024 + j].z * 255 + 0.5f);
         }
     }
 }
@@ -578,7 +572,6 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 
 void kexLightmapBuilder::LightSurface(const int surfid)
 {
-    static int processed = 0;
     float remaining;
     int numsurfs = surfaces.Length();
 
@@ -593,10 +586,14 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 
 	std::unique_lock<std::mutex> lock(mutex);
 
-    remaining = (float)processed / (float)numsurfs;
+	int lastproc = processed * 100 / numsurfs;
     processed++;
-
-    printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
+	int curproc = processed * 100 / numsurfs;
+	if (lastproc != curproc || processed == 1)
+	{
+		remaining = (float)processed / (float)numsurfs;
+		printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
+	}
 }
 
 //
@@ -733,7 +730,6 @@ kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace, c
 
 void kexLightmapBuilder::LightGrid(const int gridid)
 {
-    static int processed = 0;
     float remaining;
     int x, y, z;
     int mod;
@@ -788,25 +784,26 @@ void kexLightmapBuilder::LightGrid(const int gridid)
         }
     }
 
-    processed++;
-
-    if(!bInRange)
+    if(bInRange)
     {
-        // ignore if not in the world
-        return;
-    }
+		// mark grid cell and accumulate color results
+		gridMap[gridid].marked = 1;
+		gridMap[gridid].color += LightCellSample(gridid, trace, org, ss);
 
-    // mark grid cell and accumulate color results
-    gridMap[gridid].marked = 1;
-    gridMap[gridid].color += LightCellSample(gridid, trace, org, ss);
-
-    kexMath::Clamp(gridMap[gridid].color, 0, 1);
+		kexMath::Clamp(gridMap[gridid].color, 0, 1);
+	}
 
 	std::unique_lock<std::mutex> lock(mutex);
 
-    remaining = (float)processed / (float)numLightGrids;
+	int lastproc = processed * 100 / numLightGrids;
+	processed++;
+	int curproc = processed * 100 / numLightGrids;
 
-    printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
+	if (lastproc != curproc || processed == 1)
+	{
+		remaining = (float)processed / (float)numLightGrids;
+		printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
+	}
 }
 
 //
@@ -822,6 +819,7 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 
     printf("------------- Tracing surfaces -------------\n");
 
+	processed = 0;
 	kexWorker::RunJob(surfaces.Length(), [=](int id) {
 		LightSurface(id);
 	});
@@ -872,6 +870,7 @@ void kexLightmapBuilder::CreateLightGrid()
                   (int)(gridBlock.x * gridBlock.y), hb_static);
 
     // process all grid cells
+	processed = 0;
 	kexWorker::RunJob(count, [=](int id) {
 		LightGrid(id);
 	});
