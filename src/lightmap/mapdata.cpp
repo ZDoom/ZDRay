@@ -676,6 +676,9 @@ void FLevel::CreateLights()
 			}
 		}
 
+		int x = thing->x >> FRACBITS;
+		int y = thing->y >> FRACBITS;
+
 		thingLight = new thingLight_t;
 
 		thingLight->mapThing = thing;
@@ -685,10 +688,10 @@ void FLevel::CreateLights()
 		thingLight->radius = lightDef->radius >= 0 ? lightDef->radius : thing->angle;
 		thingLight->height = lightDef->height;
 		thingLight->bCeiling = lightDef->bCeiling;
-		thingLight->ssect = PointInSubSector(thing->x, thing->y);
+		thingLight->ssect = PointInSubSector(x, y);
 		thingLight->sector = GetSectorFromSubSector(thingLight->ssect);
 
-		thingLight->origin.Set(thing->x, thing->y);
+		thingLight->origin.Set(x, y);
 		thingLights.Push(thingLight);
 	}
 
