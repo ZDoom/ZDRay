@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "kexlib/binFile.h"
+#include "kexlib/binfile.h"
 
 enum mapLumps_t
 {
