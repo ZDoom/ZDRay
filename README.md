@@ -1,28 +1,35 @@
-# ZDRay UDMF properties
+
+# ZDRay baking utility for GZDoom
+
+ZDRay is a node and lightmap generator. It is based on zdbsp for the node generation and dlight for the lightmap generation.
+
+Special thanks to Randi Heit, Samuel Villarreal, Christoph Oelckers and anyone else involved in creating or maintaining those tools.
+
+## ZDRay UDMF properties
 
 <pre>
 linedef
 {
-	lightcolor = &gt;int&lt; (color, default: white)
-	lightintensity = &gt;float&lt; (default: 1)
-	lightdistance = &gt;float&lt; (default: 0, no light)
+	lightcolor = &lt;int&gt; (color, default: white)
+	lightintensity = &lt;float&gt; (default: 1)
+	lightdistance = &lt;float&gt; (default: 0, no light)
 }
 
 thing
 {
-	lightcolor = &gt;int&lt; (color)
-	lightintensity = &gt;float&lt; (default: 1)
-	lightdistance = &gt;float&lt; (default: 0, no light)
+	lightcolor = &lt;int&gt; (color)
+	lightintensity = &lt;float&gt; (default: 1)
+	lightdistance = &lt;float&gt; (default: 0, no light)
 }
 
 sector
 {
-	lightcolorfloor = &gt;int&lt; (color, default: white)
-	lightintensityfloor = &gt;float&lt; (default: 1)
-	lightdistancefloor = &gt;float&lt; (default: 0, no light)
+	lightcolorfloor = &lt;int&gt; (color, default: white)
+	lightintensityfloor = &lt;float&gt; (default: 1)
+	lightdistancefloor = &lt;float&gt; (default: 0, no light)
 
-	lightcolorceiling = &gt;int&lt; (color, default: white)
-	lightintensityceiling = &gt;float&lt; (default: 1)
-	lightdistanceceiling = &gt;float&lt; (default: 0, no light)
+	lightcolorceiling = &lt;int&gt; (color, default: white)
+	lightintensityceiling = &lt;float&gt; (default: 1)
+	lightdistanceceiling = &lt;float&gt; (default: 0, no light)
 }
 </pre>
