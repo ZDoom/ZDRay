@@ -117,6 +117,7 @@ int				 SSELevel;
 int				 NumThreads = 0;
 int				 LMDims = LIGHTMAP_MAX_SIZE;
 int				 Samples = 8;
+int				 Multisample = 1;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -155,6 +156,7 @@ static option long_opts[] =
 	{"threads",			required_argument,	0,	'j'},
 	{"samples",			required_argument,	0,	'Q'},
 	{"size",			required_argument,	0,	'S'},
+	{"multisample",		required_argument,	0,	'M'},
 	{0,0,0,0}
 };
 
@@ -448,6 +450,11 @@ static void ParseArgs(int argc, char **argv)
 			if (LMDims > LIGHTMAP_MAX_SIZE) LMDims = LIGHTMAP_MAX_SIZE;
 			LMDims = kexMath::RoundPowerOfTwo(LMDims);
 			break;
+		case 'M':
+			Multisample = atoi(optarg);
+			if (Multisample <= 0) Multisample = 1;
+			if (Multisample > 64) Multisample = 64;
+			break;
 		case 1000:
 			ShowUsage();
 			exit(0);
@@ -493,6 +500,7 @@ static void ShowUsage()
 		"                           slow compile time) must be in powers of two\n"
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
+		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"
 #ifdef _WIN32
 		"  -v, --view               View the nodes\n"
 #endif
@@ -509,6 +517,7 @@ static void ShowUsage()
 		, SplitCost
 		, AAPreference
 		, (int)std::thread::hardware_concurrency()
+		, Multisample
 	);
 }
 

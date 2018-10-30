@@ -42,6 +42,8 @@
 #include <map>
 #include <vector>
 
+extern int Multisample;
+
 const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
 
 //
@@ -474,19 +476,38 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 
     normal = surface->plane.Normal();
 
+	int multisampleCount = Multisample;
+
     // start walking through each texel
     for(i = 0; i < sampleHeight; i++)
     {
         for(j = 0; j < sampleWidth; j++)
         {
-            // convert the texel into world-space coordinates.
-            // this will be the origin in which a line will be traced from
-            pos = surface->lightmapOrigin + normal +
-                  (surface->lightmapSteps[0] * (float)j) +
-                  (surface->lightmapSteps[1] * (float)i);
+			kexVec3 c(0.0f, 0.0f, 0.0f);
 
-            kexVec3 c = LightTexelSample(trace, pos, surface);
-			kexMath::Clamp(c, 0, 1);
+			for (int k = 0; k < multisampleCount; k++)
+			{
+				kexVec2 multisamplePos((float)j, (float)i);
+				if (k > 0)
+				{
+					multisamplePos.x += rand() / (float)RAND_MAX - 0.5f;
+					multisamplePos.y += rand() / (float)RAND_MAX - 0.5f;
+					multisamplePos.x = max(multisamplePos.x, 0.0f);
+					multisamplePos.y = max(multisamplePos.y, 0.0f);
+					multisamplePos.x = min(multisamplePos.x, (float)sampleWidth);
+					multisamplePos.y = min(multisamplePos.y, (float)sampleHeight);
+				}
+
+				// convert the texel into world-space coordinates.
+				// this will be the origin in which a line will be traced from
+				pos = surface->lightmapOrigin + normal +
+					(surface->lightmapSteps[0] * multisamplePos.x) +
+					(surface->lightmapSteps[1] * multisamplePos.y);
+
+				c += LightTexelSample(trace, pos, surface);
+			}
+
+			c /= multisampleCount;
 
             // if nothing at all was traced and color is completely black
             // then this surface will not go through the extra rendering
@@ -496,6 +517,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
                 bShouldLookupTexture = true;
             }
 
+			kexMath::Clamp(c, 0, 1);
 			colorSamples[i * 1024 + j] = c;
 		}
     }
