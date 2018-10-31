@@ -229,9 +229,21 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		{
 			ld->args[0] = CheckInt(key);
 		}
-		else if (Extended && !stricmp(key, "id"))
+		else if (Extended && !stricmp(key, "arg1"))
 		{
 			ld->args[1] = CheckInt(key);
+		}
+		else if (Extended && !stricmp(key, "arg2"))
+		{
+			ld->args[2] = CheckInt(key);
+		}
+		else if (Extended && !stricmp(key, "arg3"))
+		{
+			ld->args[3] = CheckInt(key);
+		}
+		else if (Extended && !stricmp(key, "arg4"))
+		{
+			ld->args[4] = CheckInt(key);
 		}
 		else if (!stricmp(key, "blocking") && !stricmp(value, "true"))
 		{

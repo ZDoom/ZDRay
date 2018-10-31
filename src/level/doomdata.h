@@ -108,6 +108,9 @@ struct IntSector
 	kexPlane ceilingplane;
 	kexPlane floorplane;
 
+	bool controlsector;
+	TArray<IntSector*> x3dfloors;
+
 	TArray<UDMFKey> props;
 };
 
