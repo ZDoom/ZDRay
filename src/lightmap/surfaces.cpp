@@ -40,8 +40,6 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
 {
     IntSideDef *side;
     surface_t *surf;
-    float top, bTop;
-    float bottom, bBottom;
     IntSector *front;
     IntSector *back;
 
@@ -54,24 +52,27 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
     front = doomMap.GetFrontSector(seg);
     back = doomMap.GetBackSector(seg);
 
-    top = front->data.ceilingheight;
-    bottom = front->data.floorheight;
-
     FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
 	FloatVertex v2 = doomMap.GetSegVertex(seg->v2);
+	float v1Top = front->ceilingplane.zAt(v1.x, v1.y);
+	float v1Bottom = front->floorplane.zAt(v1.x, v1.y);
+	float v2Top = front->ceilingplane.zAt(v2.x, v2.y);
+	float v2Bottom = front->floorplane.zAt(v2.x, v2.y);
 
     if(back)
     {
-        bTop = back->data.ceilingheight;
-        bBottom = back->data.floorheight;
+		float v1TopBack = back->ceilingplane.zAt(v1.x, v1.y);
+		float v1BottomBack = back->floorplane.zAt(v1.x, v1.y);
+		float v2TopBack = back->ceilingplane.zAt(v2.x, v2.y);
+		float v2BottomBack = back->floorplane.zAt(v2.x, v2.y);
 
-        if(bTop == top && bBottom == bottom)
+        if (v1Top == v1TopBack && v1Bottom == v1BottomBack && v2Top == v2TopBack && v2Bottom == v2BottomBack)
         {
             return;
         }
 
         // bottom seg
-        if(bottom < bBottom)
+        if(v1Bottom < v1BottomBack || v2Bottom < v2BottomBack)
         {
             if(side->bottomtexture[0] != '-')
             {
@@ -83,8 +84,10 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
                 surf->verts[0].y = surf->verts[2].y = v1.y;
                 surf->verts[1].x = surf->verts[3].x = v2.x;
                 surf->verts[1].y = surf->verts[3].y = v2.y;
-                surf->verts[0].z = surf->verts[1].z = bottom;
-                surf->verts[2].z = surf->verts[3].z = bBottom;
+				surf->verts[0].z = v1Bottom;
+				surf->verts[1].z = v2Bottom;
+				surf->verts[2].z = v1BottomBack;
+				surf->verts[3].z = v2BottomBack;
 
                 surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
                 surf->plane.SetDistance(surf->verts[0]);
@@ -98,11 +101,12 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
                 surfaces.Push(surf);
             }
 
-            bottom = bBottom;
+			v1Bottom = v1BottomBack;
+			v2Bottom = v2BottomBack;
         }
 
         // top seg
-        if(top > bTop)
+        if(v1Top > v1TopBack || v2Top > v2TopBack)
         {
             bool bSky = false;
             int frontidx = front - &doomMap.Sectors[0];
@@ -126,8 +130,10 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
                 surf->verts[0].y = surf->verts[2].y = v1.y;
                 surf->verts[1].x = surf->verts[3].x = v2.x;
                 surf->verts[1].y = surf->verts[3].y = v2.y;
-                surf->verts[0].z = surf->verts[1].z = bTop;
-                surf->verts[2].z = surf->verts[3].z = top;
+				surf->verts[0].z = v1TopBack;
+				surf->verts[1].z = v2TopBack;
+				surf->verts[2].z = v1Top;
+				surf->verts[3].z = v2Top;
 
                 surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
                 surf->plane.SetDistance(surf->verts[0]);
@@ -142,7 +148,8 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
                 surfaces.Push(surf);
             }
 
-            top = bTop;
+			v1Top = v1TopBack;
+			v2Top = v2TopBack;
         }
     }
 
@@ -157,8 +164,10 @@ static void Surface_AllocateFromSeg(FLevel &doomMap, MapSegGLEx *seg)
         surf->verts[0].y = surf->verts[2].y = v1.y;
         surf->verts[1].x = surf->verts[3].x = v2.x;
         surf->verts[1].y = surf->verts[3].y = v2.y;
-        surf->verts[0].z = surf->verts[1].z = bottom;
-        surf->verts[2].z = surf->verts[3].z = top;
+		surf->verts[0].z = v1Bottom;
+		surf->verts[1].z = v2Bottom;
+		surf->verts[2].z = v1Top;
+		surf->verts[3].z = v2Top;
 
         surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
         surf->plane.SetDistance(surf->verts[0]);
@@ -224,11 +233,10 @@ static void Surface_AllocateFromLeaf(FLevel &doomMap)
 
             surf->verts[j].x = leaf->vertex.x;
             surf->verts[j].y = leaf->vertex.y;
-            surf->verts[j].z = sector->data.floorheight;
+            surf->verts[j].z = sector->floorplane.zAt(surf->verts[j].x, surf->verts[j].y);
         }
 
-        surf->plane.SetNormal(kexVec3(0, 0, 1));
-        surf->plane.SetDistance(surf->verts[0]);
+        surf->plane = sector->floorplane;
         surf->type = ST_FLOOR;
         surf->typeIndex = i;
 
@@ -254,11 +262,10 @@ static void Surface_AllocateFromLeaf(FLevel &doomMap)
 
             surf->verts[j].x = leaf->vertex.x;
             surf->verts[j].y = leaf->vertex.y;
-            surf->verts[j].z = sector->data.ceilingheight;
+            surf->verts[j].z = sector->ceilingplane.zAt(surf->verts[j].x, surf->verts[j].y);
         }
 
-        surf->plane.SetNormal(kexVec3(0, 0, -1));
-        surf->plane.SetDistance(surf->verts[0]);
+        surf->plane = sector->ceilingplane;
         surf->type = ST_CEILING;
         surf->typeIndex = i;
 

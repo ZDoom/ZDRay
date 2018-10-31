@@ -105,6 +105,9 @@ struct IntSector
 	// empty is enough
 	MapSector data;
 
+	kexPlane ceilingplane;
+	kexPlane floorplane;
+
 	TArray<UDMFKey> props;
 };
 

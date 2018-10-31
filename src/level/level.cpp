@@ -259,6 +259,16 @@ void FProcessor::LoadSectors ()
 	for (int i = 0; i < NumSectors; ++i)
 	{
 		Level.Sectors[i].data = Sectors[i];
+
+		Level.Sectors[i].ceilingplane.a = 0.0f;
+		Level.Sectors[i].ceilingplane.b = 0.0f;
+		Level.Sectors[i].ceilingplane.c = -1.0f;
+		Level.Sectors[i].ceilingplane.d = -Level.Sectors[i].data.ceilingheight;
+
+		Level.Sectors[i].floorplane.a = 0.0f;
+		Level.Sectors[i].floorplane.b = 0.0f;
+		Level.Sectors[i].floorplane.c = 1.0f;
+		Level.Sectors[i].floorplane.d = Level.Sectors[i].data.floorheight;
 	}
 }
 

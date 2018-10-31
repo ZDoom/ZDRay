@@ -330,6 +330,8 @@ void FProcessor::ParseSector(IntSector *sec)
 	memset(&sec->data, 0, sizeof(sec->data));
 	sec->data.lightlevel = 160;
 
+	bool ceilingplane = false, floorplane = false;
+
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
 	{
@@ -364,10 +366,84 @@ void FProcessor::ParseSector(IntSector *sec)
 		{
 			sec->data.tag = CheckInt(key);
 		}
+		else if (stricmp(key, "ceilingplane_a") == 0)
+		{
+			ceilingplane = true;
+			sec->ceilingplane.a = CheckFloat(key);
+		}
+		else if (stricmp(key, "ceilingplane_b") == 0)
+		{
+			ceilingplane = true;
+			sec->ceilingplane.b = CheckFloat(key);
+		}
+		else if (stricmp(key, "ceilingplane_c") == 0)
+		{
+			ceilingplane = true;
+			sec->ceilingplane.c = CheckFloat(key);
+		}
+		else if (stricmp(key, "ceilingplane_d") == 0)
+		{
+			ceilingplane = true;
+			sec->ceilingplane.d = CheckFloat(key);
+		}
+		else if (stricmp(key, "floorplane_a") == 0)
+		{
+			floorplane = true;
+			sec->floorplane.a = CheckFloat(key);
+		}
+		else if (stricmp(key, "floorplane_b") == 0)
+		{
+			floorplane = true;
+			sec->floorplane.b = CheckFloat(key);
+		}
+		else if (stricmp(key, "floorplane_c") == 0)
+		{
+			floorplane = true;
+			sec->floorplane.c = CheckFloat(key);
+		}
+		else if (stricmp(key, "floorplane_d") == 0)
+		{
+			floorplane = true;
+			sec->floorplane.d = CheckFloat(key);
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};
 		sec->props.Push(k);
+	}
+
+	if (!ceilingplane)
+	{
+		sec->ceilingplane.a = 0.0f;
+		sec->ceilingplane.b = 0.0f;
+		sec->ceilingplane.c = -1.0f;
+		sec->ceilingplane.d = -sec->data.ceilingheight;
+	}
+	else
+	{
+		float scale = 1.0f / sec->ceilingplane.Normal().Length();
+		sec->ceilingplane.a *= scale;
+		sec->ceilingplane.b *= scale;
+		sec->ceilingplane.c *= scale;
+		sec->ceilingplane.d *= scale;
+		sec->ceilingplane.d = -sec->ceilingplane.d;
+	}
+
+	if (!floorplane)
+	{
+		sec->floorplane.a = 0.0f;
+		sec->floorplane.b = 0.0f;
+		sec->floorplane.c = 1.0f;
+		sec->floorplane.d = sec->data.floorheight;
+	}
+	else
+	{
+		float scale = 1.0f / sec->floorplane.Normal().Length();
+		sec->floorplane.a *= scale;
+		sec->floorplane.b *= scale;
+		sec->floorplane.c *= scale;
+		sec->floorplane.d *= scale;
+		sec->floorplane.d = -sec->floorplane.d;
 	}
 }
 
