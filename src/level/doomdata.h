@@ -223,6 +223,7 @@ struct IntThing
 	char		special;
 	char		args[5];
 
+	short pitch; // UDMF
 	float height; // UDMF
 
 	TArray<UDMFKey> props;
@@ -278,7 +279,8 @@ struct thingLight_t
 	kexVec2         origin;
 	kexVec3         rgb;
 	float           intensity;
-	float           falloff;
+	float           innerAngleCos;
+	float           outerAngleCos;
 	float           height;
 	float           radius;
 	bool            bCeiling;

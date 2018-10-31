@@ -238,19 +238,22 @@ bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surfa
 // and against all nearby thing lights
 //
 
+template<class T>
+T smoothstep(const T edge0, const T edge1, const T x)
+{
+	auto t = clamp<T>((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+	return t * t * (3.0 - 2.0 * t);
+}
+
+static float radians(float degrees)
+{
+	return degrees * 3.14159265359f / 180.0f;
+}
+
 kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface)
 {
-    kexVec3 lightOrigin;
-    kexVec3 dir;
-    kexVec3 color;
-    kexPlane plane;
-    float dist;
-    float radius;
-    float intensity;
-    float colorAdd;
-
-    plane = surface->plane;
-    color.Clear();
+    kexPlane plane = surface->plane;
+	kexVec3 color(0.0f, 0.0f, 0.0f);
 
     // check all thing lights
     for(unsigned int i = 0; i < map->thingLights.Size(); i++)
@@ -263,11 +266,13 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
             continue;
         }
 
-        lightOrigin.Set(tl->origin.x,
-                        tl->origin.y,
-                        !tl->bCeiling ?
-                        tl->sector->data.floorheight + tl->height :
-                        tl->sector->data.ceilingheight - tl->height);
+		float originZ;
+		if (!tl->bCeiling)
+			originZ = tl->sector->floorplane.zAt(tl->origin.x, tl->origin.y) + tl->height;
+		else
+			originZ = tl->sector->ceilingplane.zAt(tl->origin.x, tl->origin.y) - tl->height;
+
+		kexVec3 lightOrigin(tl->origin.x, tl->origin.y, originZ);
 
         if(plane.Distance(lightOrigin) - plane.d < 0)
         {
@@ -275,14 +280,36 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
             continue;
         }
 
-        radius = tl->radius;
-        intensity = tl->intensity;
+        float radius = tl->radius;
+        float intensity = tl->intensity;
 
         if(origin.DistanceSq(lightOrigin) > (radius*radius))
         {
             // not within range
             continue;
         }
+
+		kexVec3 dir = (lightOrigin - origin);
+		float dist = dir.Unit();
+		dir.Normalize();
+
+		float spotAttenuation = 1.0f;
+		if (tl->outerAngleCos > -1.0f)
+		{
+			float negPitch = -radians(tl->mapThing->pitch);
+			float xyLen = std::cosf(negPitch);
+			kexVec3 spotDir;
+			spotDir.x = std::sinf(radians(tl->mapThing->angle)) * xyLen;
+			spotDir.y = std::cosf(radians(tl->mapThing->angle)) * xyLen;
+			spotDir.z = -std::sinf(negPitch);
+			float cosDir = kexVec3::Dot(dir, spotDir);
+			spotAttenuation = smoothstep(tl->outerAngleCos, tl->innerAngleCos, cosDir);
+			if (spotAttenuation <= 0.0f)
+			{
+				// outside spot light
+				continue;
+			}
+		}
 
         trace.Trace(lightOrigin, origin);
 
@@ -292,23 +319,13 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
             continue;
         }
 
-        dir = (lightOrigin - origin);
-        dist = dir.Unit();
-
-        dir.Normalize();
-
-        float r = MAX(radius - dist, 0.0f);
-
-        colorAdd = ((r * plane.Normal().Dot(dir)) / radius) * intensity;
-        kexMath::Clamp(colorAdd, 0, 1);
-
-        if(tl->falloff != 1)
-        {
-            colorAdd = kexMath::Pow(colorAdd, tl->falloff);
-        }
+		float attenuation = 1.0f - (dist / radius);
+		attenuation *= spotAttenuation;
+		attenuation *= plane.Normal().Dot(dir);
+		attenuation *= intensity;
 
         // accumulate results
-        color += tl->rgb * colorAdd;
+        color += tl->rgb * attenuation;
 
         tracedTexels++;
     }
@@ -331,9 +348,10 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
             continue;
         }
 
-        if(surfaceLight->TraceSurface(map, trace, surface, origin, &dist))
+		float attenuation;
+        if(surfaceLight->TraceSurface(map, trace, surface, origin, &attenuation))
         {
-            color += surfaceLight->GetRGB() * kexMath::Pow(dist * surfaceLight->Intensity(), surfaceLight->FallOff());
+            color += surfaceLight->GetRGB() * attenuation;
 
             tracedTexels++;
         }

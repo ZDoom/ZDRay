@@ -450,6 +450,8 @@ void FLevel::CreateLights()
 		uint32_t lightcolor = 0xffffff;
 		float lightintensity = 1.0f;
 		float lightdistance = 0.0f;
+		float innerAngleCos = -1.0f;
+		float outerAngleCos = -1.0f;
 
 		for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 		{
@@ -466,6 +468,14 @@ void FLevel::CreateLights()
 			{
 				lightdistance = atof(key.value);
 			}
+			else if (!stricmp(key.key, "lightinnerangle"))
+			{
+				innerAngleCos = std::cosf(atof(key.value) * 3.14159265359f / 180.0f);
+			}
+			else if (!stricmp(key.key, "lightouterangle"))
+			{
+				outerAngleCos = std::cosf(atof(key.value) * 3.14159265359f / 180.0f);
+			}
 		}
 
 		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
@@ -480,7 +490,8 @@ void FLevel::CreateLights()
 			thingLight->rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 			thingLight->rgb.z = (lightcolor & 0xff) / 255.0f;
 			thingLight->intensity = lightintensity;
-			thingLight->falloff = 1.0f;
+			thingLight->innerAngleCos = max(innerAngleCos, outerAngleCos);
+			thingLight->outerAngleCos = outerAngleCos;
 			thingLight->radius = lightdistance;
 			thingLight->height = thing->height;
 			thingLight->bCeiling = false;

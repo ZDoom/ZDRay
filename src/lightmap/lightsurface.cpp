@@ -302,7 +302,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
     // light surface will always be fullbright
     if(surf == surface)
     {
-        *dist = 1;
+        *dist = Intensity();
         return true;
     }
 
@@ -426,7 +426,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
             if(!bWall)
             {
                 *dist = 1;
-                return true;
+				break;
             }
         }
 
@@ -451,5 +451,6 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
         }
     }
 
+	*dist *= Intensity();
     return *dist > 0;
 }

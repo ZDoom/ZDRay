@@ -158,6 +158,8 @@ fixed_t CheckFixed(const char *key)
 
 void FProcessor::ParseThing(IntThing *th)
 {
+	th->pitch = 0;
+
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
 	{
@@ -178,6 +180,10 @@ void FProcessor::ParseThing(IntThing *th)
 		if (!stricmp(key, "angle"))
 		{
 			th->angle = (short)CheckInt(key);
+		}
+		if (!stricmp(key, "pitch"))
+		{
+			th->pitch = (short)CheckInt(key);
 		}
 		if (!stricmp(key, "type"))
 		{
