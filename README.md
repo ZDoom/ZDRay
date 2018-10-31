@@ -20,6 +20,8 @@ thing
 	lightcolor = &lt;int&gt; (color)
 	lightintensity = &lt;float&gt; (default: 1)
 	lightdistance = &lt;float&gt; (default: 0, no light)
+	lightinnerangle = &lt;float&gt; (default: 180)
+	lightouterangle = &lt;float&gt; (default: 180)
 }
 
 sector
