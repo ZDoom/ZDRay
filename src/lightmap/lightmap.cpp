@@ -280,7 +280,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
             continue;
         }
 
-        float radius = tl->radius;
+        float radius = tl->radius * 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
         float intensity = tl->intensity;
 
         if(origin.DistanceSq(lightOrigin) > (radius*radius))

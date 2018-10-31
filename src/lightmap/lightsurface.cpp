@@ -414,7 +414,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 
         float d = origin.Distance(center);
 
-		curDist = 1.0f - d / distance;
+		curDist = 1.0f - d / (distance * 2.0f); // 2.0 because gzdoom's dynlights do this and we want them to match
 		if (curDist < 0.0f) curDist = 0.0f;
 
         if(curDist >= 1)
