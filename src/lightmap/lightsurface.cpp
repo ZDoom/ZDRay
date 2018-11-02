@@ -243,23 +243,17 @@ void kexLightSurface::Subdivide(const float divide)
 	}
 }
 
-bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf, const kexVec3 &origin, float *dist)
+float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf, const kexVec3 &origin)
 {
-	kexVec3 normal;
-	kexVec3 lnormal;
-	float curDist;
-
-	*dist = -M_INFINITY;
-
 	// light surface will always be fullbright
 	if (surf == surface)
 	{
-		*dist = Intensity();
-		return true;
+		return 1.0f;
 	}
 
-	lnormal = surface->plane.Normal();
+	kexVec3 lnormal = surface->plane.Normal();
 
+	kexVec3 normal;
 	if (surf)
 	{
 		normal = surf->plane.Normal();
@@ -267,7 +261,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 		if (normal.Dot(lnormal) > 0)
 		{
 			// not facing the light surface
-			return false;
+			return 0.0f;
 		}
 	}
 	else
@@ -275,8 +269,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 		normal = kexVec3::vecUp;
 	}
 
-	// we need to pick the closest sample point on the light surface. what really sucks is
-	// that we have to trace each one... which could really blow up the compile time
+	float total = 0.0f;
 	for (unsigned int i = 0; i < origins.Length(); ++i)
 	{
 		kexVec3 center = origins[i];
@@ -289,25 +282,11 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 			continue;
 		}
 
-		/*if(bWall)
-		{
-			angle = (origin - center).ToVec2().Normalize().Dot(lnormal.ToVec2());
-		}
-		else
-		{
-			kexVec3 dir = (origin - center).Normalize();
+		kexVec3 dir = (origin - center).Normalize();
+		float attenuation = dir.Dot(lnormal);
 
-			if(surf)
-			{
-				if(normal.Dot(dir) >= 0)
-				{
-					// not even facing the light surface
-					continue;
-				}
-			}
-
-			angle = dir.Dot(lnormal);
-		}*/
+		if (attenuation <= 0.0f)
+			continue; // not even facing the light surface
 
 		if (bWall)
 		{
@@ -324,36 +303,17 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 		// case the start/end points are directly on or inside the surface
 		trace.Trace(center + lnormal, origin + normal);
 
-		if (trace.fraction != 1)
+		if (trace.fraction < 1.0f)
 		{
 			// something is obstructing it
 			continue;
 		}
 
 		float d = origin.Distance(center);
-
-		curDist = 1.0f - d / (distance * 2.0f); // 2.0 because gzdoom's dynlights do this and we want them to match
-		if (curDist < 0.0f) curDist = 0.0f;
-
-		if (curDist >= 1)
-		{
-			curDist = 1;
-
-			// might get large unlit gaps near the surface. this looks a lot worse for
-			// non-wall light surfaces so just clamp to full bright and exit out.
-			if (!bWall)
-			{
-				*dist = 1;
-				break;
-			}
-		}
-
-		if (curDist > *dist)
-		{
-			*dist = curDist;
-		}
+		attenuation *= 1.0f - d / (distance * 2.0f); // 2.0 because gzdoom's dynlights do this and we want them to match
+		if (attenuation > 0.0f)
+			total += attenuation;
 	}
 
-	*dist *= Intensity();
-	return *dist > 0;
+	return total / origins.Length();
 }

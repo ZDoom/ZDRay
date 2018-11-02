@@ -301,11 +301,10 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 	{
 		kexLightSurface *surfaceLight = map->lightSurfaces[i];
 
-		float attenuation;
-		if (surfaceLight->TraceSurface(map, trace, surface, origin, &attenuation))
+		float attenuation = surfaceLight->TraceSurface(map, trace, surface, origin);
+		if (attenuation > 0.0f)
 		{
-			color += surfaceLight->GetRGB() * attenuation;
-
+			color += surfaceLight->GetRGB() * surfaceLight->Intensity() * attenuation;
 			tracedTexels++;
 		}
 	}

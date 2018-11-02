@@ -42,7 +42,7 @@ public:
 	void Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint);
 	void Subdivide(const float divide);
 	void CreateCenterOrigin();
-	bool TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
+	float TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin);
 
 	const float Distance() const { return distance; }
 	const float Intensity() const { return intensity; }
