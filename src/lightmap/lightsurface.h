@@ -39,7 +39,7 @@ public:
 	kexLightSurface();
 	~kexLightSurface();
 
-	void Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint);
+	void Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall);
 	void Subdivide(const float divide);
 	void CreateCenterOrigin();
 	float TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin);
@@ -48,7 +48,6 @@ public:
 	const float Intensity() const { return intensity; }
 	const kexVec3 GetRGB() const { return rgb; }
 	const bool IsAWall() const { return bWall; }
-	const bool NoCenterPoint() const { return bNoCenterPoint; }
 	const surface_t *Surface() const { return surface; }
 	const vertexBatch_t Origins() const { return origins; }
 
@@ -60,7 +59,6 @@ private:
 	float intensity;
 	kexVec3 rgb;
 	bool bWall;
-	bool bNoCenterPoint;
 	vertexBatch_t origins;
 	surface_t *surface;
 };

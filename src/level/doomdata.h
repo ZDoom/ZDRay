@@ -288,12 +288,8 @@ struct thingLight_t
 
 struct surfaceLightDef
 {
-	int             tag;
 	float           distance;
 	float           intensity;
-	bool            bIgnoreFloor;
-	bool            bIgnoreCeiling;
-	bool            bNoCenterPoint;
 	kexVec3         rgb;
 };
 

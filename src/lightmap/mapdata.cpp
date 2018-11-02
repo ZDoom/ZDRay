@@ -272,19 +272,16 @@ void FLevel::CreateLights()
 				if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 				{
 					surfaceLightDef desc;
-					desc.tag = 0;
 					desc.intensity = lightintensity;
 					desc.distance = lightdistance;
-					desc.bIgnoreCeiling = false;
-					desc.bIgnoreFloor = false;
-					desc.bNoCenterPoint = false;
 					desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
 					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
 					kexLightSurface *lightSurface = new kexLightSurface();
-					lightSurface->Init(desc, surface, true, false);
-					lightSurface->CreateCenterOrigin();
+					lightSurface->Init(desc, surface, true);
+					lightSurface->Subdivide(16);
+					//lightSurface->CreateCenterOrigin();
 					lightSurfaces.Push(lightSurface);
 					numSurfLights++;
 				}
@@ -339,18 +336,14 @@ void FLevel::CreateLights()
 				if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 				{
 					surfaceLightDef desc;
-					desc.tag = 0;
 					desc.intensity = lightintensity;
 					desc.distance = lightdistance;
-					desc.bIgnoreCeiling = false;
-					desc.bIgnoreFloor = false;
-					desc.bNoCenterPoint = false;
 					desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
 					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
 					kexLightSurface *lightSurface = new kexLightSurface();
-					lightSurface->Init(desc, surface, false, desc.bNoCenterPoint);
+					lightSurface->Init(desc, surface, false);
 					lightSurface->Subdivide(16);
 					lightSurfaces.Push(lightSurface);
 					numSurfLights++;
