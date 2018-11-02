@@ -269,7 +269,10 @@ float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surf
 		normal = kexVec3::vecUp;
 	}
 
+	float gzdoomRadiusScale = 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
+
 	float total = 0.0f;
+	float closestDistance = distance * gzdoomRadiusScale;
 	for (unsigned int i = 0; i < origins.Length(); ++i)
 	{
 		kexVec3 center = origins[i];
@@ -310,10 +313,11 @@ float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surf
 		}
 
 		float d = origin.Distance(center);
-		attenuation *= 1.0f - d / (distance * 2.0f); // 2.0 because gzdoom's dynlights do this and we want them to match
-		if (attenuation > 0.0f)
-			total += attenuation;
+		if (d < closestDistance)
+			closestDistance = d;
+		total += attenuation;
 	}
 
-	return total / origins.Length();
+	float attenuation = 1.0f - closestDistance / (distance * gzdoomRadiusScale);
+	return attenuation * total / origins.Length();
 }
