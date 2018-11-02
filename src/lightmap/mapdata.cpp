@@ -31,7 +31,6 @@
 //-----------------------------------------------------------------------------
 
 #include "common.h"
-#include "wad.h"
 #include "mapdata.h"
 #include "lightsurface.h"
 

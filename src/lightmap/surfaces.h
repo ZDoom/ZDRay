@@ -59,13 +59,11 @@ struct surface_t
     float                   *lightmapCoords;
     surfaceType_t           type;
     int                     typeIndex;
-    //void                    *data;
     bool                    bSky;
-	//MapSubsectorEx          *subSector;
 };
 
 extern kexArray<surface_t*> surfaces;
 
 struct FLevel;
 
-void Surface_AllocateFromMap(FLevel &doomMap);
+void CreateSurfaces(FLevel &doomMap);

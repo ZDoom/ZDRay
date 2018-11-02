@@ -37,7 +37,6 @@
 #include "lightmap.h"
 #include "worker.h"
 #include "kexlib/binfile.h"
-#include "wad.h"
 #include "framework/templates.h"
 #include "halffloat.h"
 #include <map>
@@ -854,54 +853,4 @@ void kexLightmapBuilder::WriteMeshToOBJ()
 	}
 
 	fclose(f);
-}
-
-//
-// kexLightmapBuilder::ExportTexelsToObjFile
-//
-
-void kexLightmapBuilder::ExportTexelsToObjFile(FILE *f, const kexVec3 &org, int indices)
-{
-#define BLOCK(idx, offs) (org[idx] + offs)/256.0f
-    fprintf(f, "o texel_%03d\n", indices);
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, -6), BLOCK(2, -6), -BLOCK(0, 6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, -6), BLOCK(2, 6), -BLOCK(0, 6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, -6), BLOCK(2, 6), -BLOCK(0, -6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, -6), BLOCK(2, -6), -BLOCK(0, -6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 6), BLOCK(2, -6), -BLOCK(0, 6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 6), BLOCK(2, 6), -BLOCK(0, 6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 6), BLOCK(2, 6), -BLOCK(0, -6));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 6), BLOCK(2, -6), -BLOCK(0, -6));
-    fprintf(f, "f %i %i %i %i\n", indices+1, indices+2, indices+3, indices+4);
-    fprintf(f, "f %i %i %i %i\n", indices+5, indices+8, indices+7, indices+6);
-    fprintf(f, "f %i %i %i %i\n", indices+1, indices+5, indices+6, indices+2);
-    fprintf(f, "f %i %i %i %i\n", indices+2, indices+6, indices+7, indices+3);
-    fprintf(f, "f %i %i %i %i\n", indices+3, indices+7, indices+8, indices+4);
-    fprintf(f, "f %i %i %i %i\n\n", indices+5, indices+1, indices+4, indices+8);
-#undef BLOCK
-}
-
-//
-// kexLightmapBuilder::WriteBlock
-//
-
-void kexLightmapBuilder::WriteBlock(FILE *f, const int i, const kexVec3 &org, int indices, kexBBox &box)
-{
-#define BLOCK(idx, offs) (org[idx] + box[offs][idx])/256.0f
-    fprintf(f, "o texel_%03d\n", i);
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 0), BLOCK(2, 0), -BLOCK(0, 1));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 0), BLOCK(2, 1), -BLOCK(0, 1));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 0), BLOCK(2, 1), -BLOCK(0, 0));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 0), BLOCK(2, 0), -BLOCK(0, 0));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 1), BLOCK(2, 0), -BLOCK(0, 1));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 1), BLOCK(2, 1), -BLOCK(0, 1));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 1), BLOCK(2, 1), -BLOCK(0, 0));
-    fprintf(f, "v %f %f %f\n", -BLOCK(1, 1), BLOCK(2, 0), -BLOCK(0, 0));
-    fprintf(f, "f %i %i %i %i\n", indices+1, indices+2, indices+3, indices+4);
-    fprintf(f, "f %i %i %i %i\n", indices+5, indices+8, indices+7, indices+6);
-    fprintf(f, "f %i %i %i %i\n", indices+1, indices+5, indices+6, indices+2);
-    fprintf(f, "f %i %i %i %i\n", indices+2, indices+6, indices+7, indices+3);
-    fprintf(f, "f %i %i %i %i\n", indices+3, indices+7, indices+8, indices+4);
-    fprintf(f, "f %i %i %i %i\n\n", indices+5, indices+1, indices+4, indices+8);
-#undef BLOCK
 }

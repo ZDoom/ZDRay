@@ -36,7 +36,7 @@
 
 kexArray<surface_t*> surfaces;
 
-static void Surface_AllocateFromSide(FLevel &doomMap, IntSideDef *side)
+static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
     surface_t *surf;
     IntSector *front;
@@ -172,7 +172,7 @@ static void Surface_AllocateFromSide(FLevel &doomMap, IntSideDef *side)
     }
 }
 
-static void Surface_AllocateFromLeaf(FLevel &doomMap)
+static void CreateSubsectorSurfaces(FLevel &doomMap)
 {
     surface_t *surf;
     IntSector *sector = NULL;
@@ -198,7 +198,7 @@ static void Surface_AllocateFromLeaf(FLevel &doomMap)
         // sector hacks
         if(sector == NULL)
         {
-            Error("Surface_AllocateFromLeaf: subsector %i has no sector\n", i);
+            Error("CreateSubsectorSurfaces: subsector %i has no sector\n", i);
             return;
         }
 
@@ -272,7 +272,7 @@ static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2
 	return crosslengthsqr <= 1.e-6f;
 }
 
-void Surface_AllocateFromMap(FLevel &doomMap)
+void CreateSurfaces(FLevel &doomMap)
 {
 	for (unsigned int i = 0; i < surfaces.Length(); i++)
 		Mem_Free(surfaces[i]);
@@ -313,17 +313,17 @@ void Surface_AllocateFromMap(FLevel &doomMap)
 		}
 	}
 
-    printf("------------- Building seg surfaces -------------\n");
+    printf("------------- Building side surfaces -------------\n");
 
     for(unsigned int i = 0; i < doomMap.Sides.Size(); i++)
     {
-        Surface_AllocateFromSide(doomMap, &doomMap.Sides[i]);
+		CreateSideSurfaces(doomMap, &doomMap.Sides[i]);
         printf("sides: %i / %i\r", i+1, doomMap.Sides.Size());
     }
 
     printf("\nSide surfaces: %i\n", surfaces.Length());
 
-    Surface_AllocateFromLeaf(doomMap);
+    CreateSubsectorSurfaces(doomMap);
 
     printf("Surfaces total: %i\n\n", surfaces.Length());
 

@@ -149,7 +149,6 @@ set( SOURCES
 	src/lightmap/mapdata.cpp
 	src/lightmap/surfaces.cpp
 	src/lightmap/trace.cpp
-	src/lightmap/wad.cpp
 	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
 	src/lightmap/halffloat.cpp
@@ -192,7 +191,6 @@ set( HEADERS
 	src/lightmap/mapdata.h
 	src/lightmap/surfaces.h
 	src/lightmap/trace.h
-	src/lightmap/wad.h
 	src/lightmap/worker.h
 	src/lightmap/collision.h
 	src/lightmap/halffloat.h
