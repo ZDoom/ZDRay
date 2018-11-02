@@ -31,12 +31,12 @@ struct MapSubsectorEx;
 
 enum surfaceType_t
 {
-    ST_UNKNOWN      = 0,
-    ST_MIDDLESIDE,
-    ST_UPPERSIDE,
-    ST_LOWERSIDE,
-    ST_CEILING,
-    ST_FLOOR
+	ST_UNKNOWN,
+	ST_MIDDLESIDE,
+	ST_UPPERSIDE,
+	ST_LOWERSIDE,
+	ST_CEILING,
+	ST_FLOOR
 };
 
 typedef kexArray<kexVec3> vertexBatch_t;
@@ -46,20 +46,20 @@ typedef kexArray<kexVec3> vertexBatch_t;
 
 struct surface_t
 {
-    kexPlane                plane;
-    int                     lightmapNum;
-    int                     lightmapOffs[2];
-    int                     lightmapDims[2];
-    kexVec3                 lightmapOrigin;
-    kexVec3                 lightmapSteps[2];
-    kexVec3                 textureCoords[2];
-    kexBBox                 bounds;
-    int                     numVerts;
-    kexVec3                 *verts;
-    float                   *lightmapCoords;
-    surfaceType_t           type;
-    int                     typeIndex;
-    bool                    bSky;
+	kexPlane plane;
+	int lightmapNum;
+	int lightmapOffs[2];
+	int lightmapDims[2];
+	kexVec3 lightmapOrigin;
+	kexVec3 lightmapSteps[2];
+	kexVec3 textureCoords[2];
+	kexBBox bounds;
+	int numVerts;
+	kexVec3 *verts;
+	float *lightmapCoords;
+	surfaceType_t type;
+	int typeIndex;
+	bool bSky;
 };
 
 extern kexArray<surface_t*> surfaces;

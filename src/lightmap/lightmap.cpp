@@ -48,14 +48,14 @@ const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
 
 kexLightmapBuilder::kexLightmapBuilder()
 {
-    this->textureWidth  = 128;
-    this->textureHeight = 128;
-    this->allocBlocks   = NULL;
-    this->numTextures   = 0;
-    this->samples       = 16;
-    this->extraSamples  = 2;
-    this->ambience      = 0.0f;
-    this->tracedTexels  = 0;
+	this->textureWidth = 128;
+	this->textureHeight = 128;
+	this->allocBlocks = NULL;
+	this->numTextures = 0;
+	this->samples = 16;
+	this->extraSamples = 2;
+	this->ambience = 0.0f;
+	this->tracedTexels = 0;
 }
 
 kexLightmapBuilder::~kexLightmapBuilder()
@@ -64,142 +64,142 @@ kexLightmapBuilder::~kexLightmapBuilder()
 
 void kexLightmapBuilder::NewTexture()
 {
-    numTextures++;
+	numTextures++;
 
-    allocBlocks = (int**)Mem_Realloc(allocBlocks, sizeof(int*) * numTextures, hb_static);
-    allocBlocks[numTextures-1] = (int*)Mem_Calloc(sizeof(int) * textureWidth, hb_static);
+	allocBlocks = (int**)Mem_Realloc(allocBlocks, sizeof(int*) * numTextures, hb_static);
+	allocBlocks[numTextures - 1] = (int*)Mem_Calloc(sizeof(int) * textureWidth, hb_static);
 
-    memset(allocBlocks[numTextures-1], 0, sizeof(int) * textureWidth);
+	memset(allocBlocks[numTextures - 1], 0, sizeof(int) * textureWidth);
 
-    uint16_t *texture = (uint16_t*)Mem_Calloc((textureWidth * textureHeight) * 3 * 2, hb_static);
-    textures.Push(texture);
+	uint16_t *texture = (uint16_t*)Mem_Calloc((textureWidth * textureHeight) * 3 * 2, hb_static);
+	textures.Push(texture);
 }
 
 // Determines where to map a new block on to the lightmap texture
 bool kexLightmapBuilder::MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num)
 {
-    int i;
-    int j;
-    int k;
-    int bestRow1;
-    int bestRow2;
+	int i;
+	int j;
+	int k;
+	int bestRow1;
+	int bestRow2;
 
-    *num = -1;
+	*num = -1;
 
-    if(allocBlocks == NULL)
-    {
-        return false;
-    }
+	if (allocBlocks == NULL)
+	{
+		return false;
+	}
 
-    for(k = 0; k < numTextures; ++k)
-    {
-        bestRow1 = textureHeight;
+	for (k = 0; k < numTextures; ++k)
+	{
+		bestRow1 = textureHeight;
 
-        for(i = 0; i <= textureWidth - width; i++)
-        {
-            bestRow2 = 0;
+		for (i = 0; i <= textureWidth - width; i++)
+		{
+			bestRow2 = 0;
 
-            for(j = 0; j < width; j++)
-            {
-                if(allocBlocks[k][i + j] >= bestRow1)
-                {
-                    break;
-                }
+			for (j = 0; j < width; j++)
+			{
+				if (allocBlocks[k][i + j] >= bestRow1)
+				{
+					break;
+				}
 
-                if(allocBlocks[k][i + j] > bestRow2)
-                {
-                    bestRow2 = allocBlocks[k][i + j];
-                }
-            }
+				if (allocBlocks[k][i + j] > bestRow2)
+				{
+					bestRow2 = allocBlocks[k][i + j];
+				}
+			}
 
-            // found a free block
-            if(j == width)
-            {
-                *x = i;
-                *y = bestRow1 = bestRow2;
-            }
-        }
+			// found a free block
+			if (j == width)
+			{
+				*x = i;
+				*y = bestRow1 = bestRow2;
+			}
+		}
 
-        if(bestRow1 + height > textureHeight)
-        {
-            // no room
-            continue;
-        }
+		if (bestRow1 + height > textureHeight)
+		{
+			// no room
+			continue;
+		}
 
-        for(i = 0; i < width; i++)
-        {
-            // store row offset
-            allocBlocks[k][*x + i] = bestRow1 + height;
-        }
+		for (i = 0; i < width; i++)
+		{
+			// store row offset
+			allocBlocks[k][*x + i] = bestRow1 + height;
+		}
 
-        *num = k;
-        return true;
-    }
+		*num = k;
+		return true;
+	}
 
-    return false;
+	return false;
 }
 
 kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 {
-    kexVec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
-    kexVec3 hi(-M_INFINITY, -M_INFINITY, -M_INFINITY);
+	kexVec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
+	kexVec3 hi(-M_INFINITY, -M_INFINITY, -M_INFINITY);
 
-    kexBBox bounds;
-    bounds.Clear();
+	kexBBox bounds;
+	bounds.Clear();
 
-    for(int i = 0; i < surface->numVerts; i++)
-    {
-        for(int j = 0; j < 3; j++)
-        {
-            if(surface->verts[i][j] < low[j])
-            {
-                low[j] = surface->verts[i][j];
-            }
-            if(surface->verts[i][j] > hi[j])
-            {
-                hi[j] = surface->verts[i][j];
-            }
-        }
-    }
+	for (int i = 0; i < surface->numVerts; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (surface->verts[i][j] < low[j])
+			{
+				low[j] = surface->verts[i][j];
+			}
+			if (surface->verts[i][j] > hi[j])
+			{
+				hi[j] = surface->verts[i][j];
+			}
+		}
+	}
 
-    bounds.min = low;
-    bounds.max = hi;
+	bounds.min = low;
+	bounds.max = hi;
 
-    return bounds;
+	return bounds;
 }
 
 // Traces to the ceiling surface. Will emit light if the surface that was traced is a sky
 bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
 {
-    float attenuation = normal.Dot(map->GetSunDirection());
+	float attenuation = normal.Dot(map->GetSunDirection());
 
-    if(attenuation <= 0)
-    {
-        // plane is not even facing the sunlight
-        return false;
-    }
+	if (attenuation <= 0)
+	{
+		// plane is not even facing the sunlight
+		return false;
+	}
 
-    trace.Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
+	trace.Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
 
-    if(trace.fraction == 1.0f)
-    {
-        // nothing was hit
+	if (trace.fraction == 1.0f)
+	{
+		// nothing was hit
 		//color.x += 1.0f;
-        return false;
-    }
+		return false;
+	}
 
-    if(trace.hitSurface->bSky == false)
-    {
+	if (trace.hitSurface->bSky == false)
+	{
 		if (trace.hitSurface->type == ST_CEILING)
 			return false;
 
-        // not a ceiling/sky surface
-        return false;
-    }
+		// not a ceiling/sky surface
+		return false;
+	}
 
 	color += map->GetSunColor() * attenuation;
 
-    return true;
+	return true;
 }
 
 template<class T>
@@ -217,13 +217,13 @@ static float radians(float degrees)
 // Traces a line from the texel's origin to the sunlight direction and against all nearby thing lights
 kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface)
 {
-    kexPlane plane = surface->plane;
+	kexPlane plane = surface->plane;
 	kexVec3 color(0.0f, 0.0f, 0.0f);
 
-    // check all thing lights
-    for(unsigned int i = 0; i < map->thingLights.Size(); i++)
-    {
-        thingLight_t *tl = map->thingLights[i];
+	// check all thing lights
+	for (unsigned int i = 0; i < map->thingLights.Size(); i++)
+	{
+		thingLight_t *tl = map->thingLights[i];
 
 		float originZ;
 		if (!tl->bCeiling)
@@ -233,20 +233,20 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 
 		kexVec3 lightOrigin(tl->origin.x, tl->origin.y, originZ);
 
-        if(plane.Distance(lightOrigin) - plane.d < 0)
-        {
-            // completely behind the plane
-            continue;
-        }
+		if (plane.Distance(lightOrigin) - plane.d < 0)
+		{
+			// completely behind the plane
+			continue;
+		}
 
-        float radius = tl->radius * 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
-        float intensity = tl->intensity;
+		float radius = tl->radius * 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
+		float intensity = tl->intensity;
 
-        if(origin.DistanceSq(lightOrigin) > (radius*radius))
-        {
-            // not within range
-            continue;
-        }
+		if (origin.DistanceSq(lightOrigin) > (radius*radius))
+		{
+			// not within range
+			continue;
+		}
 
 		kexVec3 dir = (lightOrigin - origin);
 		float dist = dir.Unit();
@@ -270,177 +270,177 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 			}
 		}
 
-        trace.Trace(lightOrigin, origin);
+		trace.Trace(lightOrigin, origin);
 
-        if(trace.fraction != 1)
-        {
-            // this light is occluded by something
-            continue;
-        }
+		if (trace.fraction != 1)
+		{
+			// this light is occluded by something
+			continue;
+		}
 
 		float attenuation = 1.0f - (dist / radius);
 		attenuation *= spotAttenuation;
 		attenuation *= plane.Normal().Dot(dir);
 		attenuation *= intensity;
 
-        // accumulate results
-        color += tl->rgb * attenuation;
+		// accumulate results
+		color += tl->rgb * attenuation;
 
-        tracedTexels++;
-    }
+		tracedTexels++;
+	}
 
-    if(surface->type != ST_CEILING)
-    {
-        // see if it's exposed to sunlight
-        if(EmitFromCeiling(trace, surface, origin, plane.Normal(), color))
-            tracedTexels++;
-    }
+	if (surface->type != ST_CEILING)
+	{
+		// see if it's exposed to sunlight
+		if (EmitFromCeiling(trace, surface, origin, plane.Normal(), color))
+			tracedTexels++;
+	}
 
-    // trace against surface lights
-    for(unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
-    {
-        kexLightSurface *surfaceLight = map->lightSurfaces[i];
+	// trace against surface lights
+	for (unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
+	{
+		kexLightSurface *surfaceLight = map->lightSurfaces[i];
 
 		float attenuation;
-        if(surfaceLight->TraceSurface(map, trace, surface, origin, &attenuation))
-        {
-            color += surfaceLight->GetRGB() * attenuation;
+		if (surfaceLight->TraceSurface(map, trace, surface, origin, &attenuation))
+		{
+			color += surfaceLight->GetRGB() * attenuation;
 
-            tracedTexels++;
-        }
-    }
+			tracedTexels++;
+		}
+	}
 
-    return color;
+	return color;
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.
 // Width and height of the block is calcuated and steps are computed to determine where each texel will be positioned on the surface
 void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
 {
-    kexPlane *plane;
-    kexBBox bounds;
-    kexVec3 roundedSize;
-    int i;
-    kexPlane::planeAxis_t axis;
-    kexVec3 tCoords[2];
-    kexVec3 tOrigin;
-    int width;
-    int height;
-    float d;
+	kexPlane *plane;
+	kexBBox bounds;
+	kexVec3 roundedSize;
+	int i;
+	kexPlane::planeAxis_t axis;
+	kexVec3 tCoords[2];
+	kexVec3 tOrigin;
+	int width;
+	int height;
+	float d;
 
-    plane = &surface->plane;
-    bounds = GetBoundsFromSurface(surface);
+	plane = &surface->plane;
+	bounds = GetBoundsFromSurface(surface);
 
-    // round off dimentions
-    for(i = 0; i < 3; i++)
-    {
-        bounds.min[i] = samples * kexMath::Floor(bounds.min[i] / samples);
-        bounds.max[i] = samples * kexMath::Ceil(bounds.max[i] / samples);
+	// round off dimentions
+	for (i = 0; i < 3; i++)
+	{
+		bounds.min[i] = samples * kexMath::Floor(bounds.min[i] / samples);
+		bounds.max[i] = samples * kexMath::Ceil(bounds.max[i] / samples);
 
-        roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples + 1;
-    }
+		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples + 1;
+	}
 
-    tCoords[0].Clear();
-    tCoords[1].Clear();
+	tCoords[0].Clear();
+	tCoords[1].Clear();
 
-    axis = plane->BestAxis();
+	axis = plane->BestAxis();
 
-    switch(axis)
-    {
-    case kexPlane::AXIS_YZ:
-        width = (int)roundedSize.y;
-        height = (int)roundedSize.z;
-        tCoords[0].y = 1.0f / samples;
-        tCoords[1].z = 1.0f / samples;
-        break;
+	switch (axis)
+	{
+	case kexPlane::AXIS_YZ:
+		width = (int)roundedSize.y;
+		height = (int)roundedSize.z;
+		tCoords[0].y = 1.0f / samples;
+		tCoords[1].z = 1.0f / samples;
+		break;
 
-    case kexPlane::AXIS_XZ:
-        width = (int)roundedSize.x;
-        height = (int)roundedSize.z;
-        tCoords[0].x = 1.0f / samples;
-        tCoords[1].z = 1.0f / samples;
-        break;
+	case kexPlane::AXIS_XZ:
+		width = (int)roundedSize.x;
+		height = (int)roundedSize.z;
+		tCoords[0].x = 1.0f / samples;
+		tCoords[1].z = 1.0f / samples;
+		break;
 
-    case kexPlane::AXIS_XY:
-        width = (int)roundedSize.x;
-        height = (int)roundedSize.y;
-        tCoords[0].x = 1.0f / samples;
-        tCoords[1].y = 1.0f / samples;
-        break;
-    }
+	case kexPlane::AXIS_XY:
+		width = (int)roundedSize.x;
+		height = (int)roundedSize.y;
+		tCoords[0].x = 1.0f / samples;
+		tCoords[1].y = 1.0f / samples;
+		break;
+	}
 
-    // clamp width
-    if(width > textureWidth)
-    {
-        tCoords[0] *= ((float)textureWidth / (float)width);
-        width = textureWidth;
-    }
+	// clamp width
+	if (width > textureWidth)
+	{
+		tCoords[0] *= ((float)textureWidth / (float)width);
+		width = textureWidth;
+	}
 
-    // clamp height
-    if(height > textureHeight)
-    {
-        tCoords[1] *= ((float)textureHeight / (float)height);
-        height = textureHeight;
-    }
+	// clamp height
+	if (height > textureHeight)
+	{
+		tCoords[1] *= ((float)textureHeight / (float)height);
+		height = textureHeight;
+	}
 
-    surface->lightmapCoords = (float*)Mem_Calloc(sizeof(float) *
-                              surface->numVerts * 2, hb_static);
+	surface->lightmapCoords = (float*)Mem_Calloc(sizeof(float) *
+		surface->numVerts * 2, hb_static);
 
-    surface->textureCoords[0] = tCoords[0];
-    surface->textureCoords[1] = tCoords[1];
+	surface->textureCoords[0] = tCoords[0];
+	surface->textureCoords[1] = tCoords[1];
 
-    tOrigin = bounds.min;
+	tOrigin = bounds.min;
 
-    // project tOrigin and tCoords so they lie on the plane
-    d = (plane->Distance(bounds.min) - plane->d) / plane->Normal()[axis];
-    tOrigin[axis] -= d;
+	// project tOrigin and tCoords so they lie on the plane
+	d = (plane->Distance(bounds.min) - plane->d) / plane->Normal()[axis];
+	tOrigin[axis] -= d;
 
-    for(i = 0; i < 2; i++)
-    {
-        tCoords[i].Normalize();
-        d = plane->Distance(tCoords[i]) / plane->Normal()[axis];
-        tCoords[i][axis] -= d;
-    }
+	for (i = 0; i < 2; i++)
+	{
+		tCoords[i].Normalize();
+		d = plane->Distance(tCoords[i]) / plane->Normal()[axis];
+		tCoords[i][axis] -= d;
+	}
 
-    surface->bounds = bounds;
-    surface->lightmapDims[0] = width;
-    surface->lightmapDims[1] = height;
-    surface->lightmapOrigin = tOrigin;
-    surface->lightmapSteps[0] = tCoords[0] * (float)samples;
-    surface->lightmapSteps[1] = tCoords[1] * (float)samples;
+	surface->bounds = bounds;
+	surface->lightmapDims[0] = width;
+	surface->lightmapDims[1] = height;
+	surface->lightmapOrigin = tOrigin;
+	surface->lightmapSteps[0] = tCoords[0] * (float)samples;
+	surface->lightmapSteps[1] = tCoords[1] * (float)samples;
 }
 
 // Steps through each texel and traces a line to the world.
 // For each non-occluded trace, color is accumulated and saved off into the lightmap texture based on what block is mapped to
 void kexLightmapBuilder::TraceSurface(surface_t *surface)
 {
-    static thread_local kexVec3 colorSamples[1024 * 1024];
+	static thread_local kexVec3 colorSamples[1024 * 1024];
 
-    int sampleWidth;
-    int sampleHeight;
-    kexVec3 normal;
-    kexVec3 pos;
-    kexVec3 tDelta;
-    int i;
-    int j;
-    kexTrace trace;
-    uint16_t *currentTexture;
-    bool bShouldLookupTexture = false;
+	int sampleWidth;
+	int sampleHeight;
+	kexVec3 normal;
+	kexVec3 pos;
+	kexVec3 tDelta;
+	int i;
+	int j;
+	kexTrace trace;
+	uint16_t *currentTexture;
+	bool bShouldLookupTexture = false;
 
-    trace.Init(*map);
+	trace.Init(*map);
 
-    sampleWidth = surface->lightmapDims[0];
-    sampleHeight = surface->lightmapDims[1];
+	sampleWidth = surface->lightmapDims[0];
+	sampleHeight = surface->lightmapDims[1];
 
-    normal = surface->plane.Normal();
+	normal = surface->plane.Normal();
 
 	int multisampleCount = Multisample;
 
-    // start walking through each texel
-    for(i = 0; i < sampleHeight; i++)
-    {
-        for(j = 0; j < sampleWidth; j++)
-        {
+	// start walking through each texel
+	for (i = 0; i < sampleHeight; i++)
+	{
+		for (j = 0; j < sampleWidth; j++)
+		{
 			kexVec3 c(0.0f, 0.0f, 0.0f);
 
 			for (int k = 0; k < multisampleCount; k++)
@@ -467,103 +467,103 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 
 			c /= multisampleCount;
 
-            // if nothing at all was traced and color is completely black
-            // then this surface will not go through the extra rendering
-            // step in rendering the lightmap
-            if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
-            {
-                bShouldLookupTexture = true;
-            }
+			// if nothing at all was traced and color is completely black
+			// then this surface will not go through the extra rendering
+			// step in rendering the lightmap
+			if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
+			{
+				bShouldLookupTexture = true;
+			}
 
 			kexMath::Clamp(c, 0, 1);
 			colorSamples[i * 1024 + j] = c;
 		}
-    }
+	}
 
-    // SVE redraws the scene for lightmaps, so for optimizations,
-    // tell the engine to ignore this surface if completely black
-    if(bShouldLookupTexture == false)
-    {
-        surface->lightmapNum = -1;
-        return;
-    }
-    else
-    {
-        int x = 0, y = 0;
-        int width = surface->lightmapDims[0];
-        int height = surface->lightmapDims[1];
+	// SVE redraws the scene for lightmaps, so for optimizations,
+	// tell the engine to ignore this surface if completely black
+	if (bShouldLookupTexture == false)
+	{
+		surface->lightmapNum = -1;
+		return;
+	}
+	else
+	{
+		int x = 0, y = 0;
+		int width = surface->lightmapDims[0];
+		int height = surface->lightmapDims[1];
 
 		std::unique_lock<std::mutex> lock(mutex);
 
-        // now that we know the width and height of this block, see if we got
-        // room for it in the light map texture. if not, then we must allocate
-        // a new texture
-        if(!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
-        {
-            // allocate a new texture for this block
-            NewTexture();
+		// now that we know the width and height of this block, see if we got
+		// room for it in the light map texture. if not, then we must allocate
+		// a new texture
+		if (!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
+		{
+			// allocate a new texture for this block
+			NewTexture();
 
-            if(!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
-            {
+			if (!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
+			{
 				Error("Lightmap allocation failed\n");
-                return;
-            }
-        }
+				return;
+			}
+		}
 
 		lock.unlock();
 
-        // calculate texture coordinates
-        for(i = 0; i < surface->numVerts; i++)
-        {
-            tDelta = surface->verts[i] - surface->bounds.min;
-            surface->lightmapCoords[i * 2 + 0] =
-                (tDelta.Dot(surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
-            surface->lightmapCoords[i * 2 + 1] =
-                (tDelta.Dot(surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
-        }
+		// calculate texture coordinates
+		for (i = 0; i < surface->numVerts; i++)
+		{
+			tDelta = surface->verts[i] - surface->bounds.min;
+			surface->lightmapCoords[i * 2 + 0] =
+				(tDelta.Dot(surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
+			surface->lightmapCoords[i * 2 + 1] =
+				(tDelta.Dot(surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
+		}
 
-        surface->lightmapOffs[0] = x;
-        surface->lightmapOffs[1] = y;
-    }
+		surface->lightmapOffs[0] = x;
+		surface->lightmapOffs[1] = y;
+	}
 
 	std::unique_lock<std::mutex> lock(mutex);
-    currentTexture = textures[surface->lightmapNum];
+	currentTexture = textures[surface->lightmapNum];
 	lock.unlock();
 
-    // store results to lightmap texture
-    for(i = 0; i < sampleHeight; i++)
-    {
-        for(j = 0; j < sampleWidth; j++)
-        {
-            // get texture offset
-            int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+	// store results to lightmap texture
+	for (i = 0; i < sampleHeight; i++)
+	{
+		for (j = 0; j < sampleWidth; j++)
+		{
+			// get texture offset
+			int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
 
-            // convert RGB to bytes
-            currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * 1024 + j].x);
-            currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * 1024 + j].y);
-            currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * 1024 + j].z);
-        }
-    }
+			// convert RGB to bytes
+			currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * 1024 + j].x);
+			currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * 1024 + j].y);
+			currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * 1024 + j].z);
+		}
+	}
 }
 
 void kexLightmapBuilder::LightSurface(const int surfid)
 {
-    float remaining;
-    int numsurfs = surfaces.Length();
+	float remaining;
+	int numsurfs = surfaces.Length();
 
-    // TODO: this should NOT happen, but apparently, it can randomly occur
-    if(surfaces.Length() == 0)
-    {
-        return;
-    }
+	// TODO: this should NOT happen, but apparently, it can randomly occur
+	if (surfaces.Length() == 0)
+	{
+		return;
+	}
 
-    BuildSurfaceParams(surfaces[surfid]);
-    TraceSurface(surfaces[surfid]);
+	BuildSurfaceParams(surfaces[surfid]);
+	TraceSurface(surfaces[surfid]);
 
 	std::unique_lock<std::mutex> lock(mutex);
 
 	int lastproc = processed * 100 / numsurfs;
-    processed++;
+	processed++;
 	int curproc = processed * 100 / numsurfs;
 	if (lastproc != curproc || processed == 1)
 	{
@@ -574,16 +574,16 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 
 void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 {
-    map = &doomMap;
+	map = &doomMap;
 
-    printf("------------- Tracing surfaces -------------\n");
+	printf("------------- Tracing surfaces -------------\n");
 
 	processed = 0;
 	kexWorker::RunJob(surfaces.Length(), [=](int id) {
 		LightSurface(id);
 	});
 
-    printf("Texels traced: %i \n\n", tracedTexels);
+	printf("Texels traced: %i \n\n", tracedTexels);
 }
 
 void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
@@ -701,29 +701,29 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 
 void kexLightmapBuilder::WriteTexturesToTGA()
 {
-    kexBinFile file;
+	kexBinFile file;
 
-    for(unsigned int i = 0; i < textures.Length(); i++)
-    {
-        file.Create(Va("lightmap_%02d.tga", i));
-        file.Write16(0);
-        file.Write16(2);
-        file.Write16(0);
-        file.Write16(0);
-        file.Write16(0);
-        file.Write16(0);
-        file.Write16(textureWidth);
-        file.Write16(textureHeight);
-        file.Write16(24);
+	for (unsigned int i = 0; i < textures.Length(); i++)
+	{
+		file.Create(Va("lightmap_%02d.tga", i));
+		file.Write16(0);
+		file.Write16(2);
+		file.Write16(0);
+		file.Write16(0);
+		file.Write16(0);
+		file.Write16(0);
+		file.Write16(textureWidth);
+		file.Write16(textureHeight);
+		file.Write16(24);
 
-        for(int j = 0; j < (textureWidth * textureHeight) * 3; j += 3)
-        {
-            file.Write8(textures[i][j+2]);
-            file.Write8(textures[i][j+1]);
-            file.Write8(textures[i][j+0]);
-        }
-        file.Close();
-    }
+		for (int j = 0; j < (textureWidth * textureHeight) * 3; j += 3)
+		{
+			file.Write8(textures[i][j + 2]);
+			file.Write8(textures[i][j + 1]);
+			file.Write8(textures[i][j + 0]);
+		}
+		file.Close();
+	}
 }
 
 void kexLightmapBuilder::WriteMeshToOBJ()

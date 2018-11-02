@@ -38,91 +38,91 @@ typedef kexArray<kexStr>        kexStrList;
 class kexStr
 {
 public:
-    kexStr();
-    kexStr(const char *string);
-    kexStr(const char *string, const int length);
-    kexStr(const kexStr &string);
-    ~kexStr();
+	kexStr();
+	kexStr(const char *string);
+	kexStr(const char *string, const int length);
+	kexStr(const kexStr &string);
+	~kexStr();
 
-    void                CheckSize(int size, bool bKeepString);
-    int                 IndexOf(const char *pattern) const;
-    int                 IndexOf(const kexStr &pattern) const;
-    kexStr              &Concat(const char *string);
-    kexStr              &Concat(const char *string, int len);
-    kexStr              &Concat(const char c);
-    kexStr              &NormalizeSlashes();
-    kexStr              &StripPath();
-    kexStr              &StripExtension();
-    kexStr              &StripFile();
-    kexStr              &Copy(const kexStr &src, int len);
-    kexStr              &Copy(const kexStr &src);
-    kexStr              &ToUpper();
-    kexStr              &ToLower();
-    int                 Hash();
-    kexStr              Substr(int start, int len) const;
-    void                Split(kexStrList &list, const char seperator);
-    int                 Atoi();
-    float               Atof();
-    void                WriteToFile(const char *file);
+	void                CheckSize(int size, bool bKeepString);
+	int                 IndexOf(const char *pattern) const;
+	int                 IndexOf(const kexStr &pattern) const;
+	kexStr              &Concat(const char *string);
+	kexStr              &Concat(const char *string, int len);
+	kexStr              &Concat(const char c);
+	kexStr              &NormalizeSlashes();
+	kexStr              &StripPath();
+	kexStr              &StripExtension();
+	kexStr              &StripFile();
+	kexStr              &Copy(const kexStr &src, int len);
+	kexStr              &Copy(const kexStr &src);
+	kexStr              &ToUpper();
+	kexStr              &ToLower();
+	int                 Hash();
+	kexStr              Substr(int start, int len) const;
+	void                Split(kexStrList &list, const char seperator);
+	int                 Atoi();
+	float               Atof();
+	void                WriteToFile(const char *file);
 
-    int                 Length() const { return length; }
-    const char          *c_str() const { return charPtr; }
+	int                 Length() const { return length; }
+	const char          *c_str() const { return charPtr; }
 
-    kexStr              &operator=(const kexStr &str);
-    kexStr              &operator=(const char *str);
-    kexStr              &operator=(const bool b);
-    kexStr              operator+(const kexStr &str);
-    kexStr              operator+(const char *str);
-    kexStr              operator+(const bool b);
-    kexStr              operator+(const int i);
-    kexStr              operator+(const float f);
-    kexStr              &operator+=(const kexStr &str);
-    kexStr              &operator+=(const char *str);
-    kexStr              &operator+=(const char c);
-    kexStr              &operator+=(const bool b);
-    const char          operator[](int index) const;
+	kexStr              &operator=(const kexStr &str);
+	kexStr              &operator=(const char *str);
+	kexStr              &operator=(const bool b);
+	kexStr              operator+(const kexStr &str);
+	kexStr              operator+(const char *str);
+	kexStr              operator+(const bool b);
+	kexStr              operator+(const int i);
+	kexStr              operator+(const float f);
+	kexStr              &operator+=(const kexStr &str);
+	kexStr              &operator+=(const char *str);
+	kexStr              &operator+=(const char c);
+	kexStr              &operator+=(const bool b);
+	const char          operator[](int index) const;
 
-    friend bool         operator==(const kexStr &a, const kexStr &b);
-    friend bool         operator==(const char *a, const kexStr &b);
-    friend bool         operator==(const kexStr &a, const char *b);
+	friend bool         operator==(const kexStr &a, const kexStr &b);
+	friend bool         operator==(const char *a, const kexStr &b);
+	friend bool         operator==(const kexStr &a, const char *b);
 
-    operator            const char *() const { return c_str(); }
-    operator            const char *() { return c_str(); }
+	operator            const char *() const { return c_str(); }
+	operator            const char *() { return c_str(); }
 
-    static bool         CompareCase(const char *s1, const char *s2);
-    static bool         CompareCase(const kexStr &a, const kexStr &b);
-    static bool         Compare(const char *s1, const char *s2);
-    static bool         Compare(const kexStr &a, const kexStr &b);
-    static int          IndexOf(const char *string, const char *pattern);
-    static int          Hash(const char *s);
-    static char         *Format(const char *str, ...);
+	static bool         CompareCase(const char *s1, const char *s2);
+	static bool         CompareCase(const kexStr &a, const kexStr &b);
+	static bool         Compare(const char *s1, const char *s2);
+	static bool         Compare(const kexStr &a, const kexStr &b);
+	static int          IndexOf(const char *string, const char *pattern);
+	static int          Hash(const char *s);
+	static char         *Format(const char *str, ...);
 
 private:
-    void                Resize(int size, bool bKeepString);
-    void                CopyNew(const char *string, int len);
+	void                Resize(int size, bool bKeepString);
+	void                CopyNew(const char *string, int len);
 
 protected:
-    void                Init();
+	void                Init();
 
-    static const int    STRING_DEFAULT_SIZE = 32;
+	static const int    STRING_DEFAULT_SIZE = 32;
 
-    char                *charPtr;
-    char                defaultBuffer[STRING_DEFAULT_SIZE];
-    int                 length;
-    int                 bufferLength;
+	char                *charPtr;
+	char                defaultBuffer[STRING_DEFAULT_SIZE];
+	int                 length;
+	int                 bufferLength;
 };
 
 d_inline bool operator==(const kexStr &a, const kexStr &b)
 {
-    return (!strcmp(a.charPtr, b.charPtr));
+	return (!strcmp(a.charPtr, b.charPtr));
 }
 
 d_inline bool operator==(const char *a, const kexStr &b)
 {
-    return (!strcmp(a, b.charPtr));
+	return (!strcmp(a, b.charPtr));
 }
 
 d_inline bool operator==(const kexStr &a, const char *b)
 {
-    return (!strcmp(a.charPtr, b));
+	return (!strcmp(a.charPtr, b));
 }

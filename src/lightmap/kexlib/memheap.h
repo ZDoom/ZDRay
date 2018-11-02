@@ -27,66 +27,66 @@
 
 #pragma once
 
-typedef void (*blockFunc_t)(void*);
+typedef void(*blockFunc_t)(void*);
 
 class kexHeapBlock;
 
 struct memBlock
 {
-    int                     heapTag;
-    int                     purgeID;
-    int                     size;
-    kexHeapBlock            *heapBlock;
-    void                    **ptrRef;
-    memBlock              *prev;
-    memBlock              *next;
+	int                     heapTag;
+	int                     purgeID;
+	int                     size;
+	kexHeapBlock            *heapBlock;
+	void                    **ptrRef;
+	memBlock              *prev;
+	memBlock              *next;
 };
 
 class kexHeapBlock
 {
 public:
-    kexHeapBlock(const char *name, bool bGarbageCollect,
-                 blockFunc_t funcFree, blockFunc_t funcGC);
-    ~kexHeapBlock();
+	kexHeapBlock(const char *name, bool bGarbageCollect,
+		blockFunc_t funcFree, blockFunc_t funcGC);
+	~kexHeapBlock();
 
-    kexHeapBlock            *operator[](int index);
+	kexHeapBlock            *operator[](int index);
 
-    char                    *name;
-    memBlock              *blocks;
-    bool                    bGC;
-    blockFunc_t             freeFunc;
-    blockFunc_t             gcFunc;
-    int                     purgeID;
-    kexHeapBlock            *prev;
-    kexHeapBlock            *next;
+	char                    *name;
+	memBlock              *blocks;
+	bool                    bGC;
+	blockFunc_t             freeFunc;
+	blockFunc_t             gcFunc;
+	int                     purgeID;
+	kexHeapBlock            *prev;
+	kexHeapBlock            *next;
 };
 
 class kexHeap
 {
 public:
-    static void             *Malloc(int size, kexHeapBlock &heapBlock, const char *file, int line);
-    static void             *Calloc(int size, kexHeapBlock &heapBlock, const char *file, int line);
-    static void             *Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char *file, int line);
-    static void             *Alloca(int size, const char *file, int line);
-    static void             Free(void *ptr, const char *file, int line);
-    static void             Purge(kexHeapBlock &heapBlock, const char *file, int line);
-    static void             GarbageCollect(const char *file, int line);
-    static void             CheckBlocks(const char *file, int line);
-    static void             Touch(void *ptr, const char *file, int line);
-    static int              Usage(const kexHeapBlock &heapBlock);
-    static void             SetCacheRef(void **ptr, const char *file, int line);
+	static void             *Malloc(int size, kexHeapBlock &heapBlock, const char *file, int line);
+	static void             *Calloc(int size, kexHeapBlock &heapBlock, const char *file, int line);
+	static void             *Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char *file, int line);
+	static void             *Alloca(int size, const char *file, int line);
+	static void             Free(void *ptr, const char *file, int line);
+	static void             Purge(kexHeapBlock &heapBlock, const char *file, int line);
+	static void             GarbageCollect(const char *file, int line);
+	static void             CheckBlocks(const char *file, int line);
+	static void             Touch(void *ptr, const char *file, int line);
+	static int              Usage(const kexHeapBlock &heapBlock);
+	static void             SetCacheRef(void **ptr, const char *file, int line);
 
-    static int              numHeapBlocks;
-    static kexHeapBlock     *currentHeapBlock;
-    static int              currentHeapBlockID;
-    static kexHeapBlock     *blockList;
+	static int              numHeapBlocks;
+	static kexHeapBlock     *currentHeapBlock;
+	static int              currentHeapBlockID;
+	static kexHeapBlock     *blockList;
 
 private:
-    static void             AddBlock(memBlock *block, kexHeapBlock *heapBlock);
-    static void             RemoveBlock(memBlock *block);
-    static memBlock       *GetBlock(void *ptr, const char *file, int line);
+	static void             AddBlock(memBlock *block, kexHeapBlock *heapBlock);
+	static void             RemoveBlock(memBlock *block);
+	static memBlock       *GetBlock(void *ptr, const char *file, int line);
 
-    static const int        HeapTag = 0x03151983;
+	static const int        HeapTag = 0x03151983;
 };
 
 extern kexHeapBlock hb_static;

@@ -33,367 +33,279 @@
 #include "lightmap/common.h"
 #include "lightmap/kexlib/binfile.h"
 
-//
-// kexBinFile::kexBinFile
-//
-
 kexBinFile::kexBinFile()
 {
-    this->handle = NULL;
-    this->buffer = NULL;
-    this->bufferOffset = 0;
-    this->bOpened = false;
+	this->handle = NULL;
+	this->buffer = NULL;
+	this->bufferOffset = 0;
+	this->bOpened = false;
 }
-
-//
-// kexBinFile::~kexBinFile
-//
 
 kexBinFile::~kexBinFile()
 {
-    Close();
+	Close();
 }
-
-//
-// kexBinFile::Open
-//
 
 bool kexBinFile::Open(const char *file, kexHeapBlock &heapBlock)
 {
-    if((handle = fopen(file, "rb")))
-    {
-        size_t length;
+	if ((handle = fopen(file, "rb")))
+	{
+		size_t length;
 
-        fseek(handle, 0, SEEK_END);
-        length = ftell(handle);
-        fseek(handle, 0, SEEK_SET);
+		fseek(handle, 0, SEEK_END);
+		length = ftell(handle);
+		fseek(handle, 0, SEEK_SET);
 
-        buffer = (byte*)Mem_Calloc(length+1, heapBlock);
+		buffer = (byte*)Mem_Calloc(length + 1, heapBlock);
 
-        if(fread(buffer, 1, length, handle) == length)
-        {
-            if(length > 0)
-            {
-                bOpened = true;
-                bufferOffset = 0;
-                return true;
-            }
-        }
+		if (fread(buffer, 1, length, handle) == length)
+		{
+			if (length > 0)
+			{
+				bOpened = true;
+				bufferOffset = 0;
+				return true;
+			}
+		}
 
-        Mem_Free(buffer);
-        buffer = NULL;
-        fclose(handle);
-    }
+		Mem_Free(buffer);
+		buffer = NULL;
+		fclose(handle);
+	}
 
-    return false;
+	return false;
 }
-
-//
-// kexBinFile::Create
-//
 
 bool kexBinFile::Create(const char *file)
 {
-    if((handle = fopen(file, "wb")))
-    {
-        bOpened = true;
-        bufferOffset = 0;
-        return true;
-    }
+	if ((handle = fopen(file, "wb")))
+	{
+		bOpened = true;
+		bufferOffset = 0;
+		return true;
+	}
 
-    return false;
+	return false;
 }
-
-//
-// kexBinFile::Close
-//
 
 void kexBinFile::Close()
 {
-    if(bOpened == false)
-    {
-        return;
-    }
-    if(handle)
-    {
-        fclose(handle);
-        handle = NULL;
-        if(buffer)
-        {
-            Mem_Free(buffer);
-        }
-    }
+	if (bOpened == false)
+	{
+		return;
+	}
+	if (handle)
+	{
+		fclose(handle);
+		handle = NULL;
+		if (buffer)
+		{
+			Mem_Free(buffer);
+		}
+	}
 
-    bOpened = false;
+	bOpened = false;
 }
-
-//
-// kexBinFile::Exists
-//
 
 bool kexBinFile::Exists(const char *file)
 {
-    FILE *fstream;
+	FILE *fstream;
 
-    fstream = fopen(file, "r");
+	fstream = fopen(file, "r");
 
-    if(fstream != NULL)
-    {
-        fclose(fstream);
-        return true;
-    }
+	if (fstream != NULL)
+	{
+		fclose(fstream);
+		return true;
+	}
 #ifdef KEX_WIN32
-    else
-    {
-        // If we can't open because the file is a directory, the
-        // "file" exists at least!
-        if(errno == 21)
-        {
-            return true;
-        }
-    }
+	else
+	{
+		// If we can't open because the file is a directory, the
+		// "file" exists at least!
+		if (errno == 21)
+		{
+			return true;
+		}
+	}
 #endif
 
-    return false;
+	return false;
 }
-
-//
-// kexBinFile::Duplicate
-//
 
 void kexBinFile::Duplicate(const char *newFileName)
 {
-    FILE *f;
+	FILE *f;
 
-    if(bOpened == false)
-    {
-        return;
-    }
+	if (bOpened == false)
+	{
+		return;
+	}
 
-    f = fopen(newFileName, "wb");
+	f = fopen(newFileName, "wb");
 
-    if(f == NULL)
-    {
-        return;
-    }
+	if (f == NULL)
+	{
+		return;
+	}
 
-    fwrite(buffer, Length(), 1, f);
-    fclose(f);
+	fwrite(buffer, Length(), 1, f);
+	fclose(f);
 }
-
-//
-// kexBinFile::Length
-//
 
 int kexBinFile::Length()
 {
-    long savedpos;
-    long length;
+	long savedpos;
+	long length;
 
-    if(bOpened == false)
-    {
-        return 0;
-    }
+	if (bOpened == false)
+	{
+		return 0;
+	}
 
-    // save the current position in the file
-    savedpos = ftell(handle);
+	// save the current position in the file
+	savedpos = ftell(handle);
 
-    // jump to the end and find the length
-    fseek(handle, 0, SEEK_END);
-    length = ftell(handle);
+	// jump to the end and find the length
+	fseek(handle, 0, SEEK_END);
+	length = ftell(handle);
 
-    // go back to the old location
-    fseek(handle, savedpos, SEEK_SET);
+	// go back to the old location
+	fseek(handle, savedpos, SEEK_SET);
 
-    return length;
+	return length;
 }
-
-//
-// kexBinFile::Read8
-//
 
 byte kexBinFile::Read8()
 {
-    byte result;
-    result = buffer[bufferOffset++];
-    return result;
+	byte result;
+	result = buffer[bufferOffset++];
+	return result;
 }
-
-//
-// kexBinFile::Read16
-//
 
 short kexBinFile::Read16()
 {
-    int result;
-    result = Read8();
-    result |= Read8() << 8;
-    return result;
+	int result;
+	result = Read8();
+	result |= Read8() << 8;
+	return result;
 }
-
-//
-// kexBinFile::Read32
-//
 
 int kexBinFile::Read32()
 {
-    int result;
-    result = Read8();
-    result |= Read8() << 8;
-    result |= Read8() << 16;
-    result |= Read8() << 24;
-    return result;
+	int result;
+	result = Read8();
+	result |= Read8() << 8;
+	result |= Read8() << 16;
+	result |= Read8() << 24;
+	return result;
 }
-
-//
-// kexBinFile::ReadFloat
-//
 
 float kexBinFile::ReadFloat()
 {
-    fint_t fi;
-    fi.i = Read32();
-    return fi.f;
+	fint_t fi;
+	fi.i = Read32();
+	return fi.f;
 }
-
-//
-// kexBinFile::ReadVector
-//
 
 kexVec3 kexBinFile::ReadVector()
 {
-    kexVec3 vec;
+	kexVec3 vec;
 
-    vec.x = ReadFloat();
-    vec.y = ReadFloat();
-    vec.z = ReadFloat();
+	vec.x = ReadFloat();
+	vec.y = ReadFloat();
+	vec.z = ReadFloat();
 
-    return vec;
+	return vec;
 }
-
-//
-// kexBinFile::ReadString
-//
 
 kexStr kexBinFile::ReadString()
 {
-    kexStr str;
-    char c = 0;
+	kexStr str;
+	char c = 0;
 
-    while(1)
-    {
-        if(!(c = Read8()))
-        {
-            break;
-        }
+	while (1)
+	{
+		if (!(c = Read8()))
+		{
+			break;
+		}
 
-        str += c;
-    }
+		str += c;
+	}
 
-    return str;
+	return str;
 }
-
-//
-// kexBinFile::Write8
-//
 
 void kexBinFile::Write8(const byte val)
 {
-    if(bOpened)
-    {
-        fwrite(&val, 1, 1, handle);
-    }
-    else
-    {
-        buffer[bufferOffset] = val;
-    }
-    bufferOffset++;
+	if (bOpened)
+	{
+		fwrite(&val, 1, 1, handle);
+	}
+	else
+	{
+		buffer[bufferOffset] = val;
+	}
+	bufferOffset++;
 }
-
-//
-// kexBinFile::Write16
-//
 
 void kexBinFile::Write16(const short val)
 {
-    Write8(val & 0xff);
-    Write8((val >> 8) & 0xff);
+	Write8(val & 0xff);
+	Write8((val >> 8) & 0xff);
 }
-
-//
-// kexBinFile::Write32
-//
 
 void kexBinFile::Write32(const int val)
 {
-    Write8(val & 0xff);
-    Write8((val >> 8) & 0xff);
-    Write8((val >> 16) & 0xff);
-    Write8((val >> 24) & 0xff);
+	Write8(val & 0xff);
+	Write8((val >> 8) & 0xff);
+	Write8((val >> 16) & 0xff);
+	Write8((val >> 24) & 0xff);
 }
-
-//
-// kexBinFile::WriteFloat
-//
 
 void kexBinFile::WriteFloat(const float val)
 {
-    fint_t fi;
-    fi.f = val;
-    Write32(fi.i);
+	fint_t fi;
+	fi.f = val;
+	Write32(fi.i);
 }
-
-//
-// kexBinFile::WriteVector
-//
 
 void kexBinFile::WriteVector(const kexVec3 &val)
 {
-    WriteFloat(val.x);
-    WriteFloat(val.y);
-    WriteFloat(val.z);
+	WriteFloat(val.x);
+	WriteFloat(val.y);
+	WriteFloat(val.z);
 }
-
-//
-// kexBinFile::WriteString
-//
 
 void kexBinFile::WriteString(const kexStr &val)
 {
-    const char *c = val.c_str();
+	const char *c = val.c_str();
 
-    for(int i = 0; i < val.Length(); i++)
-    {
-        Write8(c[i]);
-    }
+	for (int i = 0; i < val.Length(); i++)
+	{
+		Write8(c[i]);
+	}
 
-    Write8(0);
+	Write8(0);
 }
-
-//
-// kexBinFile::GetOffsetValue
-//
 
 int kexBinFile::GetOffsetValue(int id)
 {
-    return *(int*)(buffer + (id << 2));
+	return *(int*)(buffer + (id << 2));
 }
-
-//
-// kexBinFile::GetOffset
-//
 
 byte *kexBinFile::GetOffset(int id, byte *subdata, int *count)
 {
-    byte *data = (subdata == NULL) ? buffer : subdata;
+	byte *data = (subdata == NULL) ? buffer : subdata;
 
-    bufferOffset = GetOffsetValue(id);
-    byte *dataOffs = &data[bufferOffset];
+	bufferOffset = GetOffsetValue(id);
+	byte *dataOffs = &data[bufferOffset];
 
-    if(count)
-    {
-        *count = *(int*)(dataOffs);
-    }
+	if (count)
+	{
+		*count = *(int*)(dataOffs);
+	}
 
-    return dataOffs;
+	return dataOffs;
 }

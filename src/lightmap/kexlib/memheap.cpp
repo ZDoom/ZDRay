@@ -51,40 +51,40 @@ kexHeapBlock hb_object("object", false, NULL, NULL);
 //
 
 kexHeapBlock::kexHeapBlock(const char *name, bool bGarbageCollect,
-                           blockFunc_t funcFree, blockFunc_t funcGC)
+	blockFunc_t funcFree, blockFunc_t funcGC)
 {
-    this->name      = (char*)name;
-    this->freeFunc  = funcFree;
-    this->gcFunc    = funcGC;
-    this->blocks    = NULL;
-    this->bGC       = bGarbageCollect;
-    this->purgeID   = kexHeap::numHeapBlocks++;
+	this->name = (char*)name;
+	this->freeFunc = funcFree;
+	this->gcFunc = funcGC;
+	this->blocks = NULL;
+	this->bGC = bGarbageCollect;
+	this->purgeID = kexHeap::numHeapBlocks++;
 
-    // add heap block to main block list
-    if(kexHeap::blockList)
-    {
-        if(kexHeap::blockList->prev)
-        {
-            kexHeap::blockList->prev->next = this;
-            this->prev = kexHeap::blockList->prev;
-            this->next = NULL;
-            kexHeap::blockList->prev = this;
-        }
-        else
-        {
-            kexHeap::blockList->prev = this;
-            kexHeap::blockList->next = this;
-            this->prev = kexHeap::blockList;
-            this->next = NULL;
-        }
+	// add heap block to main block list
+	if (kexHeap::blockList)
+	{
+		if (kexHeap::blockList->prev)
+		{
+			kexHeap::blockList->prev->next = this;
+			this->prev = kexHeap::blockList->prev;
+			this->next = NULL;
+			kexHeap::blockList->prev = this;
+		}
+		else
+		{
+			kexHeap::blockList->prev = this;
+			kexHeap::blockList->next = this;
+			this->prev = kexHeap::blockList;
+			this->next = NULL;
+		}
 
-    }
-    else
-    {
-        kexHeap::blockList = this;
-        this->prev = NULL;
-        this->next = NULL;
-    }
+	}
+	else
+	{
+		kexHeap::blockList = this;
+		this->prev = NULL;
+		this->next = NULL;
+	}
 }
 
 //
@@ -103,26 +103,26 @@ kexHeapBlock::~kexHeapBlock()
 
 kexHeapBlock *kexHeapBlock::operator[](int index)
 {
-    if(kexHeap::currentHeapBlockID == index)
-    {
-        return kexHeap::currentHeapBlock;
-    }
+	if (kexHeap::currentHeapBlockID == index)
+	{
+		return kexHeap::currentHeapBlock;
+	}
 
-    kexHeapBlock *heapBlock = this;
+	kexHeapBlock *heapBlock = this;
 
-    for(int i = 0; i < index; i++)
-    {
-        heapBlock = heapBlock->next;
-        if(heapBlock == NULL)
-        {
-            return NULL;
-        }
-    }
+	for (int i = 0; i < index; i++)
+	{
+		heapBlock = heapBlock->next;
+		if (heapBlock == NULL)
+		{
+			return NULL;
+		}
+	}
 
-    kexHeap::currentHeapBlockID = index;
-    kexHeap::currentHeapBlock = heapBlock;
+	kexHeap::currentHeapBlockID = index;
+	kexHeap::currentHeapBlock = heapBlock;
 
-    return heapBlock;
+	return heapBlock;
 }
 
 //
@@ -131,16 +131,16 @@ kexHeapBlock *kexHeapBlock::operator[](int index)
 
 void kexHeap::AddBlock(memBlock *block, kexHeapBlock *heapBlock)
 {
-    block->prev = NULL;
-    block->next = heapBlock->blocks;
-    heapBlock->blocks = block;
+	block->prev = NULL;
+	block->next = heapBlock->blocks;
+	heapBlock->blocks = block;
 
-    block->heapBlock = heapBlock;
+	block->heapBlock = heapBlock;
 
-    if(block->next != NULL)
-    {
-        block->next->prev = block;
-    }
+	if (block->next != NULL)
+	{
+		block->next->prev = block;
+	}
 }
 
 //
@@ -149,21 +149,21 @@ void kexHeap::AddBlock(memBlock *block, kexHeapBlock *heapBlock)
 
 void kexHeap::RemoveBlock(memBlock *block)
 {
-    if(block->prev == NULL)
-    {
-        block->heapBlock->blocks = block->next;
-    }
-    else
-    {
-        block->prev->next = block->next;
-    }
+	if (block->prev == NULL)
+	{
+		block->heapBlock->blocks = block->next;
+	}
+	else
+	{
+		block->prev->next = block->next;
+	}
 
-    if(block->next != NULL)
-    {
-        block->next->prev = block->prev;
-    }
+	if (block->next != NULL)
+	{
+		block->next->prev = block->prev;
+	}
 
-    block->heapBlock = NULL;
+	block->heapBlock = NULL;
 }
 
 //
@@ -172,16 +172,16 @@ void kexHeap::RemoveBlock(memBlock *block)
 
 memBlock *kexHeap::GetBlock(void *ptr, const char *file, int line)
 {
-    memBlock* block;
+	memBlock* block;
 
-    block = (memBlock*)((byte*)ptr - sizeof(memBlock));
+	block = (memBlock*)((byte*)ptr - sizeof(memBlock));
 
-    if(block->heapTag != kexHeap::HeapTag)
-    {
-        Error("kexHeap::GetBlock: found a pointer without heap tag (%s:%d)", file, line);
-    }
+	if (block->heapTag != kexHeap::HeapTag)
+	{
+		Error("kexHeap::GetBlock: found a pointer without heap tag (%s:%d)", file, line);
+	}
 
-    return block;
+	return block;
 }
 
 //
@@ -190,25 +190,25 @@ memBlock *kexHeap::GetBlock(void *ptr, const char *file, int line)
 
 void *kexHeap::Malloc(int size, kexHeapBlock &heapBlock, const char *file, int line)
 {
-    memBlock *newblock;
+	memBlock *newblock;
 
-    assert(size > 0);
+	assert(size > 0);
 
-    newblock = NULL;
+	newblock = NULL;
 
-    if(!(newblock = (memBlock*)malloc(sizeof(memBlock) + size)))
-    {
-        Error("kexHeap::Malloc: failed on allocation of %u bytes (%s:%d)", size, file, line);
-    }
+	if (!(newblock = (memBlock*)malloc(sizeof(memBlock) + size)))
+	{
+		Error("kexHeap::Malloc: failed on allocation of %u bytes (%s:%d)", size, file, line);
+	}
 
-    newblock->purgeID = heapBlock.purgeID;
-    newblock->heapTag = kexHeap::HeapTag;
-    newblock->size = size;
-    newblock->ptrRef = NULL;
+	newblock->purgeID = heapBlock.purgeID;
+	newblock->heapTag = kexHeap::HeapTag;
+	newblock->size = size;
+	newblock->ptrRef = NULL;
 
-    kexHeap::AddBlock(newblock, &heapBlock);
+	kexHeap::AddBlock(newblock, &heapBlock);
 
-    return ((byte*)newblock) + sizeof(memBlock);
+	return ((byte*)newblock) + sizeof(memBlock);
 }
 
 //
@@ -217,7 +217,7 @@ void *kexHeap::Malloc(int size, kexHeapBlock &heapBlock, const char *file, int l
 
 void *kexHeap::Calloc(int size, kexHeapBlock &heapBlock, const char *file, int line)
 {
-    return memset(kexHeap::Malloc(size, heapBlock, file, line), 0, size);
+	return memset(kexHeap::Malloc(size, heapBlock, file, line), 0, size);
 }
 
 //
@@ -226,48 +226,48 @@ void *kexHeap::Calloc(int size, kexHeapBlock &heapBlock, const char *file, int l
 
 void *kexHeap::Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char *file, int line)
 {
-    memBlock *block;
-    memBlock *newblock;
+	memBlock *block;
+	memBlock *newblock;
 
-    if(!ptr)
-    {
-        return kexHeap::Malloc(size, heapBlock, file, line);
-    }
+	if (!ptr)
+	{
+		return kexHeap::Malloc(size, heapBlock, file, line);
+	}
 
-    assert(size >= 0);
+	assert(size >= 0);
 
-    if(size == 0)
-    {
-        kexHeap::Free(ptr, file, line);
-        return NULL;
-    }
+	if (size == 0)
+	{
+		kexHeap::Free(ptr, file, line);
+		return NULL;
+	}
 
-    block = kexHeap::GetBlock(ptr, file, line);
-    newblock = NULL;
+	block = kexHeap::GetBlock(ptr, file, line);
+	newblock = NULL;
 
-    kexHeap::RemoveBlock(block);
+	kexHeap::RemoveBlock(block);
 
-    block->next = NULL;
-    block->prev = NULL;
+	block->next = NULL;
+	block->prev = NULL;
 
-    if(block->ptrRef)
-    {
-        *block->ptrRef = NULL;
-    }
+	if (block->ptrRef)
+	{
+		*block->ptrRef = NULL;
+	}
 
-    if(!(newblock = (memBlock*)realloc(block, sizeof(memBlock) + size)))
-    {
-        Error("kexHeap::Realloc: failed on allocation of %u bytes (%s:%d)", size, file, line);
-    }
+	if (!(newblock = (memBlock*)realloc(block, sizeof(memBlock) + size)))
+	{
+		Error("kexHeap::Realloc: failed on allocation of %u bytes (%s:%d)", size, file, line);
+	}
 
-    newblock->purgeID = heapBlock.purgeID;
-    newblock->heapTag = kexHeap::HeapTag;
-    newblock->size = size;
-    newblock->ptrRef = NULL;
+	newblock->purgeID = heapBlock.purgeID;
+	newblock->heapTag = kexHeap::HeapTag;
+	newblock->size = size;
+	newblock->ptrRef = NULL;
 
-    kexHeap::AddBlock(newblock, &heapBlock);
+	kexHeap::AddBlock(newblock, &heapBlock);
 
-    return ((byte*)newblock) + sizeof(memBlock);
+	return ((byte*)newblock) + sizeof(memBlock);
 }
 
 //
@@ -276,7 +276,7 @@ void *kexHeap::Realloc(void *ptr, int size, kexHeapBlock &heapBlock, const char 
 
 void *kexHeap::Alloca(int size, const char *file, int line)
 {
-    return size == 0 ? NULL : kexHeap::Calloc(size, hb_auto, file, line);
+	return size == 0 ? NULL : kexHeap::Calloc(size, hb_auto, file, line);
 }
 
 //
@@ -285,18 +285,18 @@ void *kexHeap::Alloca(int size, const char *file, int line)
 
 void kexHeap::Free(void *ptr, const char *file, int line)
 {
-    memBlock* block;
+	memBlock* block;
 
-    block = kexHeap::GetBlock(ptr, file, line);
-    if(block->ptrRef)
-    {
-        *block->ptrRef = NULL;
-    }
+	block = kexHeap::GetBlock(ptr, file, line);
+	if (block->ptrRef)
+	{
+		*block->ptrRef = NULL;
+	}
 
-    kexHeap::RemoveBlock(block);
+	kexHeap::RemoveBlock(block);
 
-    // free back to system
-    free(block);
+	// free back to system
+	free(block);
 }
 
 //
@@ -305,28 +305,28 @@ void kexHeap::Free(void *ptr, const char *file, int line)
 
 void kexHeap::Purge(kexHeapBlock &heapBlock, const char *file, int line)
 {
-    memBlock *block;
-    memBlock *next;
+	memBlock *block;
+	memBlock *next;
 
-    for(block = heapBlock.blocks; block != NULL;)
-    {
-        next = block->next;
+	for (block = heapBlock.blocks; block != NULL;)
+	{
+		next = block->next;
 
-        if(block->heapTag != kexHeap::HeapTag)
-        {
-            Error("kexHeap::Purge: Purging without heap tag (%s:%d)", file, line);
-        }
+		if (block->heapTag != kexHeap::HeapTag)
+		{
+			Error("kexHeap::Purge: Purging without heap tag (%s:%d)", file, line);
+		}
 
-        if(block->ptrRef)
-        {
-            *block->ptrRef = NULL;
-        }
+		if (block->ptrRef)
+		{
+			*block->ptrRef = NULL;
+		}
 
-        free(block);
-        block = next;
-    }
+		free(block);
+		block = next;
+	}
 
-    heapBlock.blocks = NULL;
+	heapBlock.blocks = NULL;
 }
 
 //
@@ -335,7 +335,7 @@ void kexHeap::Purge(kexHeapBlock &heapBlock, const char *file, int line)
 
 void kexHeap::SetCacheRef(void **ptr, const char *file, int line)
 {
-    kexHeap::GetBlock(*ptr, file, line)->ptrRef = ptr;
+	kexHeap::GetBlock(*ptr, file, line)->ptrRef = ptr;
 }
 
 //
@@ -344,7 +344,7 @@ void kexHeap::SetCacheRef(void **ptr, const char *file, int line)
 
 void kexHeap::GarbageCollect(const char *file, int line)
 {
-    kexHeap::Purge(hb_auto, file, line);
+	kexHeap::Purge(hb_auto, file, line);
 }
 
 //
@@ -353,28 +353,28 @@ void kexHeap::GarbageCollect(const char *file, int line)
 
 void kexHeap::CheckBlocks(const char *file, int line)
 {
-    memBlock *block;
-    memBlock *prev;
-    kexHeapBlock *heapBlock;
+	memBlock *block;
+	memBlock *prev;
+	kexHeapBlock *heapBlock;
 
-    for(heapBlock = kexHeap::blockList; heapBlock; heapBlock = heapBlock->next)
-    {
-        prev = NULL;
+	for (heapBlock = kexHeap::blockList; heapBlock; heapBlock = heapBlock->next)
+	{
+		prev = NULL;
 
-        for(block = heapBlock->blocks; block != NULL; block = block->next)
-        {
-            if(block->heapTag != kexHeap::HeapTag)
-            {
-                Error("kexHeap::CheckBlocks: found block without heap tag (%s:%d)", file, line);
-            }
-            if(block->prev != prev)
-            {
-                Error("kexHeap::CheckBlocks: bad link list found (%s:%d)", file, line);
-            }
+		for (block = heapBlock->blocks; block != NULL; block = block->next)
+		{
+			if (block->heapTag != kexHeap::HeapTag)
+			{
+				Error("kexHeap::CheckBlocks: found block without heap tag (%s:%d)", file, line);
+			}
+			if (block->prev != prev)
+			{
+				Error("kexHeap::CheckBlocks: bad link list found (%s:%d)", file, line);
+			}
 
-            prev = block;
-        }
-    }
+			prev = block;
+		}
+	}
 }
 
 //
@@ -391,13 +391,13 @@ void kexHeap::Touch(void *ptr, const char *file, int line)
 
 int kexHeap::Usage(const kexHeapBlock &heapBlock)
 {
-    int bytes = 0;
-    memBlock *block;
+	int bytes = 0;
+	memBlock *block;
 
-    for(block = heapBlock.blocks; block != NULL; block = block->next)
-    {
-        bytes += block->size;
-    }
+	for (block = heapBlock.blocks; block != NULL; block = block->next)
+	{
+		bytes += block->size;
+	}
 
-    return bytes;
+	return bytes;
 }

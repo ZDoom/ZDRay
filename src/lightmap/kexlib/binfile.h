@@ -32,45 +32,43 @@
 class kexBinFile
 {
 public:
-    kexBinFile();
-    ~kexBinFile();
+	kexBinFile();
+	~kexBinFile();
 
-    bool                Open(const char *file, kexHeapBlock &heapBlock = hb_static);
-    bool                Create(const char *file);
-    void                Close();
-    bool                Exists(const char *file);
-    int                 Length();
-    void                Duplicate(const char *newFileName);
+	bool Open(const char *file, kexHeapBlock &heapBlock = hb_static);
+	bool Create(const char *file);
+	void Close();
+	bool Exists(const char *file);
+	int Length();
+	void Duplicate(const char *newFileName);
 
-    byte                Read8();
-    short               Read16();
-    int                 Read32();
-    float               ReadFloat();
-    kexVec3             ReadVector();
-    kexStr              ReadString();
+	byte Read8();
+	short Read16();
+	int Read32();
+	float ReadFloat();
+	kexVec3 ReadVector();
+	kexStr ReadString();
 
-    void                Write8(const byte val);
-    void                Write16(const short val);
-    void                Write32(const int val);
-    void                WriteFloat(const float val);
-    void                WriteVector(const kexVec3 &val);
-    void                WriteString(const kexStr &val);
+	void Write8(const byte val);
+	void Write16(const short val);
+	void Write32(const int val);
+	void WriteFloat(const float val);
+	void WriteVector(const kexVec3 &val);
+	void WriteString(const kexStr &val);
 
-    int                 GetOffsetValue(int id);
-    byte                *GetOffset(int id,
-                                   byte *subdata = NULL,
-                                   int *count = NULL);
+	int GetOffsetValue(int id);
+	byte *GetOffset(int id, byte *subdata = NULL, int *count = NULL);
 
-    FILE                *Handle() const { return handle; }
-    byte                *Buffer() const { return buffer; }
-    void                SetBuffer(byte *ptr) { buffer = ptr; }
-    byte                *BufferAt() const { return &buffer[bufferOffset]; }
-    bool                Opened() const { return bOpened; }
-    void                SetOffset(const int offset) { bufferOffset = offset; }
+	FILE *Handle() const { return handle; }
+	byte *Buffer() const { return buffer; }
+	void SetBuffer(byte *ptr) { buffer = ptr; }
+	byte *BufferAt() const { return &buffer[bufferOffset]; }
+	bool Opened() const { return bOpened; }
+	void SetOffset(const int offset) { bufferOffset = offset; }
 
 private:
-    FILE                *handle;
-    byte                *buffer;
-    unsigned int        bufferOffset;
-    bool                bOpened;
+	FILE *handle;
+	byte *buffer;
+	unsigned int bufferOffset;
+	bool bOpened;
 };

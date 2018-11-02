@@ -39,10 +39,10 @@
 
 kexPlane::kexPlane()
 {
-    this->a = 0;
-    this->b = 0;
-    this->c = 0;
-    this->d = 0;
+	this->a = 0;
+	this->b = 0;
+	this->c = 0;
+	this->d = 0;
 }
 
 //
@@ -51,10 +51,10 @@ kexPlane::kexPlane()
 
 kexPlane::kexPlane(const float a, const float b, const float c, const float d)
 {
-    this->a = a;
-    this->b = b;
-    this->c = c;
-    this->d = d;
+	this->a = a;
+	this->b = b;
+	this->c = c;
+	this->d = d;
 }
 
 //
@@ -63,8 +63,8 @@ kexPlane::kexPlane(const float a, const float b, const float c, const float d)
 
 kexPlane::kexPlane(const kexVec3 &pt1, const kexVec3 &pt2, const kexVec3 &pt3)
 {
-    SetNormal(pt1, pt2, pt3);
-    this->d = kexVec3::Dot(pt1, Normal());
+	SetNormal(pt1, pt2, pt3);
+	this->d = kexVec3::Dot(pt1, Normal());
 }
 
 //
@@ -73,10 +73,10 @@ kexPlane::kexPlane(const kexVec3 &pt1, const kexVec3 &pt2, const kexVec3 &pt3)
 
 kexPlane::kexPlane(const kexVec3 &normal, const kexVec3 &point)
 {
-    this->a = normal.x;
-    this->b = normal.y;
-    this->c = normal.z;
-    this->d = point.Dot(normal);
+	this->a = normal.x;
+	this->b = normal.y;
+	this->c = normal.z;
+	this->d = point.Dot(normal);
 }
 
 //
@@ -85,10 +85,10 @@ kexPlane::kexPlane(const kexVec3 &normal, const kexVec3 &point)
 
 kexPlane::kexPlane(const kexPlane &plane)
 {
-    this->a = plane.a;
-    this->b = plane.b;
-    this->c = plane.c;
-    this->d = plane.d;
+	this->a = plane.a;
+	this->b = plane.b;
+	this->c = plane.c;
+	this->d = plane.d;
 }
 
 //
@@ -97,8 +97,8 @@ kexPlane::kexPlane(const kexPlane &plane)
 
 kexPlane &kexPlane::SetNormal(const kexVec3 &normal)
 {
-    Normal() = normal;
-    return *this;
+	Normal() = normal;
+	return *this;
 }
 
 //
@@ -107,8 +107,8 @@ kexPlane &kexPlane::SetNormal(const kexVec3 &normal)
 
 kexPlane &kexPlane::SetNormal(const kexVec3 &pt1, const kexVec3 &pt2, const kexVec3 &pt3)
 {
-    Normal() = (pt2 - pt1).Cross(pt3 - pt2).Normalize();
-    return *this;
+	Normal() = (pt2 - pt1).Cross(pt3 - pt2).Normalize();
+	return *this;
 }
 
 //
@@ -117,7 +117,7 @@ kexPlane &kexPlane::SetNormal(const kexVec3 &pt1, const kexVec3 &pt2, const kexV
 
 kexVec3 const &kexPlane::Normal() const
 {
-    return *reinterpret_cast<const kexVec3*>(&a);
+	return *reinterpret_cast<const kexVec3*>(&a);
 }
 
 //
@@ -126,7 +126,7 @@ kexVec3 const &kexPlane::Normal() const
 
 kexVec3 &kexPlane::Normal()
 {
-    return *reinterpret_cast<kexVec3*>(&a);
+	return *reinterpret_cast<kexVec3*>(&a);
 }
 
 //
@@ -135,7 +135,7 @@ kexVec3 &kexPlane::Normal()
 
 float kexPlane::Distance(const kexVec3 &point)
 {
-    return point.Dot(Normal());
+	return point.Dot(Normal());
 }
 
 //
@@ -144,8 +144,8 @@ float kexPlane::Distance(const kexVec3 &point)
 
 kexPlane &kexPlane::SetDistance(const kexVec3 &point)
 {
-    this->d = point.Dot(Normal());
-    return *this;
+	this->d = point.Dot(Normal());
+	return *this;
 }
 
 //
@@ -154,7 +154,7 @@ kexPlane &kexPlane::SetDistance(const kexVec3 &point)
 
 bool kexPlane::IsFacing(const float yaw)
 {
-    return -kexMath::Sin(yaw) * a + -kexMath::Cos(yaw) * b < 0;
+	return -kexMath::Sin(yaw) * a + -kexMath::Cos(yaw) * b < 0;
 }
 
 //
@@ -163,21 +163,21 @@ bool kexPlane::IsFacing(const float yaw)
 
 float kexPlane::ToYaw()
 {
-    float d = Normal().Unit();
+	float d = Normal().Unit();
 
-    if(d != 0)
-    {
-        float phi;
-        phi = kexMath::ACos(b / d);
-        if(a <= 0)
-        {
-            phi = -phi;
-        }
+	if (d != 0)
+	{
+		float phi;
+		phi = kexMath::ACos(b / d);
+		if (a <= 0)
+		{
+			phi = -phi;
+		}
 
-        return phi;
-    }
+		return phi;
+	}
 
-    return 0;
+	return 0;
 }
 
 //
@@ -186,7 +186,7 @@ float kexPlane::ToYaw()
 
 float kexPlane::ToPitch()
 {
-    return kexMath::ACos(kexVec3::vecUp.Dot(Normal()));
+	return kexMath::ACos(kexVec3::vecUp.Dot(Normal()));
 }
 
 //
@@ -195,8 +195,8 @@ float kexPlane::ToPitch()
 
 kexQuat kexPlane::ToQuat()
 {
-    kexVec3 cross = kexVec3::vecUp.Cross(Normal()).Normalize();
-    return kexQuat(kexMath::ACos(kexVec3::vecUp.Dot(Normal())), cross);
+	kexVec3 cross = kexVec3::vecUp.Cross(Normal()).Normalize();
+	return kexQuat(kexMath::ACos(kexVec3::vecUp.Dot(Normal())), cross);
 }
 
 //
@@ -205,7 +205,7 @@ kexQuat kexPlane::ToQuat()
 
 kexVec4 const &kexPlane::ToVec4() const
 {
-    return *reinterpret_cast<const kexVec4*>(&a);
+	return *reinterpret_cast<const kexVec4*>(&a);
 }
 
 //
@@ -214,7 +214,7 @@ kexVec4 const &kexPlane::ToVec4() const
 
 kexVec4 &kexPlane::ToVec4()
 {
-    return *reinterpret_cast<kexVec4*>(&a);
+	return *reinterpret_cast<kexVec4*>(&a);
 }
 
 //
@@ -223,21 +223,21 @@ kexVec4 &kexPlane::ToVec4()
 
 const kexPlane::planeAxis_t kexPlane::BestAxis() const
 {
-    float na = kexMath::Fabs(a);
-    float nb = kexMath::Fabs(b);
-    float nc = kexMath::Fabs(c);
+	float na = kexMath::Fabs(a);
+	float nb = kexMath::Fabs(b);
+	float nc = kexMath::Fabs(c);
 
-    // figure out what axis the plane lies on
-    if(na >= nb && na >= nc)
-    {
-        return AXIS_YZ;
-    }
-    else if(nb >= na && nb >= nc)
-    {
-        return AXIS_XZ;
-    }
+	// figure out what axis the plane lies on
+	if (na >= nb && na >= nc)
+	{
+		return AXIS_YZ;
+	}
+	else if (nb >= na && nb >= nc)
+	{
+		return AXIS_XZ;
+	}
 
-    return AXIS_XY;
+	return AXIS_XY;
 }
 
 //
@@ -246,6 +246,6 @@ const kexPlane::planeAxis_t kexPlane::BestAxis() const
 
 kexVec3 kexPlane::GetInclination()
 {
-    kexVec3 dir = Normal() * kexVec3::vecUp.Dot(Normal());
-    return (kexVec3::vecUp - dir).Normalize();
+	kexVec3 dir = Normal() * kexVec3::vecUp.Dot(Normal());
+	return (kexVec3::vecUp - dir).Normalize();
 }

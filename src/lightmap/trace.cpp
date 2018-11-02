@@ -37,13 +37,13 @@
 
 void kexTrace::Init(FLevel &doomMap)
 {
-    map = &doomMap;
+	map = &doomMap;
 }
 
 void kexTrace::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
 {
-    start = startVec;
-    end = endVec;
+	start = startVec;
+	end = endVec;
 
 	TraceHit hit = TriangleMeshShape::find_first_hit(map->CollisionMesh.get(), start, end);
 	fraction = hit.fraction;

@@ -38,39 +38,37 @@ class FWadWriter;
 class kexLightmapBuilder
 {
 public:
-    kexLightmapBuilder();
-    ~kexLightmapBuilder();
+	kexLightmapBuilder();
+	~kexLightmapBuilder();
 
-    void                    BuildSurfaceParams(surface_t *surface);
-    void                    TraceSurface(surface_t *surface);
-    void                    CreateLightmaps(FLevel &doomMap);
-    void                    LightSurface(const int surfid);
-    void                    WriteTexturesToTGA();
-	void                    WriteMeshToOBJ();
-	void                    AddLightmapLump(FWadWriter &wadFile);
+	void BuildSurfaceParams(surface_t *surface);
+	void TraceSurface(surface_t *surface);
+	void CreateLightmaps(FLevel &doomMap);
+	void LightSurface(const int surfid);
+	void WriteTexturesToTGA();
+	void WriteMeshToOBJ();
+	void AddLightmapLump(FWadWriter &wadFile);
 
-    int                     samples;
-    float                   ambience;
-    int                     textureWidth;
-    int                     textureHeight;
+	int samples;
+	float ambience;
+	int textureWidth;
+	int textureHeight;
 
-    static const kexVec3    gridSize;
+	static const kexVec3 gridSize;
 
 private:
-    void                    NewTexture();
-    bool                    MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
-    kexBBox                 GetBoundsFromSurface(const surface_t *surface);
-    kexVec3                 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
-    bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
-    void                    ExportTexelsToObjFile(FILE *f, const kexVec3 &org, int indices);
-    void                    WriteBlock(FILE *f, const int i, const kexVec3 &org, int indices, kexBBox &box);
+	void NewTexture();
+	bool MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
+	kexBBox GetBoundsFromSurface(const surface_t *surface);
+	kexVec3 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
+	bool EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
 
-    FLevel              *map;
-    kexArray<uint16_t*>         textures;
-    int                     **allocBlocks;
-    int                     numTextures;
-    int                     extraSamples;
-    int                     tracedTexels;
+	FLevel *map;
+	kexArray<uint16_t*> textures;
+	int **allocBlocks;
+	int numTextures;
+	int extraSamples;
+	int tracedTexels;
 
 	std::mutex mutex;
 	int processed = 0;

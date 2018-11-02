@@ -39,19 +39,19 @@
 
 int kexMath::RoundPowerOfTwo(int x)
 {
-    int mask = 1;
+	int mask = 1;
 
-    while(mask < 0x40000000)
-    {
-        if(x == mask || (x & (mask-1)) == x)
-        {
-            return mask;
-        }
+	while (mask < 0x40000000)
+	{
+		if (x == mask || (x & (mask - 1)) == x)
+		{
+			return mask;
+		}
 
-        mask <<= 1;
-    }
+		mask <<= 1;
+	}
 
-    return x;
+	return x;
 }
 
 //
@@ -59,20 +59,20 @@ int kexMath::RoundPowerOfTwo(int x)
 //
 
 void kexMath::CubicCurve(const kexVec3 &start, const kexVec3 &end, const float time,
-                         const kexVec3 &point, kexVec3 *vec)
+	const kexVec3 &point, kexVec3 *vec)
 {
-    int i;
-    float xyz[3];
+	int i;
+	float xyz[3];
 
-    for(i = 0; i < 3; i++)
-    {
-        xyz[i] = kexMath::Pow(1-time, 2) * start[i] +
-                 (2 * (1-time)) * time * point[i] + kexMath::Pow(time, 2) * end[i];
-    }
+	for (i = 0; i < 3; i++)
+	{
+		xyz[i] = kexMath::Pow(1 - time, 2) * start[i] +
+			(2 * (1 - time)) * time * point[i] + kexMath::Pow(time, 2) * end[i];
+	}
 
-    vec->x = xyz[0];
-    vec->y = xyz[1];
-    vec->z = xyz[2];
+	vec->x = xyz[0];
+	vec->y = xyz[1];
+	vec->z = xyz[2];
 }
 
 //
@@ -80,20 +80,20 @@ void kexMath::CubicCurve(const kexVec3 &start, const kexVec3 &end, const float t
 //
 
 void kexMath::QuadraticCurve(const kexVec3 &start, const kexVec3 &end, const float time,
-                             const kexVec3 &pt1, const kexVec3 &pt2, kexVec3 *vec)
+	const kexVec3 &pt1, const kexVec3 &pt2, kexVec3 *vec)
 {
-    int i;
-    float xyz[3];
+	int i;
+	float xyz[3];
 
-    for(i = 0; i < 3; i++)
-    {
-        xyz[i] = kexMath::Pow(1-time, 3) * start[i] + (3 * kexMath::Pow(1-time, 2)) *
-                 time * pt1[i] + (3 * (1-time)) * kexMath::Pow(time, 2) * pt2[i] +
-                 kexMath::Pow(time, 3) * end[i];
-    }
+	for (i = 0; i < 3; i++)
+	{
+		xyz[i] = kexMath::Pow(1 - time, 3) * start[i] + (3 * kexMath::Pow(1 - time, 2)) *
+			time * pt1[i] + (3 * (1 - time)) * kexMath::Pow(time, 2) * pt2[i] +
+			kexMath::Pow(time, 3) * end[i];
+	}
 
-    vec->x = xyz[0];
-    vec->y = xyz[1];
-    vec->z = xyz[2];
+	vec->x = xyz[0];
+	vec->y = xyz[1];
+	vec->z = xyz[2];
 }
 

@@ -38,17 +38,17 @@ kexArray<surface_t*> surfaces;
 
 static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
-    surface_t *surf;
-    IntSector *front;
-    IntSector *back;
+	surface_t *surf;
+	IntSector *front;
+	IntSector *back;
 
-    front = doomMap.GetFrontSector(side);
-    back = doomMap.GetBackSector(side);
+	front = doomMap.GetFrontSector(side);
+	back = doomMap.GetBackSector(side);
 
 	if (front->controlsector)
 		return;
 
-    FloatVertex v1 = doomMap.GetSegVertex(side->line->v1);
+	FloatVertex v1 = doomMap.GetSegVertex(side->line->v1);
 	FloatVertex v2 = doomMap.GetSegVertex(side->line->v2);
 
 	if (side->line->sidenum[0] != (ptrdiff_t)(side - &doomMap.Sides[0]))
@@ -61,199 +61,199 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	float v2Top = front->ceilingplane.zAt(v2.x, v2.y);
 	float v2Bottom = front->floorplane.zAt(v2.x, v2.y);
 
-    if(back)
-    {
+	if (back)
+	{
 		float v1TopBack = back->ceilingplane.zAt(v1.x, v1.y);
 		float v1BottomBack = back->floorplane.zAt(v1.x, v1.y);
 		float v2TopBack = back->ceilingplane.zAt(v2.x, v2.y);
 		float v2BottomBack = back->floorplane.zAt(v2.x, v2.y);
 
-        if (v1Top == v1TopBack && v1Bottom == v1BottomBack && v2Top == v2TopBack && v2Bottom == v2BottomBack)
-        {
-            return;
-        }
+		if (v1Top == v1TopBack && v1Bottom == v1BottomBack && v2Top == v2TopBack && v2Bottom == v2BottomBack)
+		{
+			return;
+		}
 
-        // bottom seg
-        if(v1Bottom < v1BottomBack || v2Bottom < v2BottomBack)
-        {
-            if(side->bottomtexture[0] != '-')
-            {
-                surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
-                surf->numVerts = 4;
-                surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
+		// bottom seg
+		if (v1Bottom < v1BottomBack || v2Bottom < v2BottomBack)
+		{
+			if (side->bottomtexture[0] != '-')
+			{
+				surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+				surf->numVerts = 4;
+				surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
 
-                surf->verts[0].x = surf->verts[2].x = v1.x;
-                surf->verts[0].y = surf->verts[2].y = v1.y;
-                surf->verts[1].x = surf->verts[3].x = v2.x;
-                surf->verts[1].y = surf->verts[3].y = v2.y;
+				surf->verts[0].x = surf->verts[2].x = v1.x;
+				surf->verts[0].y = surf->verts[2].y = v1.y;
+				surf->verts[1].x = surf->verts[3].x = v2.x;
+				surf->verts[1].y = surf->verts[3].y = v2.y;
 				surf->verts[0].z = v1Bottom;
 				surf->verts[1].z = v2Bottom;
 				surf->verts[2].z = v1BottomBack;
 				surf->verts[3].z = v2BottomBack;
 
-                surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
-                surf->plane.SetDistance(surf->verts[0]);
-                surf->type = ST_LOWERSIDE;
-                surf->typeIndex = side - &doomMap.Sides[0];
+				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+				surf->plane.SetDistance(surf->verts[0]);
+				surf->type = ST_LOWERSIDE;
+				surf->typeIndex = side - &doomMap.Sides[0];
 
-                surfaces.Push(surf);
-            }
+				surfaces.Push(surf);
+			}
 
 			v1Bottom = v1BottomBack;
 			v2Bottom = v2BottomBack;
-        }
+		}
 
-        // top seg
-        if(v1Top > v1TopBack || v2Top > v2TopBack)
-        {
-            bool bSky = false;
-            int frontidx = front - &doomMap.Sectors[0];
-            int backidx = back - &doomMap.Sectors[0];
+		// top seg
+		if (v1Top > v1TopBack || v2Top > v2TopBack)
+		{
+			bool bSky = false;
+			int frontidx = front - &doomMap.Sectors[0];
+			int backidx = back - &doomMap.Sectors[0];
 
-            if(doomMap.bSkySectors[frontidx] && doomMap.bSkySectors[backidx])
-            {
-                if(front->data.ceilingheight != back->data.ceilingheight && side->toptexture[0] == '-')
-                {
-                    bSky = true;
-                }
-            }
+			if (doomMap.bSkySectors[frontidx] && doomMap.bSkySectors[backidx])
+			{
+				if (front->data.ceilingheight != back->data.ceilingheight && side->toptexture[0] == '-')
+				{
+					bSky = true;
+				}
+			}
 
-            if(side->toptexture[0] != '-' || bSky)
-            {
-                surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
-                surf->numVerts = 4;
-                surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
+			if (side->toptexture[0] != '-' || bSky)
+			{
+				surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+				surf->numVerts = 4;
+				surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
 
-                surf->verts[0].x = surf->verts[2].x = v1.x;
-                surf->verts[0].y = surf->verts[2].y = v1.y;
-                surf->verts[1].x = surf->verts[3].x = v2.x;
-                surf->verts[1].y = surf->verts[3].y = v2.y;
+				surf->verts[0].x = surf->verts[2].x = v1.x;
+				surf->verts[0].y = surf->verts[2].y = v1.y;
+				surf->verts[1].x = surf->verts[3].x = v2.x;
+				surf->verts[1].y = surf->verts[3].y = v2.y;
 				surf->verts[0].z = v1TopBack;
 				surf->verts[1].z = v2TopBack;
 				surf->verts[2].z = v1Top;
 				surf->verts[3].z = v2Top;
 
-                surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
-                surf->plane.SetDistance(surf->verts[0]);
-                surf->type = ST_UPPERSIDE;
+				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+				surf->plane.SetDistance(surf->verts[0]);
+				surf->type = ST_UPPERSIDE;
 				surf->typeIndex = side - &doomMap.Sides[0];
-                surf->bSky = bSky;
+				surf->bSky = bSky;
 
-                surfaces.Push(surf);
-            }
+				surfaces.Push(surf);
+			}
 
 			v1Top = v1TopBack;
 			v2Top = v2TopBack;
-        }
-    }
+		}
+	}
 
-    // middle seg
-    if(back == NULL)
-    {
-        surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
-        surf->numVerts = 4;
-        surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
+	// middle seg
+	if (back == NULL)
+	{
+		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+		surf->numVerts = 4;
+		surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
 
-        surf->verts[0].x = surf->verts[2].x = v1.x;
-        surf->verts[0].y = surf->verts[2].y = v1.y;
-        surf->verts[1].x = surf->verts[3].x = v2.x;
-        surf->verts[1].y = surf->verts[3].y = v2.y;
+		surf->verts[0].x = surf->verts[2].x = v1.x;
+		surf->verts[0].y = surf->verts[2].y = v1.y;
+		surf->verts[1].x = surf->verts[3].x = v2.x;
+		surf->verts[1].y = surf->verts[3].y = v2.y;
 		surf->verts[0].z = v1Bottom;
 		surf->verts[1].z = v2Bottom;
 		surf->verts[2].z = v1Top;
 		surf->verts[3].z = v2Top;
 
-        surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
-        surf->plane.SetDistance(surf->verts[0]);
-        surf->type = ST_MIDDLESIDE;
+		surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+		surf->plane.SetDistance(surf->verts[0]);
+		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = side - &doomMap.Sides[0];
 
-        surfaces.Push(surf);
-    }
+		surfaces.Push(surf);
+	}
 }
 
 static void CreateSubsectorSurfaces(FLevel &doomMap)
 {
-    surface_t *surf;
-    IntSector *sector = NULL;
-    int i;
-    int j;
+	surface_t *surf;
+	IntSector *sector = NULL;
+	int i;
+	int j;
 
-    printf("------------- Building subsector surfaces -------------\n");
+	printf("------------- Building subsector surfaces -------------\n");
 
-    for(i = 0; i < doomMap.NumGLSubsectors; i++)
-    {
-        printf("subsectors: %i / %i\r", i+1, doomMap.NumGLSubsectors);
+	for (i = 0; i < doomMap.NumGLSubsectors; i++)
+	{
+		printf("subsectors: %i / %i\r", i + 1, doomMap.NumGLSubsectors);
 
 		MapSubsectorEx *sub = &doomMap.GLSubsectors[i];
 
-        if(sub->numlines < 3)
-        {
-            continue;
-        }
+		if (sub->numlines < 3)
+		{
+			continue;
+		}
 
-        sector = doomMap.GetSectorFromSubSector(sub);
+		sector = doomMap.GetSectorFromSubSector(sub);
 
-        // I will be NOT surprised if some users tries to do something stupid with
-        // sector hacks
-        if(sector == NULL)
-        {
-            Error("CreateSubsectorSurfaces: subsector %i has no sector\n", i);
-            return;
-        }
+		// I will be NOT surprised if some users tries to do something stupid with
+		// sector hacks
+		if (sector == NULL)
+		{
+			Error("CreateSubsectorSurfaces: subsector %i has no sector\n", i);
+			return;
+		}
 
 		if (sector->controlsector)
 			continue;
 
-        surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
-        surf->numVerts = sub->numlines;
-        surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
+		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+		surf->numVerts = sub->numlines;
+		surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
 
-        // floor verts
-        for(j = 0; j < surf->numVerts; j++)
-        {
-            MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
+		// floor verts
+		for (j = 0; j < surf->numVerts; j++)
+		{
+			MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
 			FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
 
-            surf->verts[j].x = v1.x;
-            surf->verts[j].y = v1.y;
-            surf->verts[j].z = sector->floorplane.zAt(surf->verts[j].x, surf->verts[j].y);
-        }
+			surf->verts[j].x = v1.x;
+			surf->verts[j].y = v1.y;
+			surf->verts[j].z = sector->floorplane.zAt(surf->verts[j].x, surf->verts[j].y);
+		}
 
-        surf->plane = sector->floorplane;
-        surf->type = ST_FLOOR;
-        surf->typeIndex = i;
+		surf->plane = sector->floorplane;
+		surf->type = ST_FLOOR;
+		surf->typeIndex = i;
 
-        surfaces.Push(surf);
+		surfaces.Push(surf);
 
-        surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
-        surf->numVerts = sub->numlines;
-        surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
+		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+		surf->numVerts = sub->numlines;
+		surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
 
-        if(doomMap.bSkySectors[sector-&doomMap.Sectors[0]])
-        {
-            surf->bSky = true;
-        }
+		if (doomMap.bSkySectors[sector - &doomMap.Sectors[0]])
+		{
+			surf->bSky = true;
+		}
 
-        // ceiling verts
-        for(j = 0; j < surf->numVerts; j++)
-        {
+		// ceiling verts
+		for (j = 0; j < surf->numVerts; j++)
+		{
 			MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + j];
 			FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
 
-            surf->verts[j].x = v1.x;
-            surf->verts[j].y = v1.y;
-            surf->verts[j].z = sector->ceilingplane.zAt(surf->verts[j].x, surf->verts[j].y);
-        }
+			surf->verts[j].x = v1.x;
+			surf->verts[j].y = v1.y;
+			surf->verts[j].z = sector->ceilingplane.zAt(surf->verts[j].x, surf->verts[j].y);
+		}
 
-        surf->plane = sector->ceilingplane;
-        surf->type = ST_CEILING;
-        surf->typeIndex = i;
+		surf->plane = sector->ceilingplane;
+		surf->type = ST_CEILING;
+		surf->typeIndex = i;
 
-        surfaces.Push(surf);
-    }
+		surfaces.Push(surf);
+	}
 
-    printf("\nLeaf surfaces: %i\n", surfaces.Length() - doomMap.NumGLSubsectors);
+	printf("\nLeaf surfaces: %i\n", surfaces.Length() - doomMap.NumGLSubsectors);
 }
 
 static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2)
@@ -313,19 +313,19 @@ void CreateSurfaces(FLevel &doomMap)
 		}
 	}
 
-    printf("------------- Building side surfaces -------------\n");
+	printf("------------- Building side surfaces -------------\n");
 
-    for(unsigned int i = 0; i < doomMap.Sides.Size(); i++)
-    {
+	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
+	{
 		CreateSideSurfaces(doomMap, &doomMap.Sides[i]);
-        printf("sides: %i / %i\r", i+1, doomMap.Sides.Size());
-    }
+		printf("sides: %i / %i\r", i + 1, doomMap.Sides.Size());
+	}
 
-    printf("\nSide surfaces: %i\n", surfaces.Length());
+	printf("\nSide surfaces: %i\n", surfaces.Length());
 
-    CreateSubsectorSurfaces(doomMap);
+	CreateSubsectorSurfaces(doomMap);
 
-    printf("Surfaces total: %i\n\n", surfaces.Length());
+	printf("Surfaces total: %i\n\n", surfaces.Length());
 
 	printf("Building collision mesh..\n\n");
 

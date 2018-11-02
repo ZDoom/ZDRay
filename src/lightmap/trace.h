@@ -32,14 +32,14 @@ struct FLevel;
 class kexTrace
 {
 public:
-    void                Init(FLevel &doomMap);
-    void                Trace(const kexVec3 &startVec, const kexVec3 &endVec);
+	void Init(FLevel &doomMap);
+	void Trace(const kexVec3 &startVec, const kexVec3 &endVec);
 
-    kexVec3             start;
-    kexVec3             end;
-	surface_t           *hitSurface;
-	float               fraction;
+	kexVec3 start;
+	kexVec3 end;
+	surface_t *hitSurface;
+	float fraction;
 
 private:
-	FLevel          *map = nullptr;
+	FLevel *map = nullptr;
 };

@@ -36,31 +36,31 @@ class kexTrace;
 class kexLightSurface
 {
 public:
-    kexLightSurface();
-    ~kexLightSurface();
+	kexLightSurface();
+	~kexLightSurface();
 
-    void                    Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint);
-    void                    Subdivide(const float divide);
-    void                    CreateCenterOrigin();
-    bool                    TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
+	void Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint);
+	void Subdivide(const float divide);
+	void CreateCenterOrigin();
+	bool TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
 
-    const float             Distance() const { return distance; }
-    const float             Intensity() const { return intensity; }
-    const kexVec3           GetRGB() const { return rgb; }
-    const bool              IsAWall() const { return bWall; }
-    const bool              NoCenterPoint() const { return bNoCenterPoint; }
-    const surface_t         *Surface() const { return surface; }
-    const vertexBatch_t     Origins() const { return origins; }
+	const float Distance() const { return distance; }
+	const float Intensity() const { return intensity; }
+	const kexVec3 GetRGB() const { return rgb; }
+	const bool IsAWall() const { return bWall; }
+	const bool NoCenterPoint() const { return bNoCenterPoint; }
+	const surface_t *Surface() const { return surface; }
+	const vertexBatch_t Origins() const { return origins; }
 
 private:
-    bool                    SubdivideRecursion(vertexBatch_t &surfPoints, float divide, kexArray<vertexBatch_t*> &points);
-    void                    Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
+	bool SubdivideRecursion(vertexBatch_t &surfPoints, float divide, kexArray<vertexBatch_t*> &points);
+	void Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
 
-    float                   distance;
-    float                   intensity;
-    kexVec3                 rgb;
-    bool                    bWall;
-    bool                    bNoCenterPoint;
-    vertexBatch_t           origins;
-    surface_t               *surface;
+	float distance;
+	float intensity;
+	kexVec3 rgb;
+	bool bWall;
+	bool bNoCenterPoint;
+	vertexBatch_t origins;
+	surface_t *surface;
 };

@@ -40,7 +40,7 @@
 
 kexPluecker::kexPluecker()
 {
-    Clear();
+	Clear();
 }
 
 //
@@ -49,7 +49,7 @@ kexPluecker::kexPluecker()
 
 kexPluecker::kexPluecker(const kexVec3 &start, const kexVec3 &end, bool bRay)
 {
-    bRay ? SetRay(start, end) : SetLine(start, end);
+	bRay ? SetRay(start, end) : SetLine(start, end);
 }
 
 //
@@ -58,7 +58,7 @@ kexPluecker::kexPluecker(const kexVec3 &start, const kexVec3 &end, bool bRay)
 
 void kexPluecker::Clear()
 {
-    p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = 0;
+	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = 0;
 }
 
 //
@@ -67,13 +67,13 @@ void kexPluecker::Clear()
 
 void kexPluecker::SetLine(const kexVec3 &start, const kexVec3 &end)
 {
-    p[0] = start.x * end.y - end.x * start.y;
-    p[1] = start.x * end.z - end.x * start.z;
-    p[3] = start.y * end.z - end.y * start.z;
+	p[0] = start.x * end.y - end.x * start.y;
+	p[1] = start.x * end.z - end.x * start.z;
+	p[3] = start.y * end.z - end.y * start.z;
 
-    p[2] = start.x - end.x;
-    p[5] = end.y - start.y;
-    p[4] = start.z - end.z;
+	p[2] = start.x - end.x;
+	p[5] = end.y - start.y;
+	p[4] = start.z - end.z;
 }
 
 //
@@ -82,13 +82,13 @@ void kexPluecker::SetLine(const kexVec3 &start, const kexVec3 &end)
 
 void kexPluecker::SetRay(const kexVec3 &start, const kexVec3 &dir)
 {
-    p[0] = start.x * dir.y - dir.x * start.y;
-    p[1] = start.x * dir.z - dir.x * start.z;
-    p[3] = start.y * dir.z - dir.y * start.z;
+	p[0] = start.x * dir.y - dir.x * start.y;
+	p[1] = start.x * dir.z - dir.x * start.z;
+	p[3] = start.y * dir.z - dir.y * start.z;
 
-    p[2] = -dir.x;
-    p[5] = dir.y;
-    p[4] = -dir.z;
+	p[2] = -dir.x;
+	p[5] = dir.y;
+	p[4] = -dir.z;
 }
 
 //
@@ -97,11 +97,11 @@ void kexPluecker::SetRay(const kexVec3 &start, const kexVec3 &dir)
 
 float kexPluecker::InnerProduct(const kexPluecker &pluecker) const
 {
-    return
-        p[0] * pluecker.p[4] +
-        p[1] * pluecker.p[5] +
-        p[2] * pluecker.p[3] +
-        p[4] * pluecker.p[0] +
-        p[5] * pluecker.p[1] +
-        p[3] * pluecker.p[2];
+	return
+		p[0] * pluecker.p[4] +
+		p[1] * pluecker.p[5] +
+		p[2] * pluecker.p[3] +
+		p[4] * pluecker.p[0] +
+		p[5] * pluecker.p[1] +
+		p[3] * pluecker.p[2];
 }
