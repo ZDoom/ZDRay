@@ -46,10 +46,6 @@ extern int Multisample;
 
 const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
 
-//
-// kexLightmapBuilder::kexLightmapBuilder
-//
-
 kexLightmapBuilder::kexLightmapBuilder()
 {
     this->textureWidth  = 128;
@@ -62,19 +58,9 @@ kexLightmapBuilder::kexLightmapBuilder()
     this->tracedTexels  = 0;
 }
 
-//
-// kexLightmapBuilder::~kexLightmapBuilder
-//
-
 kexLightmapBuilder::~kexLightmapBuilder()
 {
 }
-
-//
-// kexLightmapBuilder::NewTexture
-//
-// Allocates a new texture pointer
-//
 
 void kexLightmapBuilder::NewTexture()
 {
@@ -89,15 +75,8 @@ void kexLightmapBuilder::NewTexture()
     textures.Push(texture);
 }
 
-//
-// kexLightMapBuilder::MakeRoomForBlock
-//
-// Determines where to map a new block on to
-// the lightmap texture
-//
-
-bool kexLightmapBuilder::MakeRoomForBlock(const int width, const int height,
-        int *x, int *y, int *num)
+// Determines where to map a new block on to the lightmap texture
+bool kexLightmapBuilder::MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num)
 {
     int i;
     int j;
@@ -160,10 +139,6 @@ bool kexLightmapBuilder::MakeRoomForBlock(const int width, const int height,
     return false;
 }
 
-//
-// kexLightmapBuilder::GetBoundsFromSurface
-//
-
 kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 {
     kexVec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
@@ -193,13 +168,7 @@ kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
     return bounds;
 }
 
-//
-// kexLightmapBuilder::EmitFromCeiling
-//
-// Traces to the ceiling surface. Will emit
-// light if the surface that was traced is a sky
-//
-
+// Traces to the ceiling surface. Will emit light if the surface that was traced is a sky
 bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
 {
     float attenuation = normal.Dot(map->GetSunDirection());
@@ -233,13 +202,6 @@ bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surfa
     return true;
 }
 
-//
-// kexLightmapBuilder::LightTexelSample
-//
-// Traces a line from the texel's origin to the sunlight direction
-// and against all nearby thing lights
-//
-
 template<class T>
 T smoothstep(const T edge0, const T edge1, const T x)
 {
@@ -252,6 +214,7 @@ static float radians(float degrees)
 	return degrees * 3.14159265359f / 180.0f;
 }
 
+// Traces a line from the texel's origin to the sunlight direction and against all nearby thing lights
 kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface)
 {
     kexPlane plane = surface->plane;
@@ -350,15 +313,8 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
     return color;
 }
 
-//
-// kexLightmapBuilder::BuildSurfaceParams
-//
-// Determines a lightmap block in which to map to
-// the lightmap texture. Width and height of the block
-// is calcuated and steps are computed to determine where
-// each texel will be positioned on the surface
-//
-
+// Determines a lightmap block in which to map to the lightmap texture.
+// Width and height of the block is calcuated and steps are computed to determine where each texel will be positioned on the surface
 void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
 {
     kexPlane *plane;
@@ -454,14 +410,8 @@ void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
     surface->lightmapSteps[1] = tCoords[1] * (float)samples;
 }
 
-//
-// kexLightmapBuilder::TraceSurface
-//
 // Steps through each texel and traces a line to the world.
-// For each non-occluded trace, color is accumulated and saved off
-// into the lightmap texture based on what block is mapped to
-//
-
+// For each non-occluded trace, color is accumulated and saved off into the lightmap texture based on what block is mapped to
 void kexLightmapBuilder::TraceSurface(surface_t *surface)
 {
     static thread_local kexVec3 colorSamples[1024 * 1024];
@@ -595,10 +545,6 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
         }
     }
 }
-
-//
-// kexLightmapBuilder::LightSurface
-//
 
 void kexLightmapBuilder::LightSurface(const int surfid)
 {

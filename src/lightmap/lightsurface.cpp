@@ -37,30 +37,15 @@
 #include "trace.h"
 #include "lightsurface.h"
 
-//
-// kexLightSurface::kexLightSurface
-//
-
 kexLightSurface::kexLightSurface()
 {
 }
-
-//
-// kexLightSurface::~kexLightSurface
-//
 
 kexLightSurface::~kexLightSurface()
 {
 }
 
-//
-// kexLightSurface::Init
-//
-
-void kexLightSurface::Init(const surfaceLightDef &lightSurfaceDef,
-                           surface_t *surface,
-                           const bool bWall,
-                           const bool bNoCenterPoint)
+void kexLightSurface::Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall, const bool bNoCenterPoint)
 {
     this->intensity         = lightSurfaceDef.intensity;
     this->distance          = lightSurfaceDef.distance;
@@ -70,13 +55,7 @@ void kexLightSurface::Init(const surfaceLightDef &lightSurfaceDef,
     this->bNoCenterPoint    = bNoCenterPoint;
 }
 
-//
-// kexLightSurface::CreateCenterOrigin
-//
-// Creates a single origin point if we're not
-// intending on subdividing this light surface
-//
-
+// Creates a single origin point if we're not intending on subdividing this light surface
 void kexLightSurface::CreateCenterOrigin()
 {
     if(!bWall)
@@ -98,15 +77,8 @@ void kexLightSurface::CreateCenterOrigin()
     }
 }
 
-//
-// kexLightSurface::Clip
-//
-// Splits surface vertices into two groups while adding new ones
-// caused by the split
-//
-
-void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float dist,
-                           vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
+// Splits surface vertices into two groups while adding new ones caused by the split
+void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
 {
     kexArray<float> dists;
     kexArray<char> sides;
@@ -179,14 +151,8 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
     }
 }
 
-//
-// kexLightSurface::SubdivideRecursion
-//
 // Recursively divides the surface
-//
-
-bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide,
-        kexArray<vertexBatch_t*> &points)
+bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, kexArray<vertexBatch_t*> &points)
 {
     kexBBox bounds;
     kexVec3 splitNormal;
@@ -241,10 +207,6 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
     return false;
 }
 
-//
-// kexLightSurface::Subdivide
-//
-
 void kexLightSurface::Subdivide(const float divide)
 {
     kexArray<vertexBatch_t*> points;
@@ -280,10 +242,6 @@ void kexLightSurface::Subdivide(const float divide)
         delete vb;
     }
 }
-
-//
-// kexLightSurface::TraceSurface
-//
 
 bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf, const kexVec3 &origin, float *dist)
 {
