@@ -44,9 +44,6 @@ public:
     void                    CreateCenterOrigin();
     bool                    TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surface, const kexVec3 &origin, float *dist);
 
-    const float             OuterCone() const { return outerCone; }
-    const float             InnerCone() const { return innerCone; }
-    const float             FallOff() const { return falloff; }
     const float             Distance() const { return distance; }
     const float             Intensity() const { return intensity; }
     const kexVec3           GetRGB() const { return rgb; }
@@ -59,9 +56,6 @@ private:
     bool                    SubdivideRecursion(vertexBatch_t &surfPoints, float divide, kexArray<vertexBatch_t*> &points);
     void                    Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
 
-    float                   outerCone;
-    float                   innerCone;
-    float                   falloff;
     float                   distance;
     float                   intensity;
     kexVec3                 rgb;

@@ -822,11 +822,10 @@ void FProcessor::Write (FWadWriter &out)
 			out.CopyLump (Wad, Wad.FindMapLump ("BEHAVIOR", Lump));
 			out.CopyLump (Wad, Wad.FindMapLump ("SCRIPTS", Lump));
 		}
-		if (LightmapsBuilt)
+		/*if (LightmapsBuilt)
 		{
-			LMBuilder.AddLightGridLump(out);
-			LMBuilder.AddLightmapLumps(out);
-		}
+			LMBuilder.AddLightmapLump(out);
+		}*/
 		if (Level.GLNodes != NULL && !compressGL)
 		{
 			char glname[9];

@@ -40,111 +40,7 @@ static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
 
 void FLevel::SetupDlight()
 {
-	BuildNodeBounds();
-	BuildLeafs();
-	BuildPVS();
 	CheckSkySectors();
-}
-
-void FLevel::BuildNodeBounds()
-{
-	int     i;
-	int     j;
-	kexVec3 point;
-	float   high = -M_INFINITY;
-	float   low = M_INFINITY;
-
-	nodeBounds = (kexBBox*)Mem_Calloc(sizeof(kexBBox) * NumGLNodes, hb_static);
-
-	for (i = 0; i < (int)Sectors.Size(); ++i)
-	{
-		if (Sectors[i].data.ceilingheight > high)
-		{
-			high = Sectors[i].data.ceilingheight;
-		}
-		if (Sectors[i].data.floorheight < low)
-		{
-			low = Sectors[i].data.floorheight;
-		}
-	}
-
-	for (i = 0; i < NumGLNodes; ++i)
-	{
-		nodeBounds[i].Clear();
-
-		for (j = 0; j < 2; ++j)
-		{
-			point.Set(GLNodes[i].bbox[j][BOXLEFT], GLNodes[i].bbox[j][BOXBOTTOM], low);
-			nodeBounds[i].AddPoint(point);
-			point.Set(GLNodes[i].bbox[j][BOXRIGHT], GLNodes[i].bbox[j][BOXTOP], high);
-			nodeBounds[i].AddPoint(point);
-		}
-	}
-}
-
-void FLevel::BuildLeafs()
-{
-	MapSubsectorEx  *ss;
-	leaf_t          *lf;
-	int             i;
-	int             j;
-	kexVec3         point;
-	IntSector     *sector;
-	int             count;
-
-	leafs = (leaf_t*)Mem_Calloc(sizeof(leaf_t*) * NumGLSegs * 2, hb_static);
-	numLeafs = NumGLSubsectors;
-
-	ss = GLSubsectors;
-
-	segLeafLookup = (int*)Mem_Calloc(sizeof(int) * NumGLSegs, hb_static);
-	ssLeafLookup = (int*)Mem_Calloc(sizeof(int) * NumGLSubsectors, hb_static);
-	ssLeafCount = (int*)Mem_Calloc(sizeof(int) * NumGLSubsectors, hb_static);
-	ssLeafBounds = (kexBBox*)Mem_Calloc(sizeof(kexBBox) * NumGLSubsectors, hb_static);
-
-	count = 0;
-
-	for (i = 0; i < NumGLSubsectors; ++i, ++ss)
-	{
-		ssLeafCount[i] = ss->numlines;
-		ssLeafLookup[i] = ss->firstline;
-
-		ssLeafBounds[i].Clear();
-		sector = GetSectorFromSubSector(ss);
-
-		if (ss->numlines)
-		{
-			for (j = 0; j < (int)ss->numlines; ++j)
-			{
-				MapSegGLEx *seg = &GLSegs[ss->firstline + j];
-				lf = &leafs[count++];
-
-				segLeafLookup[ss->firstline + j] = i;
-
-				lf->vertex = GetSegVertex(seg->v1);
-				lf->seg = seg;
-
-				point.Set(lf->vertex.x, lf->vertex.y, sector->data.floorheight);
-				ssLeafBounds[i].AddPoint(point);
-
-				point.z = sector->data.ceilingheight;
-				ssLeafBounds[i].AddPoint(point);
-			}
-		}
-	}
-}
-
-void FLevel::BuildPVS()
-{
-	// don't do anything if already loaded
-	if (mapPVS != NULL)
-	{
-		return;
-	}
-
-	int len = ((NumGLSubsectors + 7) / 8) * NumGLSubsectors;
-	mapPVS = (byte*)Mem_Malloc(len, hb_static);
-	memset(mapPVS, 0xff, len);
 }
 
 void FLevel::CheckSkySectors()
@@ -152,7 +48,6 @@ void FLevel::CheckSkySectors()
 	char name[9];
 
 	bSkySectors = (bool*)Mem_Calloc(sizeof(bool) * Sectors.Size(), hb_static);
-	bSSectsVisibleToSky = (bool*)Mem_Calloc(sizeof(bool) * NumGLSubsectors, hb_static);
 
 	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{
@@ -167,27 +62,6 @@ void FLevel::CheckSkySectors()
 			bSkySectors[i] = true;
 		}
 	}
-
-	// try to early out by quickly checking which subsector can potentially
-	// see a sky sector
-	for (int i = 0; i < NumGLSubsectors; ++i)
-	{
-		for (int j = 0; j < NumGLSubsectors; ++j)
-		{
-			IntSector *sec = GetSectorFromSubSector(&GLSubsectors[j]);
-
-			if (bSkySectors[sec - &Sectors[0]] == false)
-			{
-				continue;
-			}
-
-			if (CheckPVS(&GLSubsectors[i], &GLSubsectors[j]))
-			{
-				bSSectsVisibleToSky[i] = true;
-				break;
-			}
-		}
-	}
 }
 
 const kexVec3 &FLevel::GetSunColor() const
@@ -200,65 +74,41 @@ const kexVec3 &FLevel::GetSunDirection() const
 	return defaultSunDirection;
 }
 
-IntSideDef *FLevel::GetSideDef(const MapSegGLEx *seg)
+IntSector *FLevel::GetFrontSector(const IntSideDef *side)
 {
-	if (seg->linedef == NO_LINE_INDEX)
-	{
-		// skip minisegs
-		return NULL;
-	}
-
-	IntLineDef *line = &Lines[seg->linedef];
-	return &Sides[line->sidenum[seg->side]];
-}
-
-IntSector *FLevel::GetFrontSector(const MapSegGLEx *seg)
-{
-	IntSideDef *side = GetSideDef(seg);
-
-	if (side == NULL)
-	{
-		return NULL;
-	}
-
 	return &Sectors[side->sector];
 }
 
-IntSector *FLevel::GetBackSector(const MapSegGLEx *seg)
+IntSector *FLevel::GetBackSector(const IntSideDef *side)
 {
-	if (seg->linedef == NO_LINE_INDEX)
-	{
-		// skip minisegs
-		return NULL;
-	}
+	IntLineDef *line = side->line;
+	if (!(line->flags & ML_TWOSIDED))
+		return nullptr;
 
-	IntLineDef *line = &Lines[seg->linedef];
+	int sidenum = (ptrdiff_t)(side - &Sides[0]);
+	if (line->sidenum[0] == sidenum)
+		sidenum = line->sidenum[1];
+	else
+		sidenum = line->sidenum[0];
 
-	if ((line->flags & ML_TWOSIDED) && line->sidenum[seg->side ^ 1] != 0xffffffff)
-	{
-		IntSideDef *backSide = &Sides[line->sidenum[seg->side ^ 1]];
-		return &Sectors[backSide->sector];
-	}
+	if (sidenum == NO_SIDE_INDEX)
+		return nullptr;
 
-	return NULL;
+	return GetFrontSector(&Sides[sidenum]);
 }
 
 IntSector *FLevel::GetSectorFromSubSector(const MapSubsectorEx *sub)
 {
-	IntSector *sector = NULL;
-
-	// try to find a sector that the subsector belongs to
 	for (int i = 0; i < (int)sub->numlines; i++)
 	{
 		MapSegGLEx *seg = &GLSegs[sub->firstline + i];
 		if (seg->side != NO_SIDE_INDEX)
 		{
-			sector = GetFrontSector(seg);
-			break;
+			IntLineDef *line = &Lines[seg->linedef];
+			return GetFrontSector(&Sides[line->sidenum[seg->side]]);
 		}
 	}
-
-	return sector;
+	return nullptr;
 }
 
 MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
@@ -300,113 +150,6 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	return &GLSubsectors[nodenum & ~NFX_SUBSECTOR];
 }
 
-bool FLevel::PointInsideSubSector(const float x, const float y, const MapSubsectorEx *sub)
-{
-	surface_t *surf;
-	int i;
-	kexVec2 p(x, y);
-	kexVec2 dp1, dp2;
-	kexVec2 pt1, pt2;
-
-	surf = leafSurfaces[0][sub - GLSubsectors];
-	if (!surf)
-		return false;
-
-	// check to see if the point is inside the subsector leaf
-	for (i = 0; i < surf->numVerts; i++)
-	{
-		pt1 = surf->verts[i].ToVec2();
-		pt2 = surf->verts[(i + 1) % surf->numVerts].ToVec2();
-
-		dp1 = pt1 - p;
-		dp2 = pt2 - p;
-
-		if (dp1.CrossScalar(dp2) < 0)
-		{
-			continue;
-		}
-
-		// this point is outside the subsector leaf
-		return false;
-	}
-
-	return true;
-}
-
-bool FLevel::LineIntersectSubSector(const kexVec3 &start, const kexVec3 &end, const MapSubsectorEx *sub, kexVec2 &out)
-{
-	surface_t *surf;
-	kexVec2 p1, p2;
-	kexVec2 s1, s2;
-	kexVec2 pt;
-	kexVec2 v;
-	float d, u;
-	float newX;
-	float ab;
-	int i;
-
-	surf = leafSurfaces[0][sub - GLSubsectors];
-	p1 = start.ToVec2();
-	p2 = end.ToVec2();
-
-	for (i = 0; i < surf->numVerts; i++)
-	{
-		s1 = surf->verts[i].ToVec2();
-		s2 = surf->verts[(i + 1) % surf->numVerts].ToVec2();
-
-		if ((p1 == p2) || (s1 == s2))
-		{
-			// zero length
-			continue;
-		}
-
-		if ((p1 == s1) || (p2 == s1) || (p1 == s2) || (p2 == s2))
-		{
-			// shares end point
-			continue;
-		}
-
-		// translate to origin
-		pt = p2 - p1;
-		s1 -= p1;
-		s2 -= p1;
-
-		// normalize
-		u = pt.UnitSq();
-		d = kexMath::InvSqrt(u);
-		v = (pt * d);
-
-		// rotate points s1 and s2 so they're on the positive x axis
-		newX = s1.Dot(v);
-		s1.y = s1.CrossScalar(v);
-		s1.x = newX;
-
-		newX = s2.Dot(v);
-		s2.y = s2.CrossScalar(v);
-		s2.x = newX;
-
-		if ((s1.y < 0 && s2.y < 0) || (s1.y >= 0 && s2.y >= 0))
-		{
-			// s1 and s2 didn't cross
-			continue;
-		}
-
-		ab = s2.x + (s1.x - s2.x) * s2.y / (s2.y - s1.y);
-
-		if (ab < 0 || ab >(u * d))
-		{
-			// s1 and s2 crosses but outside of points p1 and p2
-			continue;
-		}
-
-		// intersected
-		out = p1 + (v * ab);
-		return true;
-	}
-
-	return false;
-}
-
 FloatVertex FLevel::GetSegVertex(int index)
 {
 	if (index & 0x8000)
@@ -418,19 +161,6 @@ FloatVertex FLevel::GetSegVertex(int index)
 	v.x = F(GLVertices[index].x);
 	v.y = F(GLVertices[index].y);
 	return v;
-}
-
-bool FLevel::CheckPVS(MapSubsectorEx *s1, MapSubsectorEx *s2)
-{
-	uint8_t *vis;
-	int n1, n2;
-
-	n1 = s1 - GLSubsectors;
-	n2 = s2 - GLSubsectors;
-
-	vis = &mapPVS[(((NumGLSubsectors + 7) / 8) * n1)];
-
-	return ((vis[n2 >> 3] & (1 << (n2 & 7))) != 0);
 }
 
 void FLevel::CreateLights()
@@ -514,12 +244,9 @@ void FLevel::CreateLights()
 	{
 		surface_t *surface = surfaces[j];
 
-		if (surface->type >= ST_MIDDLESEG && surface->type <= ST_LOWERSEG)
+		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
 		{
-			IntLineDef *line = nullptr;
-			if (GLSegs[surface->typeIndex].linedef != NO_LINE_INDEX)
-				line = &Lines[GLSegs[surface->typeIndex].linedef];
-
+			IntLineDef *line = Sides[surface->typeIndex].line;
 			if (line)
 			{
 				uint32_t lightcolor = 0xffffff;
@@ -547,9 +274,6 @@ void FLevel::CreateLights()
 				{
 					surfaceLightDef desc;
 					desc.tag = 0;
-					desc.outerCone = 0.0f;
-					desc.innerCone = 0.0f;
-					desc.falloff = 1.0f;
 					desc.intensity = lightintensity;
 					desc.distance = lightdistance;
 					desc.bIgnoreCeiling = false;
@@ -569,7 +293,7 @@ void FLevel::CreateLights()
 		}
 		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
 		{
-			MapSubsectorEx *sub = surface->subSector;
+			MapSubsectorEx *sub = &GLSubsectors[surface->typeIndex];
 			IntSector *sector = GetSectorFromSubSector(sub);
 
 			if (sector && surface->numVerts > 0)
@@ -617,9 +341,6 @@ void FLevel::CreateLights()
 				{
 					surfaceLightDef desc;
 					desc.tag = 0;
-					desc.outerCone = 0.0f;
-					desc.innerCone = 0.0f;
-					desc.falloff = 1.0f;
 					desc.intensity = lightintensity;
 					desc.distance = lightdistance;
 					desc.bIgnoreCeiling = false;

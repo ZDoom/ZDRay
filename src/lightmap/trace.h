@@ -32,9 +32,6 @@ struct FLevel;
 class kexTrace
 {
 public:
-    kexTrace();
-    ~kexTrace();
-
     void                Init(FLevel &doomMap);
     void                Trace(const kexVec3 &startVec, const kexVec3 &endVec);
 
@@ -44,15 +41,5 @@ public:
 	float               fraction;
 
 private:
-	FLevel          *map;
-
-#if 0
-	kexVec3             dir;
-    kexVec3             hitNormal;
-    kexVec3             hitVector;
-
-    void                TraceBSPNode(int num);
-    void                TraceSubSector(int num);
-    void                TraceSurface(surface_t *surface);
-#endif
+	FLevel          *map = nullptr;
 };

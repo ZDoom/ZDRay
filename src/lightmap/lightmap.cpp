@@ -39,6 +39,7 @@
 #include "kexlib/binfile.h"
 #include "wad.h"
 #include "framework/templates.h"
+#include "halffloat.h"
 #include <map>
 #include <vector>
 
@@ -60,7 +61,6 @@ kexLightmapBuilder::kexLightmapBuilder()
     this->extraSamples  = 2;
     this->ambience      = 0.0f;
     this->tracedTexels  = 0;
-    this->gridMap       = NULL;
 }
 
 //
@@ -86,7 +86,7 @@ void kexLightmapBuilder::NewTexture()
 
     memset(allocBlocks[numTextures-1], 0, sizeof(int) * textureWidth);
 
-    byte *texture = (byte*)Mem_Calloc((textureWidth * textureHeight) * 3, hb_static);
+    uint16_t *texture = (uint16_t*)Mem_Calloc((textureWidth * textureHeight) * 3 * 2, hb_static);
     textures.Push(texture);
 }
 
@@ -203,9 +203,9 @@ kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 
 bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
 {
-    float dist = normal.Dot(map->GetSunDirection());
+    float attenuation = normal.Dot(map->GetSunDirection());
 
-    if(dist <= 0)
+    if(attenuation <= 0)
     {
         // plane is not even facing the sunlight
         return false;
@@ -222,11 +222,14 @@ bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surfa
 
     if(trace.hitSurface->bSky == false)
     {
+		if (trace.hitSurface->type == ST_CEILING)
+			return false;
+
         // not a ceiling/sky surface
         return false;
     }
 
-	color += map->GetSunColor() * dist;
+	color += map->GetSunColor() * attenuation;
 
     return true;
 }
@@ -259,12 +262,6 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
     for(unsigned int i = 0; i < map->thingLights.Size(); i++)
     {
         thingLight_t *tl = map->thingLights[i];
-
-        // try to early out if PVS data exists
-        if(!map->CheckPVS(surface->subSector, tl->ssect))
-        {
-            continue;
-        }
 
 		float originZ;
 		if (!tl->bCeiling)
@@ -330,7 +327,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
         tracedTexels++;
     }
 
-    if(surface->type != ST_CEILING && map->bSSectsVisibleToSky[surface->subSector - map->GLSubsectors])
+    if(surface->type != ST_CEILING)
     {
         // see if it's exposed to sunlight
         if(EmitFromCeiling(trace, surface, origin, plane.Normal(), color))
@@ -341,12 +338,6 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
     for(unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
     {
         kexLightSurface *surfaceLight = map->lightSurfaces[i];
-
-        // try to early out if PVS data exists
-        if(!map->CheckPVS(surface->subSector, surfaceLight->Surface()->subSector))
-        {
-            continue;
-        }
 
 		float attenuation;
         if(surfaceLight->TraceSurface(map, trace, surface, origin, &attenuation))
@@ -484,7 +475,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
     int i;
     int j;
     kexTrace trace;
-    byte *currentTexture;
+    uint16_t *currentTexture;
     bool bShouldLookupTexture = false;
 
     trace.Init(*map);
@@ -599,9 +590,9 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
             int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
 
             // convert RGB to bytes
-            currentTexture[offs + j * 3 + 0] = (uint32_t)(colorSamples[i * 1024 + j].x * 255 + 0.5f);
-            currentTexture[offs + j * 3 + 1] = (uint32_t)(colorSamples[i * 1024 + j].y * 255 + 0.5f);
-            currentTexture[offs + j * 3 + 2] = (uint32_t)(colorSamples[i * 1024 + j].z * 255 + 0.5f);
+            currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * 1024 + j].x);
+            currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * 1024 + j].y);
+            currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * 1024 + j].z);
         }
     }
 }
@@ -636,226 +627,9 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 	}
 }
 
-//
-// kexLightmapBuilder::LightCellSample
-//
-// Traces a line from the cell's origin to the sunlight direction
-// and against all nearby thing lights
-//
-
-kexVec3 kexLightmapBuilder::LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const MapSubsectorEx *sub)
-{
-    kexVec3 color;
-    kexVec3 dir;
-    IntSector *mapSector;
-    float intensity;
-    float radius;
-    float dist;
-    float colorAdd;
-    thingLight_t *tl;
-    kexVec3 lightOrigin;
-    bool bInSkySector;
-    kexVec3 org;
-
-    mapSector = map->GetSectorFromSubSector(sub);
-    bInSkySector = map->bSkySectors[mapSector - &map->Sectors[0]];
-
-    trace.Trace(origin, origin + (map->GetSunDirection() * 32768));
-
-    // did we traced a ceiling surface with a sky texture?
-    if(trace.fraction != 1 && trace.hitSurface != NULL)
-    {
-        if(trace.hitSurface->bSky && origin.z + gridSize[2] > mapSector->data.floorheight)
-        {
-            color = map->GetSunColor();
-            // this cell is inside a sector with a sky texture and is also exposed to sunlight.
-            // mark this cell as a sun type. cells of this type will simply sample the
-            // sector's light level
-            gridMap[gridid].sunShadow = 2;
-            return color;
-        }
-
-        // if this cell is inside a sector with a sky texture but is NOT exposed to sunlight, then
-        // mark this cell as a sun shade type. cells of this type will halve the sector's light level
-        if(bInSkySector)
-        {
-            gridMap[gridid].sunShadow = 1;
-        }
-    }
-    // if the cell is technically inside a sector with a sky but is not actually on an actual surface
-    // then this cell is considered occluded
-    else if(bInSkySector && !map->PointInsideSubSector(origin.x, origin.y, sub))
-    {
-        gridMap[gridid].sunShadow = 1;
-    }
-
-    // trace against all thing lights
-    for(unsigned int i = 0; i < map->thingLights.Size(); i++)
-    {
-        tl = map->thingLights[i];
-
-        lightOrigin.Set(tl->origin.x,
-                        tl->origin.y,
-                        !tl->bCeiling ?
-                        (float)tl->sector->data.floorheight + 16 :
-                        (float)tl->sector->data.ceilingheight - 16);
-
-        radius = tl->radius;
-        intensity = tl->intensity * 4;
-
-        if(intensity < 1.0f)
-        {
-            intensity = 1.0f;
-        }
-
-        if(origin.DistanceSq(lightOrigin) > (radius*radius))
-        {
-            // not within range
-            continue;
-        }
-
-        trace.Trace(origin, lightOrigin);
-
-        if(trace.fraction != 1)
-        {
-            // something is occluding it
-            continue;
-        }
-
-        dir = (lightOrigin - origin);
-        dist = dir.Unit();
-
-        dir.Normalize();
-
-        colorAdd = (radius / (dist * dist)) * intensity;
-        kexMath::Clamp(colorAdd, 0, 1);
-
-        // accumulate results
-        color = color.Lerp(tl->rgb, colorAdd);
-        kexMath::Clamp(color, 0, 1);
-    }
-
-    org = origin;
-
-    // if the cell is sticking out from the ground then at least
-    // clamp the origin to the ground level so it can at least
-    // have a chance to be sampled by the light
-    if(origin.z + gridSize[2] > mapSector->data.floorheight)
-    {
-        org.z = (float)mapSector->data.floorheight + 2;
-    }
-
-    // trace against all light surfaces
-    for(unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
-    {
-        kexLightSurface *surfaceLight = map->lightSurfaces[i];
-
-        if(surfaceLight->TraceSurface(map, trace, NULL, org, &dist))
-        {
-            dist = (dist * (surfaceLight->Intensity() * 0.5f)) * 0.5f;
-            kexMath::Clamp(dist, 0, 1);
-
-            // accumulate results
-            color = color.Lerp(surfaceLight->GetRGB(), dist);
-            kexMath::Clamp(color, 0, 1);
-        }
-    }
-
-    return color;
-}
-
-//
-// kexLightmapBuilder::LightGrid
-//
-
-void kexLightmapBuilder::LightGrid(const int gridid)
-{
-    float remaining;
-    int x, y, z;
-    int mod;
-    int secnum;
-    bool bInRange;
-    int gx = (int)gridBlock.x;
-    int gy = (int)gridBlock.y;
-    kexTrace trace;
-    MapSubsectorEx *ss;
-
-    // convert grid id to xyz coordinates
-    mod = gridid;
-    z = mod / (gx * gy);
-    mod -= z * (gx * gy);
-
-    y = mod / gx;
-    mod -= y * gx;
-
-    x = mod;
-
-    // get world-coordinates
-    kexVec3 org(worldGrid.min[0] + x * gridSize[0],
-                worldGrid.min[1] + y * gridSize[1],
-                worldGrid.min[2] + z * gridSize[2]);
-
-    ss = NULL;
-    secnum = ((int)gridBlock.x * y) + x;
-
-    // determine what sector this cell is in
-    if(gridSectors[secnum] == NULL)
-    {
-        ss = map->PointInSubSector((int)org.x, (int)org.y);
-        gridSectors[secnum] = ss;
-    }
-    else
-    {
-        ss = gridSectors[secnum];
-    }
-
-    trace.Init(*map);
-    kexBBox bounds = gridBound + org;
-
-    bInRange = false;
-
-    // is this cell even inside the world?
-    for(int i = 0; i < map->NumGLSubsectors; ++i)
-    {
-        if(bounds.IntersectingBox(map->ssLeafBounds[i]))
-        {
-            bInRange = true;
-            break;
-        }
-    }
-
-    if(bInRange)
-    {
-		// mark grid cell and accumulate color results
-		gridMap[gridid].marked = 1;
-		gridMap[gridid].color += LightCellSample(gridid, trace, org, ss);
-
-		kexMath::Clamp(gridMap[gridid].color, 0, 1);
-	}
-
-	std::unique_lock<std::mutex> lock(mutex);
-
-	int lastproc = processed * 100 / numLightGrids;
-	processed++;
-	int curproc = processed * 100 / numLightGrids;
-
-	if (lastproc != curproc || processed == 1)
-	{
-		remaining = (float)processed / (float)numLightGrids;
-		printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
-	}
-}
-
-//
-// kexLightmapBuilder::CreateLightmaps
-//
-
 void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 {
     map = &doomMap;
-
-    printf("------------- Building light grid -------------\n");
-    CreateLightGrid();
 
     printf("------------- Tracing surfaces -------------\n");
 
@@ -867,261 +641,118 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
     printf("Texels traced: %i \n\n", tracedTexels);
 }
 
-//
-// kexLightmapBuilder::CreateLightGrid
-//
-
-void kexLightmapBuilder::CreateLightGrid()
+void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 {
-    int count;
-    int numNodes;
-    kexVec3 mins, maxs;
+	// Calculate size of lump
+	int numTexCoords = 0;
+	int numSurfaces = 0;
+	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	{
+		if (surfaces[i]->lightmapNum != -1)
+		{
+			numTexCoords += surfaces[i]->numVerts;
+			numSurfaces++;
+		}
+	}
+	int version = 0;
+	int headerSize = 3 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
+	int surfacesSize = surfaces.Length() * 5 * sizeof(uint32_t);
+	int texCoordsSize = numTexCoords * 2 * sizeof(float);
+	int texDataSize = textures.Length() * textureWidth * textureHeight * 3 * 2;
+	int lumpSize = headerSize + surfacesSize + texCoordsSize + texDataSize;
 
-    // get the bounding box of the root BSP node
-    numNodes = map->NumGLNodes-1;
-    if(numNodes < 0)
-    {
-        numNodes = 0;
-    }
+	// Setup buffer
+	std::vector<uint8_t> buffer(lumpSize);
+	kexBinFile lumpFile;
+	lumpFile.SetBuffer(buffer.data());
 
-    worldGrid = map->nodeBounds[numNodes];
+	// Write header
+	lumpFile.Write32(version);
+	lumpFile.Write16(textureWidth);
+	lumpFile.Write16(textures.Length());
+	lumpFile.Write32(numSurfaces);
+	lumpFile.Write32(numTexCoords);
 
-    // determine the size of the grid block
-    for(int i = 0; i < 3; ++i)
-    {
-        mins[i] = gridSize[i] * kexMath::Floor(worldGrid.min[i] / gridSize[i]);
-        maxs[i] = gridSize[i] * kexMath::Ceil(worldGrid.max[i] / gridSize[i]);
-        gridBlock[i] = (maxs[i] - mins[i]) / gridSize[i] + 1;
-    }
+	// Write surfaces
+	int coordOffsets = 0;
+	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	{
+		if (surfaces[i]->lightmapNum == -1)
+			continue;
 
-    worldGrid.min = mins;
-    worldGrid.max = maxs;
+		lumpFile.Write32(surfaces[i]->type);
+		lumpFile.Write32(surfaces[i]->typeIndex);
+		lumpFile.Write32(0xffffffff/*surfaces[i]->controlSector*/);
+		lumpFile.Write32(surfaces[i]->lightmapNum);
+		lumpFile.Write32(coordOffsets);
+		coordOffsets += surfaces[i]->numVerts;
+	}
 
-    gridBound.min = -(gridSize * 0.5f);
-    gridBound.max = (gridSize * 0.5f);
+	// Write texture coordinates
+	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	{
+		if (surfaces[i]->lightmapNum == -1)
+			continue;
 
-    // get the total number of grid cells
-    count = (int)(gridBlock.x * gridBlock.y * gridBlock.z);
-    numLightGrids = count;
+		int count = surfaces[i]->numVerts;
+		if (surfaces[i]->type == ST_FLOOR)
+		{
+			for (int j = count - 1; j >= 0; j--)
+			{
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2]);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2 + 1]);
+			}
+		}
+		else if (surfaces[i]->type == ST_CEILING)
+		{
+			for (int j = 0; j < count; j++)
+			{
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2]);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2 + 1]);
+			}
+		}
+		else
+		{
+			// zdray uses triangle strip internally, lump/gzd uses triangle fan
 
-    // allocate data
-    gridMap = (gridMap_t*)Mem_Calloc(sizeof(gridMap_t) * count, hb_static);
-    gridSectors = (MapSubsectorEx**)Mem_Calloc(sizeof(MapSubsectorEx*) *
-                  (int)(gridBlock.x * gridBlock.y), hb_static);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1]);
 
-    // process all grid cells
-	processed = 0;
-	kexWorker::RunJob(count, [=](int id) {
-		LightGrid(id);
-	});
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[4]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[5]);
 
-    printf("\nGrid cells: %i\n\n", count);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[6]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[7]);
+
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3]);
+		}
+	}
+
+	// Write lightmap textures
+	for (unsigned int i = 0; i < textures.Length(); i++)
+	{
+		unsigned int count = (textureWidth * textureHeight) * 3;
+		for (unsigned int j = 0; j < count; j++)
+		{
+			lumpFile.Write16(textures[i][j]);
+		}
+	}
+
+#if 0
+	// Apply compression predictor
+	uint8_t *texBytes = lumpFile.BufferAt() - texDataSize;
+	for (int i = texDataSize - 1; i > 0; i--)
+	{
+		texBytes[i] -= texBytes[i - 1];
+	}
+#endif
+
+	// Compress and store in lump
+	ZLibOut zout(wadFile);
+	wadFile.StartWritingLump("LIGHTMAP");
+	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
 }
-
-//
-// kexLightmapBuilder::AddLightGridLump
-//
-
-void kexLightmapBuilder::AddLightGridLump(FWadWriter &wadFile)
-{
-    kexBinFile lumpFile;
-    int lumpSize = 0;
-    int bit;
-    int bitmask;
-    byte *data;
-
-    lumpSize = 28 + numLightGrids;
-
-    for(int i = 0; i < numLightGrids; ++i)
-    {
-        if(gridMap[i].marked)
-        {
-            lumpSize += 4;
-        }
-    }
-
-    lumpSize += 512; // add some extra slop
-
-    data = (byte*)Mem_Calloc(lumpSize, hb_static);
-    lumpFile.SetBuffer(data);
-
-    lumpFile.Write32(numLightGrids);
-    lumpFile.Write16((short)worldGrid.min[0]);
-    lumpFile.Write16((short)worldGrid.min[1]);
-    lumpFile.Write16((short)worldGrid.min[2]);
-    lumpFile.Write16((short)worldGrid.max[0]);
-    lumpFile.Write16((short)worldGrid.max[1]);
-    lumpFile.Write16((short)worldGrid.max[2]);
-    lumpFile.Write16((short)gridSize.x);
-    lumpFile.Write16((short)gridSize.y);
-    lumpFile.Write16((short)gridSize.z);
-    lumpFile.Write16((short)gridBlock.x);
-    lumpFile.Write16((short)gridBlock.y);
-    lumpFile.Write16((short)gridBlock.z);
-
-    bit = 0;
-    bitmask = 0;
-
-    for(int i = 0; i < numLightGrids; ++i)
-    {
-#if 0
-        bit |= (gridMap[i].marked << bitmask);
-
-        if(++bitmask == 8)
-        {
-            lumpFile.Write8(bit);
-            bit = 0;
-            bitmask = 0;
-        }
-#else
-        lumpFile.Write8(gridMap[i].marked);
-#endif
-    }
-
-#if 0
-    if(bit)
-    {
-        lumpFile.Write8(bit);
-    }
-#endif
-
-    for(int i = 0; i < numLightGrids; ++i)
-    {
-        if(gridMap[i].marked)
-        {
-            lumpFile.Write8((byte)(gridMap[i].color[0] * 255.0f));
-            lumpFile.Write8((byte)(gridMap[i].color[1] * 255.0f));
-            lumpFile.Write8((byte)(gridMap[i].color[2] * 255.0f));
-        }
-    }
-
-    bit = 0;
-    bitmask = 0;
-
-    for(int i = 0; i < numLightGrids; ++i)
-    {
-        if(gridMap[i].marked)
-        {
-#if 0
-            bit |= (gridMap[i].sunShadow << bitmask);
-            bitmask += 2;
-
-            if(bitmask >= 8)
-            {
-                lumpFile.Write8(bit);
-                bit = 0;
-                bitmask = 0;
-            }
-#else
-            lumpFile.Write8(gridMap[i].sunShadow);
-#endif
-        }
-    }
-
-#if 0
-    if(bit)
-    {
-        lumpFile.Write8(bit);
-    }
-#endif
-
-    wadFile.WriteLump("LM_CELLS", data, lumpFile.BufferAt() - lumpFile.Buffer());
-}
-
-//
-// kexLightmapBuilder::CreateLightmapLump
-//
-
-void kexLightmapBuilder::AddLightmapLumps(FWadWriter &wadFile)
-{
-    int lumpSize = 0;
-    unsigned int i;
-    byte *data, *surfs, *txcrd, *lmaps;
-    int offs;
-    int size;
-    int j;
-    int coordOffsets;
-    kexBinFile lumpFile;
-
-    // try to guess the actual lump size
-    lumpSize += ((textureWidth * textureHeight) * 3) * textures.Length();
-    lumpSize += (12 * surfaces.Length());
-    lumpSize += sizeof(kexVec3);
-    lumpSize += 2048; // add some extra slop
-
-    for(i = 0; i < surfaces.Length(); i++)
-    {
-        lumpSize += (surfaces[i]->numVerts * 2) * sizeof(float);
-    }
-
-    data = (byte*)Mem_Calloc(lumpSize, hb_static);
-    lumpFile.SetBuffer(data);
-
-    lumpFile.WriteVector(map->GetSunDirection());
-    wadFile.WriteLump("LM_SUN", data, sizeof(kexVec3));
-
-    offs = lumpFile.BufferAt() - lumpFile.Buffer();
-    surfs = data + offs;
-
-    coordOffsets = 0;
-    size = 0;
-
-    // begin writing LM_SURFS lump
-    for(i = 0; i < surfaces.Length(); i++)
-    {
-        lumpFile.Write16(surfaces[i]->type);
-        lumpFile.Write16(surfaces[i]->typeIndex);
-        lumpFile.Write16(surfaces[i]->lightmapNum);
-        lumpFile.Write16(surfaces[i]->numVerts * 2);
-        lumpFile.Write32(coordOffsets);
-
-        size += 12;
-        coordOffsets += (surfaces[i]->numVerts * 2);
-    }
-
-    offs = lumpFile.BufferAt() - lumpFile.Buffer();
-    wadFile.WriteLump("LM_SURFS", data, size);
-    txcrd = data + offs;
-
-    size = 0;
-
-    // begin writing LM_TXCRD lump
-    for(i = 0; i < surfaces.Length(); i++)
-    {
-        for(j = 0; j < surfaces[i]->numVerts * 2; j++)
-        {
-            lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j]);
-            size += 4;
-        }
-    }
-
-    offs = (lumpFile.BufferAt() - lumpFile.Buffer()) - offs;
-    wadFile.WriteLump("LM_TXCRD", txcrd, size);
-    lmaps = txcrd + offs;
-
-    // begin writing LM_LMAPS lump
-    lumpFile.Write32(textures.Length());
-    lumpFile.Write32(textureWidth);
-    lumpFile.Write32(textureHeight);
-
-    size = 12;
-
-    for(i = 0; i < textures.Length(); i++)
-    {
-        for(j = 0; j < (textureWidth * textureHeight) * 3; j++)
-        {
-            lumpFile.Write8(textures[i][j]);
-            size++;
-        }
-    }
-
-    offs = (lumpFile.BufferAt() - lumpFile.Buffer()) - offs;
-    wadFile.WriteLump("LM_LMAPS", lmaps, size);
-}
-
-//
-// kexLightmapBuilder::WriteTexturesToTGA
-//
 
 void kexLightmapBuilder::WriteTexturesToTGA()
 {

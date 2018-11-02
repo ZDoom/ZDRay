@@ -43,14 +43,11 @@ public:
 
     void                    BuildSurfaceParams(surface_t *surface);
     void                    TraceSurface(surface_t *surface);
-    void                    CreateLightGrid();
     void                    CreateLightmaps(FLevel &doomMap);
     void                    LightSurface(const int surfid);
-    void                    LightGrid(const int gridid);
     void                    WriteTexturesToTGA();
 	void                    WriteMeshToOBJ();
-    void                    AddLightGridLump(FWadWriter &wadFile);
-    void                    AddLightmapLumps(FWadWriter &wadFile);
+	void                    AddLightmapLump(FWadWriter &wadFile);
 
     int                     samples;
     float                   ambience;
@@ -64,30 +61,16 @@ private:
     bool                    MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
     kexBBox                 GetBoundsFromSurface(const surface_t *surface);
     kexVec3                 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
-    kexVec3                 LightCellSample(const int gridid, kexTrace &trace, const kexVec3 &origin, const MapSubsectorEx *sub);
     bool                    EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
     void                    ExportTexelsToObjFile(FILE *f, const kexVec3 &org, int indices);
     void                    WriteBlock(FILE *f, const int i, const kexVec3 &org, int indices, kexBBox &box);
 
-    struct gridMap_t
-    {
-        byte                marked;
-        byte                sunShadow;
-        kexVec3             color;
-    };
-
     FLevel              *map;
-    kexArray<byte*>         textures;
+    kexArray<uint16_t*>         textures;
     int                     **allocBlocks;
     int                     numTextures;
     int                     extraSamples;
     int                     tracedTexels;
-    int                     numLightGrids;
-    gridMap_t               *gridMap;
-    MapSubsectorEx          **gridSectors;
-    kexBBox                 worldGrid;
-    kexBBox                 gridBound;
-    kexVec3                 gridBlock;
 
 	std::mutex mutex;
 	int processed = 0;

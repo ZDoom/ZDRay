@@ -62,9 +62,6 @@ void kexLightSurface::Init(const surfaceLightDef &lightSurfaceDef,
                            const bool bWall,
                            const bool bNoCenterPoint)
 {
-    this->outerCone         = lightSurfaceDef.outerCone;
-    this->innerCone         = lightSurfaceDef.innerCone;
-    this->falloff           = lightSurfaceDef.falloff;
     this->intensity         = lightSurfaceDef.intensity;
     this->distance          = lightSurfaceDef.distance;
     this->rgb               = lightSurfaceDef.rgb;
@@ -292,9 +289,6 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
 {
     kexVec3 normal;
     kexVec3 lnormal;
-    kexVec3 center;
-    bool bInside;
-    float angle;
     float curDist;
 
     *dist = -M_INFINITY;
@@ -304,29 +298,6 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
     {
         *dist = Intensity();
         return true;
-    }
-
-    bInside = false;
-
-    // nudge the origin around to see if it's actually in the subsector
-    float nudges[4] = { -2, 2, -4, 4 };
-
-    for(int x = 0; x < 4; x++)
-    {
-        for(int y = 0; y < 4; y++)
-        {
-            if(doomMap->PointInsideSubSector(origin.x + nudges[x],
-                                             origin.y + nudges[y], surface->subSector))
-            {
-                bInside = true;
-                break;
-            }
-        }
-
-        if(bInside)
-        {
-            break;
-        }
     }
 
     lnormal = surface->plane.Normal();
@@ -350,7 +321,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
     // that we have to trace each one... which could really blow up the compile time
     for(unsigned int i = 0; i < origins.Length(); ++i)
     {
-        center = origins[i];
+		kexVec3 center = origins[i];
 
         if(!bWall && origin.z > center.z)
         {
@@ -360,7 +331,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
             continue;
         }
 
-        if(bWall)
+        /*if(bWall)
         {
             angle = (origin - center).ToVec2().Normalize().Dot(lnormal.ToVec2());
         }
@@ -378,18 +349,7 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
             }
 
             angle = dir.Dot(lnormal);
-
-            if(angle > innerCone)
-            {
-                angle = innerCone;
-            }
-        }
-
-        if(!bInside && angle < outerCone)
-        {
-            // out of the cone range
-            continue;
-        }
+        }*/
 
         if(bWall)
         {
@@ -427,21 +387,6 @@ bool kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surfa
             {
                 *dist = 1;
 				break;
-            }
-        }
-
-        // determine how much to fade out
-        if(angle < innerCone)
-        {
-            float div = (innerCone - outerCone);
-
-            if(div != 0)
-            {
-                curDist *= ((angle - outerCone) / div);
-            }
-            else
-            {
-                curDist *= angle;
             }
         }
 

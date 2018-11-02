@@ -789,7 +789,8 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 		const char *lumpname = Wad.LumpName(i);
 		if (stricmp(lumpname, "ZNODES") &&
 			stricmp(lumpname, "BLOCKMAP") &&
-			stricmp(lumpname, "REJECT"))
+			stricmp(lumpname, "REJECT") &&
+			stricmp(lumpname, "LIGHTMAP"))
 		{
 			out.CopyLump(Wad, i);
 		}
@@ -797,8 +798,7 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 
 	if (LightmapsBuilt)
 	{
-		LMBuilder.AddLightGridLump(out);
-		LMBuilder.AddLightmapLumps(out);
+		LMBuilder.AddLightmapLump(out);
 	}
 
 	out.CreateLabel("ENDMAP");

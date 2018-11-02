@@ -40,6 +40,8 @@ struct MapSideDef
 	WORD	sector;
 };
 
+struct IntLineDef;
+
 struct IntSideDef
 {
 	// the first 5 values are only used for binary format maps
@@ -50,6 +52,8 @@ struct IntSideDef
 	char	midtexture[8];
 
 	int sector;
+
+	IntLineDef *line;
 
 	TArray<UDMFKey> props;
 };
@@ -248,12 +252,6 @@ struct FloatVertex
 	float y;
 };
 
-struct leaf_t
-{
-	FloatVertex vertex;
-	MapSegGLEx *seg;
-};
-
 struct lightDef_t
 {
 	int             doomednum;
@@ -291,9 +289,6 @@ struct thingLight_t
 struct surfaceLightDef
 {
 	int             tag;
-	float           outerCone;
-	float           innerCone;
-	float           falloff;
 	float           distance;
 	float           intensity;
 	bool            bIgnoreFloor;
@@ -362,23 +357,7 @@ struct FLevel
 	TArray<int> MeshSurfaces;
 	std::unique_ptr<TriangleMeshShape> CollisionMesh;
 
-	leaf_t *leafs = nullptr;
-	uint8_t *mapPVS = nullptr;
-
 	bool *bSkySectors = nullptr;
-	bool *bSSectsVisibleToSky = nullptr;
-
-	int numLeafs = 0;
-
-	int *segLeafLookup = nullptr;
-	int *ssLeafLookup = nullptr;
-	int *ssLeafCount = nullptr;
-	kexBBox *ssLeafBounds = nullptr;
-
-	kexBBox *nodeBounds = nullptr;
-
-	surface_t **segSurfaces[3] = { nullptr, nullptr, nullptr };
-	surface_t **leafSurfaces[2] = { nullptr, nullptr };
 
 	TArray<thingLight_t*> thingLights;
 	TArray<kexLightSurface*> lightSurfaces;
@@ -389,20 +368,13 @@ struct FLevel
 
 	const kexVec3 &GetSunColor() const;
 	const kexVec3 &GetSunDirection() const;
-	IntSideDef *GetSideDef(const MapSegGLEx *seg);
-	IntSector *GetFrontSector(const MapSegGLEx *seg);
-	IntSector *GetBackSector(const MapSegGLEx *seg);
+	IntSector *GetFrontSector(const IntSideDef *side);
+	IntSector *GetBackSector(const IntSideDef *side);
 	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
-	bool PointInsideSubSector(const float x, const float y, const MapSubsectorEx *sub);
-	bool LineIntersectSubSector(const kexVec3 &start, const kexVec3 &end, const MapSubsectorEx *sub, kexVec2 &out);
 	FloatVertex GetSegVertex(int index);
-	bool CheckPVS(MapSubsectorEx *s1, MapSubsectorEx *s2);
 
 private:
-	void BuildNodeBounds();
-	void BuildLeafs();
-	void BuildPVS();
 	void CheckSkySectors();
 };
 

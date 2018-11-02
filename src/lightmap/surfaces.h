@@ -32,9 +32,9 @@ struct MapSubsectorEx;
 enum surfaceType_t
 {
     ST_UNKNOWN      = 0,
-    ST_MIDDLESEG,
-    ST_UPPERSEG,
-    ST_LOWERSEG,
+    ST_MIDDLESIDE,
+    ST_UPPERSIDE,
+    ST_LOWERSIDE,
     ST_CEILING,
     ST_FLOOR
 };
@@ -59,9 +59,9 @@ struct surface_t
     float                   *lightmapCoords;
     surfaceType_t           type;
     int                     typeIndex;
-    void                    *data;
+    //void                    *data;
     bool                    bSky;
-	MapSubsectorEx          *subSector;
+	//MapSubsectorEx          *subSector;
 };
 
 extern kexArray<surface_t*> surfaces;
