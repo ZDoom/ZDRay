@@ -49,14 +49,13 @@ const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
 
 kexLightmapBuilder::kexLightmapBuilder()
 {
-	this->textureWidth = 128;
-	this->textureHeight = 128;
-	this->allocBlocks = NULL;
-	this->numTextures = 0;
-	this->samples = 16;
-	this->extraSamples = 2;
-	this->ambience = 0.0f;
-	this->tracedTexels = 0;
+	textureWidth = 128;
+	textureHeight = 128;
+	numTextures = 0;
+	samples = 16;
+	extraSamples = 2;
+	ambience = 0.0f;
+	tracedTexels = 0;
 }
 
 kexLightmapBuilder::~kexLightmapBuilder()
@@ -67,12 +66,10 @@ void kexLightmapBuilder::NewTexture()
 {
 	numTextures++;
 
-	allocBlocks = (int**)Mem_Realloc(allocBlocks, sizeof(int*) * numTextures, hb_static);
-	allocBlocks[numTextures - 1] = (int*)Mem_Calloc(sizeof(int) * textureWidth, hb_static);
+	allocBlocks.push_back(new int[textureWidth]);
+	memset(allocBlocks.back(), 0, sizeof(int) * textureWidth);
 
-	memset(allocBlocks[numTextures - 1], 0, sizeof(int) * textureWidth);
-
-	uint16_t *texture = (uint16_t*)Mem_Calloc((textureWidth * textureHeight) * 3 * 2, hb_static);
+	uint16_t *texture = new uint16_t[textureWidth * textureHeight * 3];
 	textures.push_back(texture);
 }
 
@@ -87,7 +84,7 @@ bool kexLightmapBuilder::MakeRoomForBlock(const int width, const int height, int
 
 	*num = -1;
 
-	if (allocBlocks == NULL)
+	if (allocBlocks.empty())
 	{
 		return false;
 	}
@@ -383,8 +380,7 @@ void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
 		height = textureHeight;
 	}
 
-	surface->lightmapCoords = (float*)Mem_Calloc(sizeof(float) *
-		surface->numVerts * 2, hb_static);
+	surface->lightmapCoords = new float[surface->numVerts * 2];
 
 	surface->textureCoords[0] = tCoords[0];
 	surface->textureCoords[1] = tCoords[1];
@@ -697,6 +693,7 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
 }
 
+/*
 void kexLightmapBuilder::WriteTexturesToTGA()
 {
 	kexBinFile file;
@@ -723,6 +720,7 @@ void kexLightmapBuilder::WriteTexturesToTGA()
 		file.Close();
 	}
 }
+*/
 
 void kexLightmapBuilder::WriteMeshToOBJ()
 {

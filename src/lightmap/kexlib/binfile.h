@@ -33,16 +33,6 @@
 class kexBinFile
 {
 public:
-	kexBinFile();
-	~kexBinFile();
-
-	bool Open(const char *file, kexHeapBlock &heapBlock = hb_static);
-	bool Create(const char *file);
-	void Close();
-	bool Exists(const char *file);
-	int Length();
-	void Duplicate(const char *newFileName);
-
 	byte Read8();
 	short Read16();
 	int Read32();
@@ -58,18 +48,14 @@ public:
 	void WriteString(const std::string &val);
 
 	int GetOffsetValue(int id);
-	byte *GetOffset(int id, byte *subdata = NULL, int *count = NULL);
+	byte *GetOffset(int id, byte *subdata = nullptr, int *count = nullptr);
 
-	FILE *Handle() const { return handle; }
 	byte *Buffer() const { return buffer; }
 	void SetBuffer(byte *ptr) { buffer = ptr; }
 	byte *BufferAt() const { return &buffer[bufferOffset]; }
-	bool Opened() const { return bOpened; }
 	void SetOffset(const int offset) { bufferOffset = offset; }
 
 private:
-	FILE *handle;
-	byte *buffer;
-	unsigned int bufferOffset;
-	bool bOpened;
+	byte *buffer = nullptr;
+	unsigned int bufferOffset = 0;
 };

@@ -55,7 +55,7 @@ struct surface_t
 	kexVec3 textureCoords[2];
 	kexBBox bounds;
 	int numVerts;
-	kexVec3 *verts;
+	std::vector<kexVec3> verts;
 	float *lightmapCoords;
 	surfaceType_t type;
 	int typeIndex;

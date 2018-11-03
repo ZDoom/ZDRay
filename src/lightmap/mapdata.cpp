@@ -46,7 +46,7 @@ void FLevel::CheckSkySectors()
 {
 	char name[9];
 
-	bSkySectors = (bool*)Mem_Calloc(sizeof(bool) * Sectors.Size(), hb_static);
+	bSkySectors.resize(Sectors.Size());
 
 	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{

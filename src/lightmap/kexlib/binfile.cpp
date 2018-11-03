@@ -33,149 +33,6 @@
 #include "lightmap/common.h"
 #include "lightmap/kexlib/binfile.h"
 
-kexBinFile::kexBinFile()
-{
-	this->handle = NULL;
-	this->buffer = NULL;
-	this->bufferOffset = 0;
-	this->bOpened = false;
-}
-
-kexBinFile::~kexBinFile()
-{
-	Close();
-}
-
-bool kexBinFile::Open(const char *file, kexHeapBlock &heapBlock)
-{
-	if ((handle = fopen(file, "rb")))
-	{
-		size_t length;
-
-		fseek(handle, 0, SEEK_END);
-		length = ftell(handle);
-		fseek(handle, 0, SEEK_SET);
-
-		buffer = (byte*)Mem_Calloc(length + 1, heapBlock);
-
-		if (fread(buffer, 1, length, handle) == length)
-		{
-			if (length > 0)
-			{
-				bOpened = true;
-				bufferOffset = 0;
-				return true;
-			}
-		}
-
-		Mem_Free(buffer);
-		buffer = NULL;
-		fclose(handle);
-	}
-
-	return false;
-}
-
-bool kexBinFile::Create(const char *file)
-{
-	if ((handle = fopen(file, "wb")))
-	{
-		bOpened = true;
-		bufferOffset = 0;
-		return true;
-	}
-
-	return false;
-}
-
-void kexBinFile::Close()
-{
-	if (bOpened == false)
-	{
-		return;
-	}
-	if (handle)
-	{
-		fclose(handle);
-		handle = NULL;
-		if (buffer)
-		{
-			Mem_Free(buffer);
-		}
-	}
-
-	bOpened = false;
-}
-
-bool kexBinFile::Exists(const char *file)
-{
-	FILE *fstream;
-
-	fstream = fopen(file, "r");
-
-	if (fstream != NULL)
-	{
-		fclose(fstream);
-		return true;
-	}
-#ifdef KEX_WIN32
-	else
-	{
-		// If we can't open because the file is a directory, the
-		// "file" exists at least!
-		if (errno == 21)
-		{
-			return true;
-		}
-	}
-#endif
-
-	return false;
-}
-
-void kexBinFile::Duplicate(const char *newFileName)
-{
-	FILE *f;
-
-	if (bOpened == false)
-	{
-		return;
-	}
-
-	f = fopen(newFileName, "wb");
-
-	if (f == NULL)
-	{
-		return;
-	}
-
-	fwrite(buffer, Length(), 1, f);
-	fclose(f);
-}
-
-int kexBinFile::Length()
-{
-	long savedpos;
-	long length;
-
-	if (bOpened == false)
-	{
-		return 0;
-	}
-
-	// save the current position in the file
-	savedpos = ftell(handle);
-
-	// jump to the end and find the length
-	fseek(handle, 0, SEEK_END);
-	length = ftell(handle);
-
-	// go back to the old location
-	fseek(handle, savedpos, SEEK_SET);
-
-	return length;
-}
-
 byte kexBinFile::Read8()
 {
 	byte result;
@@ -239,14 +96,7 @@ std::string kexBinFile::ReadString()
 
 void kexBinFile::Write8(const byte val)
 {
-	if (bOpened)
-	{
-		fwrite(&val, 1, 1, handle);
-	}
-	else
-	{
-		buffer[bufferOffset] = val;
-	}
+	buffer[bufferOffset] = val;
 	bufferOffset++;
 }
 
@@ -297,7 +147,7 @@ int kexBinFile::GetOffsetValue(int id)
 
 byte *kexBinFile::GetOffset(int id, byte *subdata, int *count)
 {
-	byte *data = (subdata == NULL) ? buffer : subdata;
+	byte *data = (subdata == nullptr) ? buffer : subdata;
 
 	bufferOffset = GetOffsetValue(id);
 	byte *dataOffs = &data[bufferOffset];

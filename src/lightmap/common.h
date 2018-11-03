@@ -153,7 +153,6 @@ typedef union
 #define d_inline
 #endif
 
-#include "kexlib/memheap.h"
 #include "kexlib/math/mathlib.h"
 
 void Error(const char *error, ...);

@@ -78,9 +78,9 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		{
 			if (side->bottomtexture[0] != '-')
 			{
-				surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+				surf = new surface_t();
 				surf->numVerts = 4;
-				surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
+				surf->verts.resize(4);
 
 				surf->verts[0].x = surf->verts[2].x = v1.x;
 				surf->verts[0].y = surf->verts[2].y = v1.y;
@@ -120,9 +120,9 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			if (side->toptexture[0] != '-' || bSky)
 			{
-				surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+				surf = new surface_t();
 				surf->numVerts = 4;
-				surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
+				surf->verts.resize(4);
 
 				surf->verts[0].x = surf->verts[2].x = v1.x;
 				surf->verts[0].y = surf->verts[2].y = v1.y;
@@ -150,9 +150,9 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	// middle seg
 	if (back == NULL)
 	{
-		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+		surf = new surface_t();
 		surf->numVerts = 4;
-		surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * 4, hb_static);
+		surf->verts.resize(4);
 
 		surf->verts[0].x = surf->verts[2].x = v1.x;
 		surf->verts[0].y = surf->verts[2].y = v1.y;
@@ -205,9 +205,9 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		if (sector->controlsector)
 			continue;
 
-		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+		surf = new surface_t();
 		surf->numVerts = sub->numlines;
-		surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
+		surf->verts.resize(surf->numVerts);
 
 		// floor verts
 		for (j = 0; j < surf->numVerts; j++)
@@ -226,9 +226,9 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 
 		surfaces.push_back(surf);
 
-		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
+		surf = new surface_t();
 		surf->numVerts = sub->numlines;
-		surf->verts = (kexVec3*)Mem_Calloc(sizeof(kexVec3) * surf->numVerts, hb_static);
+		surf->verts.resize(surf->numVerts);
 
 		if (doomMap.bSkySectors[sector - &doomMap.Sectors[0]])
 		{
@@ -275,7 +275,7 @@ static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2
 void CreateSurfaces(FLevel &doomMap)
 {
 	for (size_t i = 0; i < surfaces.size(); i++)
-		Mem_Free(surfaces[i]);
+		delete surfaces[i];
 	surfaces = {};
 
 	for (unsigned int i = 0; i < doomMap.Sectors.Size(); i++)

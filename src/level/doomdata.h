@@ -353,7 +353,7 @@ struct FLevel
 	TArray<int> MeshSurfaces;
 	std::unique_ptr<TriangleMeshShape> CollisionMesh;
 
-	bool *bSkySectors = nullptr;
+	std::vector<bool> bSkySectors;
 
 	TArray<thingLight_t*> thingLights;
 	TArray<kexLightSurface*> lightSurfaces;

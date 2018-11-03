@@ -45,7 +45,7 @@ public:
 	void TraceSurface(surface_t *surface);
 	void CreateLightmaps(FLevel &doomMap);
 	void LightSurface(const int surfid);
-	void WriteTexturesToTGA();
+	//void WriteTexturesToTGA();
 	void WriteMeshToOBJ();
 	void AddLightmapLump(FWadWriter &wadFile);
 
@@ -65,7 +65,7 @@ private:
 
 	FLevel *map;
 	std::vector<uint16_t*> textures;
-	int **allocBlocks;
+	std::vector<int*> allocBlocks;
 	int numTextures;
 	int extraSamples;
 	int tracedTexels;
