@@ -194,13 +194,8 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 
 		sector = doomMap.GetSectorFromSubSector(sub);
 
-		// I will be NOT surprised if some users tries to do something stupid with
-		// sector hacks
-		if (sector == NULL)
-		{
-			Error("CreateSubsectorSurfaces: subsector %i has no sector\n", i);
-			return;
-		}
+		if (!sector)
+			continue;
 
 		if (sector->controlsector)
 			continue;

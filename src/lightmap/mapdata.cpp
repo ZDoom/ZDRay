@@ -33,6 +33,7 @@
 #include "common.h"
 #include "mapdata.h"
 #include "lightsurface.h"
+#include <algorithm>
 
 static const kexVec3 defaultSunColor(1, 1, 1);
 static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
@@ -219,7 +220,7 @@ void FLevel::CreateLights()
 			thingLight->rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 			thingLight->rgb.z = (lightcolor & 0xff) / 255.0f;
 			thingLight->intensity = lightintensity;
-			thingLight->innerAngleCos = max(innerAngleCos, outerAngleCos);
+			thingLight->innerAngleCos = std::max(innerAngleCos, outerAngleCos);
 			thingLight->outerAngleCos = outerAngleCos;
 			thingLight->radius = lightdistance;
 			thingLight->height = thing->height;

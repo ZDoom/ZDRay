@@ -33,9 +33,15 @@
 #include "lightmap/common.h"
 #include "lightmap/kexlib/binfile.h"
 
-byte kexBinFile::Read8()
+typedef union
 {
-	byte result;
+	int     i;
+	float   f;
+} fint_t;
+
+uint8_t kexBinFile::Read8()
+{
+	uint8_t result;
 	result = buffer[bufferOffset++];
 	return result;
 }
@@ -94,7 +100,7 @@ std::string kexBinFile::ReadString()
 	return str;
 }
 
-void kexBinFile::Write8(const byte val)
+void kexBinFile::Write8(const uint8_t val)
 {
 	buffer[bufferOffset] = val;
 	bufferOffset++;
@@ -145,12 +151,12 @@ int kexBinFile::GetOffsetValue(int id)
 	return *(int*)(buffer + (id << 2));
 }
 
-byte *kexBinFile::GetOffset(int id, byte *subdata, int *count)
+uint8_t *kexBinFile::GetOffset(int id, uint8_t *subdata, int *count)
 {
-	byte *data = (subdata == nullptr) ? buffer : subdata;
+	uint8_t *data = (subdata == nullptr) ? buffer : subdata;
 
 	bufferOffset = GetOffsetValue(id);
-	byte *dataOffs = &data[bufferOffset];
+	uint8_t *dataOffs = &data[bufferOffset];
 
 	if (count)
 	{

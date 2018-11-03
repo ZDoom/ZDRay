@@ -730,36 +730,3 @@ void Warn(const char *format, ...)
 	vprintf(format, marker);
 	va_end(marker);
 }
-
-void Error(const char *error, ...)
-{
-	va_list argptr;
-
-	va_start(argptr, error);
-	vprintf(error, argptr);
-	va_end(argptr);
-	printf("\n");
-	exit(1);
-}
-
-char *Va(const char *str, ...)
-{
-	va_list v;
-	static char vastr[1024];
-
-	va_start(v, str);
-	vsprintf(vastr, str, v);
-	va_end(v);
-
-	return vastr;
-}
-
-void Delay(int ms)
-{
-	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-}
-
-const int64_t GetSeconds()
-{
-	return time(0);
-}

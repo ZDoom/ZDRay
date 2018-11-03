@@ -41,6 +41,7 @@
 #include "halffloat.h"
 #include <map>
 #include <vector>
+#include <algorithm>
 
 extern int Multisample;
 extern thread_local kexVec3 *colorSamples;
@@ -444,10 +445,10 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 				{
 					multisamplePos.x += rand() / (float)RAND_MAX - 0.5f;
 					multisamplePos.y += rand() / (float)RAND_MAX - 0.5f;
-					multisamplePos.x = max(multisamplePos.x, 0.0f);
-					multisamplePos.y = max(multisamplePos.y, 0.0f);
-					multisamplePos.x = min(multisamplePos.x, (float)sampleWidth);
-					multisamplePos.y = min(multisamplePos.y, (float)sampleHeight);
+					multisamplePos.x = std::max(multisamplePos.x, 0.0f);
+					multisamplePos.y = std::max(multisamplePos.y, 0.0f);
+					multisamplePos.x = std::min(multisamplePos.x, (float)sampleWidth);
+					multisamplePos.y = std::min(multisamplePos.y, (float)sampleHeight);
 				}
 
 				// convert the texel into world-space coordinates.
@@ -499,8 +500,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 
 			if (!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
 			{
-				Error("Lightmap allocation failed\n");
-				return;
+				throw std::runtime_error("Lightmap allocation failed");
 			}
 		}
 

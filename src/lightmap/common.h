@@ -35,127 +35,19 @@
 #include <ctype.h>
 #include <cstdint>
 #include <vector>
+#include <limits.h>
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
-// narrow down the windows preprocessor bullshit down to just one macro define
-#if defined(__WIN32__) || defined(__WIN32) || defined(_WIN32_) || defined(_WIN32) || defined(WIN32)
-#define KEX_WIN32
-#else
-#if defined(__APPLE__)
-// lets us know what version of Mac OS X we're compiling on
-#include "AvailabilityMacros.h"
-#include "TargetConditionals.h"
-#if TARGET_OS_IPHONE
-// if compiling for iPhone
-#define KEX_IPHONE
-#else
-// if not compiling for iPhone
-#define KEX_MACOSX
-#if MAC_OS_X_VERSION_MIN_REQUIRED < 1050
-# error KexLIB for Mac OS X only supports deploying on 10.5 and above.
-#endif // MAC_OS_X_VERSION_MIN_REQUIRED < 1050
-#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
-# error KexLIB for Mac OS X must be built with a 10.6 SDK or above.
-#endif // MAC_OS_X_VERSION_MAX_ALLOWED < 1060
-#endif // TARGET_OS_IPHONE
-#endif // defined(__APPLE__)
-#endif // WIN32
-
-#ifdef KEX_WIN32
-#include <windows.h>
-#else
-#include <time.h>
-#endif
-
-#define MAX_FILEPATH    256
-#define MAX_HASH        2048
-
-typedef unsigned char   byte;
-typedef unsigned short  word;
-typedef unsigned long   ulong;
-typedef unsigned int    uint;
-typedef unsigned int    dtexture;
-typedef unsigned int    rcolor;
-typedef char            filepath_t[MAX_FILEPATH];
-
-typedef union
-{
-    int     i;
-    float   f;
-} fint_t;
-
-#define ASCII_SLASH		47
-#define ASCII_BACKSLASH 92
-
-#ifdef KEX_WIN32
-#define DIR_SEPARATOR '\\'
-#define PATH_SEPARATOR ';'
-#else
-#define DIR_SEPARATOR '/'
-#define PATH_SEPARATOR ':'
-#endif
-
-#include <limits.h>
-#define D_MININT INT_MIN
-#define D_MAXINT INT_MAX
-
-#ifndef MAX
-#define MAX(a,b) ((a)>(b)?(a):(b))
-#endif
-
-#ifndef MIN
-#define MIN(a,b) ((a)<(b)?(a):(b))
-#endif
-
-#ifndef BETWEEN
-#define BETWEEN(l,u,x) ((l)>(x)?(l):(x)>(u)?(u):(x))
-#endif
-
-#ifndef BIT
-#define BIT(num) (1<<(num))
-#endif
-
-#if defined(KEX_WIN32) && !defined(__GNUC__)
-#define KDECL __cdecl
-#else
-#define KDECL
-#endif
-
-#ifdef ALIGNED
-#undef ALIGNED
-#endif
-
-#if defined(_MSC_VER)
-#define ALIGNED(x) __declspec(align(x))
-#define PACKED
-#elif defined(__GNUC__)
-#define ALIGNED(x) __attribute__ ((aligned(x)))
-#define PACKED __attribute__((packed))
-#else
-#define ALIGNED(x)
-#define PACKED
-#endif
-
-// function inlining is available on most platforms, however,
-// the GNU C __inline__ is too common and conflicts with a
-// definition in other dependencies, so it needs to be factored
-// out into a custom macro definition
-
 #if defined(__GNUC__) || defined(__APPLE__)
 #define d_inline __inline__
-#elif defined(_MSC_VER) || defined(KEX_WIN32)
+#elif defined(_MSC_VER)
 #define d_inline __forceinline
 #else
 #define d_inline
 #endif
 
 #include "kexlib/math/mathlib.h"
-
-void Error(const char *error, ...);
-char *Va(const char *str, ...);
-void Delay(int ms);
-const int64_t GetSeconds();

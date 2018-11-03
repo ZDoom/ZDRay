@@ -33,14 +33,14 @@
 class kexBinFile
 {
 public:
-	byte Read8();
+	uint8_t Read8();
 	short Read16();
 	int Read32();
 	float ReadFloat();
 	kexVec3 ReadVector();
 	std::string ReadString();
 
-	void Write8(const byte val);
+	void Write8(const uint8_t val);
 	void Write16(const short val);
 	void Write32(const int val);
 	void WriteFloat(const float val);
@@ -48,14 +48,14 @@ public:
 	void WriteString(const std::string &val);
 
 	int GetOffsetValue(int id);
-	byte *GetOffset(int id, byte *subdata = nullptr, int *count = nullptr);
+	uint8_t *GetOffset(int id, uint8_t *subdata = nullptr, int *count = nullptr);
 
-	byte *Buffer() const { return buffer; }
-	void SetBuffer(byte *ptr) { buffer = ptr; }
-	byte *BufferAt() const { return &buffer[bufferOffset]; }
+	uint8_t *Buffer() const { return buffer; }
+	void SetBuffer(uint8_t *ptr) { buffer = ptr; }
+	uint8_t *BufferAt() const { return &buffer[bufferOffset]; }
 	void SetOffset(const int offset) { bufferOffset = offset; }
 
 private:
-	byte *buffer = nullptr;
+	uint8_t *buffer = nullptr;
 	unsigned int bufferOffset = 0;
 };

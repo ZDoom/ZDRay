@@ -73,7 +73,7 @@ public:
 	static float            InvSqrt(float x);
 	static void             Clamp(float &f, const float min, const float max);
 	static void             Clamp(int &i, const int min, const int max);
-	static void             Clamp(byte &b, const byte min, const byte max);
+	static void             Clamp(uint8_t &b, const uint8_t min, const uint8_t max);
 	static void             Clamp(kexVec3 &f, const float min, const float max);
 
 	static void             CubicCurve(const kexVec3 &start, const kexVec3 &end, const float time,
@@ -658,7 +658,7 @@ d_inline void kexMath::Clamp(float &f, const float min, const float max)
 // kexMath::Clamp
 //
 
-d_inline void kexMath::Clamp(byte &b, const byte min, const byte max)
+d_inline void kexMath::Clamp(uint8_t &b, const uint8_t min, const uint8_t max)
 {
 	if (b < min) { b = min; }
 	if (b > max) { b = max; }
