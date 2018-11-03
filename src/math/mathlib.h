@@ -28,7 +28,7 @@
 #pragma once
 
 #include <math.h>
-#include "lightmap/common.h"
+#include <cstdint>
 
 #ifdef M_PI
 #undef M_PI

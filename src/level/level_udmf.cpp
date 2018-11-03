@@ -28,6 +28,11 @@ typedef unsigned int uint32;
 typedef signed int int32;
 #include "framework/xs_Float.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+#pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+#endif
+
 static void CopyUDMFString(char *dest, int destlen, const char *udmfvalue)
 {
 	destlen--;

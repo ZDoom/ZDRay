@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <vector>
+
 struct MapSubsectorEx;
 
 enum surfaceType_t

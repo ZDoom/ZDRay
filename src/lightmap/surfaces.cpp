@@ -30,9 +30,14 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "common.h"
+#include "math/mathlib.h"
 #include "mapdata.h"
 #include "surfaces.h"
+
+#ifdef _MSC_VER
+#pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+#pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+#endif
 
 std::vector<surface_t*> surfaces;
 

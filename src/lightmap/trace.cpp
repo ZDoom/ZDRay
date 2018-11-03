@@ -31,7 +31,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "common.h"
+#include "math/mathlib.h"
 #include "mapdata.h"
 #include "trace.h"
 

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "kexlib/math/mathlib.h"
+#include "math/mathlib.h"
 #include <vector>
 
 class SphereShape

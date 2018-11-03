@@ -32,6 +32,7 @@
 
 #include <math.h>
 #include "mathlib.h"
+#include <assert.h>
 
 const kexVec3 kexVec3::vecRight(1, 0, 0);
 const kexVec3 kexVec3::vecUp(0, 0, 1);

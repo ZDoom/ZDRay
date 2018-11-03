@@ -2,7 +2,7 @@
 #pragma once
 
 #include "framework/tarray.h"
-#include "lightmap/kexlib/math/mathlib.h"
+#include "math/mathlib.h"
 #include "lightmap/collision.h"
 #include <memory>
 #undef MIN

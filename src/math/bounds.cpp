@@ -32,6 +32,7 @@
 
 #include <math.h>
 #include "mathlib.h"
+#include <assert.h>
 
 //
 // kexBBox::kexBBox

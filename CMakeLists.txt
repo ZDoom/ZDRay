@@ -153,15 +153,15 @@ set( SOURCES
 	src/lightmap/collision.cpp
 	src/lightmap/halffloat.cpp
 	src/lightmap/kexlib/binfile.cpp
-	src/lightmap/kexlib/math/angle.cpp
-	src/lightmap/kexlib/math/bounds.cpp
-	src/lightmap/kexlib/math/mathlib.cpp
-	src/lightmap/kexlib/math/matrix.cpp
-	src/lightmap/kexlib/math/plane.cpp
-	src/lightmap/kexlib/math/pluecker.cpp
-	src/lightmap/kexlib/math/quaternion.cpp
-	src/lightmap/kexlib/math/random.cpp
-	src/lightmap/kexlib/math/vector.cpp
+	src/math/angle.cpp
+	src/math/bounds.cpp
+	src/math/mathlib.cpp
+	src/math/matrix.cpp
+	src/math/plane.cpp
+	src/math/pluecker.cpp
+	src/math/quaternion.cpp
+	src/math/random.cpp
+	src/math/vector.cpp
 )
 if( WIN32 )
 	set( SOURCES "${SOURCES}" src/viewer/view.cpp )
@@ -183,7 +183,6 @@ set( HEADERS
 	src/framework/templates.h
 	src/framework/zdray.h
 	src/framework/xs_Float.h
-	src/lightmap/common.h
 	src/lightmap/lightmap.h
 	src/lightmap/lightsurface.h
 	src/lightmap/mapdata.h
@@ -193,7 +192,7 @@ set( HEADERS
 	src/lightmap/collision.h
 	src/lightmap/halffloat.h
 	src/lightmap/kexlib/binfile.h
-	src/lightmap/kexlib/math/mathlib.h
+	src/math/mathlib.h
 )
 
 if( SSE_MATTERS )
@@ -263,6 +262,6 @@ source_group("Sources\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR
 source_group("Sources\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
 source_group("Sources\\Viewer" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/viewer/.+")
 source_group("Sources\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
+source_group("Sources\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
 source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
 source_group("Sources\\Lightmap\\kexlib" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/kexlib/.+")
-source_group("Sources\\Lightmap\\kexlib\\math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/kexlib/math/.+")

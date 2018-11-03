@@ -30,10 +30,15 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "common.h"
+#include "math/mathlib.h"
 #include "mapdata.h"
 #include "lightsurface.h"
 #include <algorithm>
+
+#ifdef _MSC_VER
+#pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+#pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+#endif
 
 static const kexVec3 defaultSunColor(1, 1, 1);
 static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);

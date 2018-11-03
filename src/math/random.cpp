@@ -32,6 +32,7 @@
 
 #include <math.h>
 #include "mathlib.h"
+#include <cstdlib>
 
 #define RANDOM_MAX  0x7FFF
 

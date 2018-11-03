@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "lightmap/kexlib/math/mathlib.h"
+#include "math/mathlib.h"
 #include <string>
 
 class kexBinFile
