@@ -45,6 +45,8 @@ enum surfaceType_t
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
 
+struct IntSector;
+
 struct surface_t
 {
 	kexPlane plane;
@@ -60,6 +62,7 @@ struct surface_t
 	std::vector<float> lightmapCoords;
 	surfaceType_t type;
 	int typeIndex;
+	IntSector *controlSector;
 	bool bSky;
 };
 

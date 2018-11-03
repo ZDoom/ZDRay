@@ -99,6 +99,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->plane.SetDistance(surf->verts[0]);
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = side - &doomMap.Sides[0];
+				surf->controlSector = nullptr;
 
 				surfaces.push_back(std::move(surf));
 			}
@@ -142,6 +143,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->type = ST_UPPERSIDE;
 				surf->typeIndex = side - &doomMap.Sides[0];
 				surf->bSky = bSky;
+				surf->controlSector = nullptr;
 
 				surfaces.push_back(std::move(surf));
 			}
@@ -171,9 +173,65 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->plane.SetDistance(surf->verts[0]);
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = side - &doomMap.Sides[0];
+		surf->controlSector = nullptr;
 
 		surfaces.push_back(std::move(surf));
 	}
+}
+
+static void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
+{
+	auto surf = std::make_unique<surface_t>();
+	surf->numVerts = sub->numlines;
+	surf->verts.resize(surf->numVerts);
+
+	// floor verts
+	for (int j = 0; j < surf->numVerts; j++)
+	{
+		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
+		FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
+
+		surf->verts[j].x = v1.x;
+		surf->verts[j].y = v1.y;
+		surf->verts[j].z = sector->floorplane.zAt(surf->verts[j].x, surf->verts[j].y);
+	}
+
+	surf->plane = sector->floorplane;
+	surf->type = ST_FLOOR;
+	surf->typeIndex = typeIndex;
+	surf->controlSector = is3DFloor ? sector : nullptr;
+
+	surfaces.push_back(std::move(surf));
+}
+
+static void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
+{
+	auto surf = std::make_unique<surface_t>();
+	surf->numVerts = sub->numlines;
+	surf->verts.resize(surf->numVerts);
+
+	if (doomMap.bSkySectors[sector - &doomMap.Sectors[0]])
+	{
+		surf->bSky = true;
+	}
+
+	// ceiling verts
+	for (int j = 0; j < surf->numVerts; j++)
+	{
+		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + j];
+		FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
+
+		surf->verts[j].x = v1.x;
+		surf->verts[j].y = v1.y;
+		surf->verts[j].z = sector->ceilingplane.zAt(surf->verts[j].x, surf->verts[j].y);
+	}
+
+	surf->plane = sector->ceilingplane;
+	surf->type = ST_CEILING;
+	surf->typeIndex = typeIndex;
+	surf->controlSector = is3DFloor ? sector : nullptr;
+
+	surfaces.push_back(std::move(surf));
 }
 
 static void CreateSubsectorSurfaces(FLevel &doomMap)
@@ -192,59 +250,17 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		}
 
 		IntSector *sector = doomMap.GetSectorFromSubSector(sub);
-
-		if (!sector)
+		if (!sector || sector->controlsector)
 			continue;
 
-		if (sector->controlsector)
-			continue;
+		CreateFloorSurface(doomMap, sub, sector, i, false);
+		CreateCeilingSurface(doomMap, sub, sector, i, false);
 
-		auto surf = std::make_unique<surface_t>();
-		surf->numVerts = sub->numlines;
-		surf->verts.resize(surf->numVerts);
-
-		// floor verts
-		for (int j = 0; j < surf->numVerts; j++)
+		for (unsigned int j = 0; j < sector->x3dfloors.Size(); j++)
 		{
-			MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
-			FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
-
-			surf->verts[j].x = v1.x;
-			surf->verts[j].y = v1.y;
-			surf->verts[j].z = sector->floorplane.zAt(surf->verts[j].x, surf->verts[j].y);
+			CreateFloorSurface(doomMap, sub, sector->x3dfloors[j], i, true);
+			CreateCeilingSurface(doomMap, sub, sector->x3dfloors[j], i, false);
 		}
-
-		surf->plane = sector->floorplane;
-		surf->type = ST_FLOOR;
-		surf->typeIndex = i;
-
-		surfaces.push_back(std::move(surf));
-
-		surf = std::make_unique<surface_t>();
-		surf->numVerts = sub->numlines;
-		surf->verts.resize(surf->numVerts);
-
-		if (doomMap.bSkySectors[sector - &doomMap.Sectors[0]])
-		{
-			surf->bSky = true;
-		}
-
-		// ceiling verts
-		for (int j = 0; j < surf->numVerts; j++)
-		{
-			MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + j];
-			FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
-
-			surf->verts[j].x = v1.x;
-			surf->verts[j].y = v1.y;
-			surf->verts[j].z = sector->ceilingplane.zAt(surf->verts[j].x, surf->verts[j].y);
-		}
-
-		surf->plane = sector->ceilingplane;
-		surf->type = ST_CEILING;
-		surf->typeIndex = i;
-
-		surfaces.push_back(std::move(surf));
 	}
 
 	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);

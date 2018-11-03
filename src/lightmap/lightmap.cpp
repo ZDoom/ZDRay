@@ -613,7 +613,7 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 
 		lumpFile.Write32(surfaces[i]->type);
 		lumpFile.Write32(surfaces[i]->typeIndex);
-		lumpFile.Write32(0xffffffff/*surfaces[i]->controlSector*/);
+		lumpFile.Write32(surfaces[i]->controlSector ? (uint32_t)(surfaces[i]->controlSector - &map->Sectors[0]) : 0xffffffff);
 		lumpFile.Write32(surfaces[i]->lightmapNum);
 		lumpFile.Write32(coordOffsets);
 		coordOffsets += surfaces[i]->numVerts;
