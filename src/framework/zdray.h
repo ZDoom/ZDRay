@@ -33,7 +33,6 @@ extern int				 MaxSegs;
 extern int				 SplitCost;
 extern int				 AAPreference;
 extern bool				 CheckPolyobjs;
-extern bool				 ShowMap;
 extern bool				 CompressNodes, CompressGLNodes, ForceCompression, V5GLNodes;
 extern bool				 HaveSSE1, HaveSSE2;
 extern int				 SSELevel;

@@ -104,7 +104,6 @@ int				 MaxSegs = 64;
 int				 SplitCost = 8;
 int				 AAPreference = 16;
 bool			 CheckPolyobjs = true;
-bool			 ShowMap = false;
 bool			 ShowWarnings = false;
 bool			 NoTiming = false;
 bool			 CompressNodes = true;// false;
@@ -125,7 +124,6 @@ static option long_opts[] =
 {
 	{"help",			no_argument,		0,	1000},
 	{"version",			no_argument,		0,	'V'},
-	{"view",			no_argument,		0,	'v'},
 	{"warn",			no_argument,		0,	'w'},
 	{"map",				required_argument,	0,	'm'},
 	{"output",			required_argument,	0,	'o'},
@@ -327,9 +325,6 @@ static void ParseArgs(int argc, char **argv)
 		case 0:
 			break;
 
-		case 'v':
-			ShowMap = true;
-			break;
 		case 'w':
 			ShowWarnings = true;
 			break;
@@ -501,9 +496,6 @@ static void ShowUsage()
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"
-#ifdef _WIN32
-		"  -v, --view               View the nodes\n"
-#endif
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
 		"  -t, --no-timing          Suppress timing information\n"

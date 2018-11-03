@@ -163,11 +163,6 @@ set( SOURCES
 	src/math/random.cpp
 	src/math/vector.cpp
 )
-if( WIN32 )
-	set( SOURCES "${SOURCES}" src/viewer/view.cpp )
-else( WIN32 )
-	add_definitions( -DNO_MAP_VIEWER )
-endif( WIN32 )
 
 set( HEADERS
 	src/commandline/getopt.h
@@ -259,7 +254,6 @@ source_group("Sources\\NodeBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_
 source_group("Sources\\Parse" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/parse/.+")
 source_group("Sources\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/.+")
 source_group("Sources\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
-source_group("Sources\\Viewer" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/viewer/.+")
 source_group("Sources\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
 source_group("Sources\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
 source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
