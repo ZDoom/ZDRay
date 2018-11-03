@@ -90,7 +90,7 @@ extern "C" char *optarg;
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
-const char		*Map = NULL;
+const char		*Map = nullptr;
 const char		*InName;
 const char		*OutName = "tmp.wad";
 bool			 BuildNodes = true;
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
 
 	ParseArgs(argc, argv);
 
-	if (InName == NULL)
+	if (InName == nullptr)
 	{
 		if (optind >= argc || optind < argc - 1)
 		{ // Source file is unspecified or followed by junk
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 
 			char *out = new char[strlen(OutName) + 3], *dot;
 
-			if (out == NULL)
+			if (out == nullptr)
 			{
 				throw std::runtime_error("Could not create temporary file name.");
 			}
@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 				else if (inwad.IsGLNodes(lump))
 				{
 					// Ignore GL nodes from the input for any maps we process.
-					if (BuildNodes && (Map == NULL || stricmp(inwad.LumpName(lump) + 3, Map) == 0))
+					if (BuildNodes && (Map == nullptr || stricmp(inwad.LumpName(lump) + 3, Map) == 0))
 					{
 						lump = inwad.SkipGLNodes(lump);
 					}
@@ -320,7 +320,7 @@ static void ParseArgs(int argc, char **argv)
 {
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, short_opts, long_opts, NULL)) != EOF)
+	while ((ch = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != EOF)
 	{
 		switch (ch)
 		{
@@ -591,13 +591,13 @@ static bool CheckInOutNames()
 	HANDLE inFile, outFile;
 
 	outFile = CreateFile(OutName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-		NULL, OPEN_EXISTING, 0, NULL);
+		nullptr, OPEN_EXISTING, 0, nullptr);
 	if (outFile == INVALID_HANDLE_VALUE)
 	{
 		return false;
 	}
 	inFile = CreateFile(InName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-		NULL, OPEN_EXISTING, 0, NULL);
+		nullptr, OPEN_EXISTING, 0, nullptr);
 	if (inFile == INVALID_HANDLE_VALUE)
 	{
 		CloseHandle(outFile);

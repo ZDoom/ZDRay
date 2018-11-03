@@ -67,14 +67,14 @@ public:
 	{
 		Most = 0;
 		Count = 0;
-		Array = NULL;
+		Array = nullptr;
 	}
 	TArray (int max)
 	{
 		Most = max;
 		Count = 0;
 		Array = (T *)malloc (sizeof(T)*max);
-		if (Array == NULL)
+		if (Array == nullptr)
 		{
 			throw std::bad_alloc();
 		}
@@ -87,7 +87,7 @@ public:
 	{
 		if (&other != this)
 		{
-			if (Array != NULL)
+			if (Array != nullptr)
 			{
 				if (Count > 0)
 				{
@@ -108,7 +108,7 @@ public:
 				DoDelete (0, Count-1);
 			}
 			free (Array);
-			Array = NULL;
+			Array = nullptr;
 			Count = 0;
 			Most = 0;
 		}
@@ -198,10 +198,10 @@ public:
 			Most = Count;
 			if (Most == 0)
 			{
-				if (Array != NULL)
+				if (Array != nullptr)
 				{
 					free (Array);
-					Array = NULL;
+					Array = nullptr;
 				}
 			}
 			else
@@ -281,7 +281,7 @@ private:
 		if (Count != 0)
 		{
 			Array = (T *)malloc (sizeof(T)*Most);
-			if (Array == NULL)
+			if (Array == nullptr)
 			{
 				throw std::bad_alloc();
 			}
@@ -292,7 +292,7 @@ private:
 		}
 		else
 		{
-			Array = NULL;
+			Array = nullptr;
 		}
 	}
 
@@ -300,7 +300,7 @@ private:
 	{
 		size_t allocsize = sizeof(T)*Most;
 		Array = (T *)realloc (Array, allocsize);
-		if (Array == NULL)
+		if (Array == nullptr)
 		{
 			throw std::bad_alloc();
 		}
@@ -326,7 +326,7 @@ public:
 	{
 		for (unsigned int i = 0; i < TArray<T,TT>::Size(); ++i)
 		{
-			if ((*this)[i] != NULL) 
+			if ((*this)[i] != nullptr) 
 				delete (*this)[i];
 		}
 	}

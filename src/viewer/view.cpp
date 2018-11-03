@@ -170,7 +170,7 @@ INT_PTR CALLBACK ViewDialogFunc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				{
 					Viewing = newmode;
 					ResetViews ();
-					InvalidateRect (GetDlgItem (hDlg, IDC_MAPVIEW), NULL, TRUE);
+					InvalidateRect (GetDlgItem (hDlg, IDC_MAPVIEW), nullptr, TRUE);
 				}
 			}
 			break;
@@ -239,12 +239,12 @@ static void DrawSubsector (HDC dc, int ssec)
 		int seg = Level->Subsectors[ssec].firstline + i;
 		if (Level->Segs[seg].side == 0)
 		{
-			MoveToEx (dc, VERTX(Level->Segs[seg].v1), VERTY(Level->Segs[seg].v1), NULL);
+			MoveToEx (dc, VERTX(Level->Segs[seg].v1), VERTY(Level->Segs[seg].v1), nullptr);
 			LineTo (dc, VERTX(Level->Segs[seg].v2), VERTY(Level->Segs[seg].v2));
 		}
 		else
 		{
-			MoveToEx (dc, VERTX(Level->Segs[seg].v2), VERTY(Level->Segs[seg].v2), NULL);
+			MoveToEx (dc, VERTX(Level->Segs[seg].v2), VERTY(Level->Segs[seg].v2), nullptr);
 			LineTo (dc, VERTX(Level->Segs[seg].v1), VERTY(Level->Segs[seg].v1));
 		}
 	}
@@ -255,10 +255,10 @@ static void DrawSubsectorGL (HDC dc, int ssec, HPEN miniPen, HPEN badPen)
 	int seg;
 
 	seg = Level->GLSubsectors[ssec].firstline;
-	MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v1), GLVERTY(Level->GLSegs[seg].v1), NULL);
+	MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v1), GLVERTY(Level->GLSegs[seg].v1), nullptr);
 	for (uint32_t i = 0; i < Level->GLSubsectors[ssec].numlines; ++i)
 	{
-		HPEN oldPen = NULL;
+		HPEN oldPen = nullptr;
 		seg = Level->GLSubsectors[ssec].firstline + i;
 		if (Level->GLSegs[seg].linedef == NO_INDEX)
 		{
@@ -273,15 +273,15 @@ static void DrawSubsectorGL (HDC dc, int ssec, HPEN miniPen, HPEN badPen)
 		}
 		if (Level->GLSegs[seg].side == 0 || 1)
 		{
-			//MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v1), GLVERTY(Level->GLSegs[seg].v1), NULL);
+			//MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v1), GLVERTY(Level->GLSegs[seg].v1), nullptr);
 			LineTo (dc, GLVERTX(Level->GLSegs[seg].v2), GLVERTY(Level->GLSegs[seg].v2));
 		}
 		else
 		{
-			//MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v2), GLVERTY(Level->GLSegs[seg].v2), NULL);
+			//MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v2), GLVERTY(Level->GLSegs[seg].v2), nullptr);
 			LineTo (dc, GLVERTX(Level->GLSegs[seg].v1), GLVERTY(Level->GLSegs[seg].v1));
 		}
-		if (oldPen != NULL)
+		if (oldPen != nullptr)
 		{
 			SelectObject (dc, oldPen);
 		}
@@ -402,7 +402,7 @@ static void DrawSplitter (HDC dc, MapNodeEx *node)
 		dy <<= 1;
 	}
 	SelectObject (dc, Splitter);
-	MoveToEx (dc, (node->x - dx) >> 16, (node->y - dy) >> 16, NULL);
+	MoveToEx (dc, (node->x - dx) >> 16, (node->y - dy) >> 16, nullptr);
 	LineTo (dc, (node->x + 2*dx) >> 16, (node->y + 2*dy) >> 16);
 }
 
@@ -609,7 +609,7 @@ static void DrawLevelReject (HDC dc)
 			{
 				choice = SEE_FROM;
 			}
-			else if (Level->Reject != NULL)
+			else if (Level->Reject != nullptr)
 			{
 				int pnum = seeFromRow + Level->Sides[Level->Lines[i].sidenum[0]].sector;
 				if (Level->Reject[pnum>>3] & (1<<(pnum&7)))
@@ -632,7 +632,7 @@ static void DrawLevelReject (HDC dc)
 			{
 				choice = SEE_FROM;
 			}
-			else if (Level->Reject != NULL && choice < CAN_SEE)
+			else if (Level->Reject != nullptr && choice < CAN_SEE)
 			{
 				int pnum = seeFromRow + Level->Sides[Level->Lines[i].sidenum[1]].sector;
 				if (Level->Reject[pnum>>3] & (1<<(pnum&7)))
@@ -662,7 +662,7 @@ static void DrawLevelReject (HDC dc)
 				default: break;
 				}
 			}
-			MoveToEx (dc, VERTX(Level->Lines[i].v1), VERTY(Level->Lines[i].v1), NULL);
+			MoveToEx (dc, VERTX(Level->Lines[i].v1), VERTY(Level->Lines[i].v1), nullptr);
 			LineTo (dc, VERTX(Level->Lines[i].v2), VERTY(Level->Lines[i].v2));
 		}
 	}
@@ -768,7 +768,7 @@ static void DrawLevel (HDC dc)
 
 	for (i = 0; i < Level->NumSegs; ++i)
 	{
-		MoveToEx (dc, VERTX(Level->Segs[i].v1), VERTY(Level->Segs[i].v1), NULL);
+		MoveToEx (dc, VERTX(Level->Segs[i].v1), VERTY(Level->Segs[i].v1), nullptr);
 		LineTo (dc, VERTX(Level->Segs[i].v2), VERTY(Level->Segs[i].v2));
 	}
 	*/
@@ -793,7 +793,7 @@ void SizeView (HWND wnd, bool firstTime)
 	else if (sinfo.nPos > sinfo.nMax - (int)sinfo.nPage)
 	{
 		int delta = sinfo.nPos - sinfo.nMax + (int)sinfo.nPage;
-		ScrollWindowEx (wnd, 0, (delta + Divisor-1) / Divisor, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+		ScrollWindowEx (wnd, 0, (delta + Divisor-1) / Divisor, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 		sinfo.nPos = sinfo.nMax - sinfo.nPage;
 	}
 	SetScrollInfo (wnd, SB_VERT, &sinfo, TRUE);
@@ -809,7 +809,7 @@ void SizeView (HWND wnd, bool firstTime)
 	else if (sinfo.nPos > sinfo.nMax - (int)sinfo.nPage)
 	{
 		int delta = sinfo.nPos - sinfo.nMax + (int)sinfo.nPage;
-		ScrollWindowEx (wnd, (delta + Divisor-1) / Divisor, 0, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+		ScrollWindowEx (wnd, (delta + Divisor-1) / Divisor, 0, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 		sinfo.nPos = sinfo.nMax - sinfo.nPage;
 	}
 	SetScrollInfo (wnd, SB_HORZ, &sinfo, TRUE);
@@ -831,24 +831,24 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 	case WM_SIZE:
 		SizeView (hWnd, false);
-		//InvalidateRect (hWnd, NULL, TRUE);
+		//InvalidateRect (hWnd, nullptr, TRUE);
 		break;
 
 	case WM_PAINT:
-		if (GetUpdateRect (hWnd, NULL, FALSE))
+		if (GetUpdateRect (hWnd, nullptr, FALSE))
 		{
 			PAINTSTRUCT paint;
 			HDC dc = BeginPaint (hWnd, &paint);
 
-			if (dc != NULL)
+			if (dc != nullptr)
 			{
 				sinfo.fMask = SIF_POS;
 				GetScrollInfo (hWnd, SB_HORZ, &sinfo);
 				pos = sinfo.nPos;
 				GetScrollInfo (hWnd, SB_VERT, &sinfo);
 				SetMapMode (dc, MM_ANISOTROPIC);
-				ScaleWindowExtEx (dc, Divisor, 1, Divisor, -1, NULL);
-				SetWindowOrgEx (dc, pos + MapBounds.left, MapBounds.bottom - sinfo.nPos, NULL);
+				ScaleWindowExtEx (dc, Divisor, 1, Divisor, -1, nullptr);
+				SetWindowOrgEx (dc, pos + MapBounds.left, MapBounds.bottom - sinfo.nPos, nullptr);
 				DrawLevel (dc);
 				EndPaint (hWnd, &paint);
 			}
@@ -880,7 +880,7 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			PostMessage (GetParent (hWnd), WM_APP, DesiredSector, 0);
 			break;
 		}
-		InvalidateRect (hWnd, NULL, TRUE);
+		InvalidateRect (hWnd, nullptr, TRUE);
 		return 0;
 
 	case WM_HSCROLL:
@@ -902,7 +902,7 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			SetScrollPos (hWnd, SB_HORZ, pos, TRUE);
 			int oldx = sinfo.nPos / Divisor;
 			int newx = pos / Divisor;
-			ScrollWindowEx (hWnd, oldx - newx, 0, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+			ScrollWindowEx (hWnd, oldx - newx, 0, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 			UpdateWindow (hWnd);
 		}
 		return 0;
@@ -924,7 +924,7 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		if (pos != sinfo.nPos)
 		{
 			SetScrollPos (hWnd, SB_VERT, pos, TRUE);
-			ScrollWindowEx (hWnd, 0, (sinfo.nPos - pos) / Divisor, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+			ScrollWindowEx (hWnd, 0, (sinfo.nPos - pos) / Divisor, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 			UpdateWindow (hWnd);
 		}
 		return 0;
@@ -938,7 +938,7 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		if (pos != sinfo.nPos)
 		{
 			SetScrollPos (hWnd, SB_VERT, pos, TRUE);
-			ScrollWindowEx (hWnd, 0, (sinfo.nPos - pos) / Divisor, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+			ScrollWindowEx (hWnd, 0, (sinfo.nPos - pos) / Divisor, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 			UpdateWindow (hWnd);
 		}
 		return 0;
@@ -975,7 +975,7 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 				if (pos != sinfo.nPos)
 				{
 					SetScrollPos (hWnd, SB_HORZ, pos, TRUE);
-					ScrollWindowEx (hWnd, (sinfo.nPos - pos) / Divisor, 0, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+					ScrollWindowEx (hWnd, (sinfo.nPos - pos) / Divisor, 0, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 					UpdateWindow (hWnd);
 				}
 			}
@@ -990,7 +990,7 @@ LRESULT CALLBACK MapViewFunc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 				if (pos != sinfo.nPos)
 				{
 					SetScrollPos (hWnd, SB_VERT, pos, TRUE);
-					ScrollWindowEx (hWnd, 0, (sinfo.nPos - pos) / Divisor, NULL, NULL, NULL, NULL, SW_INVALIDATE|SW_ERASE);
+					ScrollWindowEx (hWnd, 0, (sinfo.nPos - pos) / Divisor, nullptr, nullptr, nullptr, nullptr, SW_INVALIDATE|SW_ERASE);
 					UpdateWindow (hWnd);
 				}
 			}
@@ -1022,7 +1022,7 @@ void ShowView (FLevel *level)
 	{
 		Level = level;
 
-		if (level->Blockmap != NULL)
+		if (level->Blockmap != nullptr)
 		{
 			MapBounds.left = short(level->Blockmap[0]) - 8;
 			MapBounds.right = short(level->Blockmap[0]) + (level->Blockmap[2] << BLOCKBITS) + 8;
@@ -1040,7 +1040,7 @@ void ShowView (FLevel *level)
 		MapSize.y = MapBounds.bottom - MapBounds.top;
 		Divisor = 1;
 
-		if (Level->Subsectors == NULL)
+		if (Level->Subsectors == nullptr)
 		{
 			Viewing = ViewGLSubsectors;
 		}
@@ -1050,7 +1050,7 @@ void ShowView (FLevel *level)
 		}
 
 		ResetViews ();
-		DialogBox (GetModuleHandle(0), MAKEINTRESOURCE(IDD_MAPVIEW), NULL, ViewDialogFunc);
+		DialogBox (GetModuleHandle(0), MAKEINTRESOURCE(IDD_MAPVIEW), nullptr, ViewDialogFunc);
 		UnregisterClass ("MapViewer", GetModuleHandle(0));
 	}
 }

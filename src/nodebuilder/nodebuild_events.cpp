@@ -23,7 +23,7 @@
 #include "nodebuilder/nodebuild.h"
 
 FEventTree::FEventTree ()
-: Root (&Nil), Spare (NULL)
+: Root (&Nil), Spare (nullptr)
 {
 	memset (&Nil, 0, sizeof(Nil));
 }
@@ -34,7 +34,7 @@ FEventTree::~FEventTree ()
 
 	DeleteAll ();
 	probe = Spare;
-	while (probe != NULL)
+	while (probe != nullptr)
 	{
 		FEvent *next = probe->Left;
 		delete probe;
@@ -50,7 +50,7 @@ void FEventTree::DeleteAll ()
 
 void FEventTree::DeletionTraverser (FEvent *node)
 {
-	if (node != &Nil && node != NULL)
+	if (node != &Nil && node != nullptr)
 	{
 		DeletionTraverser (node->Left);
 		DeletionTraverser (node->Right);
@@ -63,7 +63,7 @@ FEvent *FEventTree::GetNewNode ()
 {
 	FEvent *node;
 
-	if (Spare != NULL)
+	if (Spare != nullptr)
 	{
 		node = Spare;
 		Spare = node->Left;
@@ -174,7 +174,7 @@ FEvent *FEventTree::FindEvent (double key) const
 			node = node->Right;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 FEvent *FEventTree::GetMinimum ()
@@ -183,7 +183,7 @@ FEvent *FEventTree::GetMinimum ()
 
 	if (node == &Nil)
 	{
-		return NULL;
+		return nullptr;
 	}
 	while (node->Left != &Nil)
 	{

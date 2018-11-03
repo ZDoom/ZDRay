@@ -59,7 +59,7 @@ void ReadLump (FWadReader &wad, int index, T *&data, int &size)
 {
 	if ((unsigned)index >= (unsigned)wad.Header.NumLumps)
 	{
-		data = NULL;
+		data = nullptr;
 		size = 0;
 		return;
 	}

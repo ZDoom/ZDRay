@@ -148,7 +148,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	}
 
 	// middle seg
-	if (back == NULL)
+	if (back == nullptr)
 	{
 		surf = new surface_t();
 		surf->numVerts = 4;
@@ -175,7 +175,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 static void CreateSubsectorSurfaces(FLevel &doomMap)
 {
 	surface_t *surf;
-	IntSector *sector = NULL;
+	IntSector *sector = nullptr;
 	int i;
 	int j;
 

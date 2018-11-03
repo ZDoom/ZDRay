@@ -155,7 +155,7 @@ int FNodeBuilder::CloseSubsector (TArray<MapSegGLEx> &segs, int subsector)
 		for (i = first + 1; i < max; ++i)
 		{
 			angle_t bestdiff = ANGLE_MAX;
-			FPrivSeg *bestseg = NULL;
+			FPrivSeg *bestseg = nullptr;
 			int bestj = -1;
 			for (j = first; j < max; ++j)
 			{
@@ -176,7 +176,7 @@ int FNodeBuilder::CloseSubsector (TArray<MapSegGLEx> &segs, int subsector)
 					bestj = j;
 				}
 			}
-			if (bestseg != NULL)
+			if (bestseg != nullptr)
 			{
 				seg = bestseg;
 			}
@@ -272,7 +272,7 @@ int FNodeBuilder::OutputDegenerateSubsector (TArray<MapSegGLEx> &segs, int subse
 	for (i = first + 1; i < max; ++i)
 	{
 		double bestdot = bestinit[bForward];
-		FPrivSeg *bestseg = NULL;
+		FPrivSeg *bestseg = nullptr;
 		for (j = first + 1; j < max; ++j)
 		{
 			seg = &Segs[SegList[j].SegNum];
@@ -301,7 +301,7 @@ int FNodeBuilder::OutputDegenerateSubsector (TArray<MapSegGLEx> &segs, int subse
 				}
 			}
 		}
-		if (bestseg != NULL)
+		if (bestseg != nullptr)
 		{
 			if (prev->v2 != bestseg->v1)
 			{

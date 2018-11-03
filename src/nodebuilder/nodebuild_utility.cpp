@@ -115,7 +115,7 @@ int FNodeBuilder::CreateSeg (int linenum, int sidenum)
 	seg.loopnum = 0;
 	seg.offset = 0;
 	seg.partner = DWORD_MAX;
-	seg.hashnext = NULL;
+	seg.hashnext = nullptr;
 	seg.planefront = false;
 	seg.planenum = DWORD_MAX;
 	seg.storedseg = DWORD_MAX;
@@ -163,7 +163,7 @@ void FNodeBuilder::GroupSegPlanes ()
 	{
 		FPrivSeg *seg = &Segs[i];
 		seg->next = i+1;
-		seg->hashnext = NULL;
+		seg->hashnext = nullptr;
 	}
 
 	Segs[Segs.Size()-1].next = DWORD_MAX;
@@ -182,7 +182,7 @@ void FNodeBuilder::GroupSegPlanes ()
 
 		FPrivSeg *check = buckets[ang >>= 31-bucketbits];
 
-		while (check != NULL)
+		while (check != nullptr)
 		{
 			fixed_t cx1 = Vertices[check->v1].x;
 			fixed_t cy1 = Vertices[check->v1].y;
@@ -195,7 +195,7 @@ void FNodeBuilder::GroupSegPlanes ()
 			}
 			check = check->hashnext;
 		}
-		if (check != NULL)
+		if (check != nullptr)
 		{
 			seg->planenum = check->planenum;
 			const FSimpleLine *line = &Planes[seg->planenum];

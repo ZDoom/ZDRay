@@ -61,10 +61,10 @@ static const char GLLumpNames[5][9] =
 };
 
 FWadReader::FWadReader (const char *filename)
-	: Lumps (NULL), File (NULL)
+	: Lumps (nullptr), File (nullptr)
 {
 	File = fopen (filename, "rb");
-	if (File == NULL)
+	if (File == nullptr)
 	{
 		throw std::runtime_error("Could not open input file");
 	}
@@ -76,7 +76,7 @@ FWadReader::FWadReader (const char *filename)
 		Header.Magic[3] != 'D')
 	{
 		fclose (File);
-		File = NULL;
+		File = nullptr;
 		throw std::runtime_error("Input file is not a wad");
 	}
 
@@ -341,10 +341,10 @@ const char *FWadReader::LumpName (int lump)
 }
 
 FWadWriter::FWadWriter (const char *filename, bool iwad)
-	: File (NULL)
+	: File (nullptr)
 {
 	File = fopen (filename, "wb");
-	if (File == NULL)
+	if (File == nullptr)
 	{
 		throw std::runtime_error("Could not open output file");
 	}
@@ -387,7 +387,7 @@ void FWadWriter::Close ()
 		fseek (File, 4, SEEK_SET);
 		SafeWrite (head, 8);
 		fclose (File);
-		File = NULL;
+		File = nullptr;
 	}
 }
 
@@ -419,7 +419,7 @@ void FWadWriter::CopyLump (FWadReader &wad, int lump)
 	int size;
 
 	ReadLump<uint8_t> (wad, lump, data, size);
-	if (data != NULL)
+	if (data != nullptr)
 	{
 		WriteLump (wad.LumpName (lump), data, size);
 		delete[] data;
@@ -442,7 +442,7 @@ void FWadWriter::SafeWrite (const void *buffer, size_t size)
 	if (fwrite (buffer, 1, size, File) != size)
 	{
 		fclose (File);
-		File = NULL;
+		File = nullptr;
 		throw std::runtime_error(
 			"Failed to write. Check that this directory is writable and\n"
 			"that you have enough free disk space.");

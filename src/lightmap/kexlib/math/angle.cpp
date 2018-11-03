@@ -239,7 +239,7 @@ kexVec3 kexAngle::ToForwardAxis()
 {
 	kexVec3 vec;
 
-	ToAxis(&vec, NULL, NULL);
+	ToAxis(&vec, nullptr, nullptr);
 	return vec;
 }
 
@@ -251,7 +251,7 @@ kexVec3 kexAngle::ToUpAxis()
 {
 	kexVec3 vec;
 
-	ToAxis(NULL, &vec, NULL);
+	ToAxis(nullptr, &vec, nullptr);
 	return vec;
 }
 
@@ -263,7 +263,7 @@ kexVec3 kexAngle::ToRightAxis()
 {
 	kexVec3 vec;
 
-	ToAxis(NULL, NULL, &vec);
+	ToAxis(nullptr, nullptr, &vec);
 	return vec;
 }
 

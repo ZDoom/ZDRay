@@ -526,7 +526,7 @@ void FProcessor::BuildNodes()
 {
 	NodesBuilt = true;
 
-	FNodeBuilder *builder = NULL;
+	FNodeBuilder *builder = nullptr;
 
 	// ZDoom's UDMF spec requires compressed GL nodes.
 	// No other UDMF spec has defined anything regarding nodes yet.
@@ -553,7 +553,7 @@ void FProcessor::BuildNodes()
 			SSELevel = 0;
 		}
 		builder = new FNodeBuilder(Level, PolyStarts, PolyAnchors, Wad.LumpName(Lump), BuildGLNodes);
-		if (builder == NULL)
+		if (builder == nullptr)
 		{
 			throw std::runtime_error("   Not enough memory to build nodes!");
 		}
@@ -583,7 +583,7 @@ void FProcessor::BuildNodes()
 					// Now repeat the process to obtain regular nodes
 					delete builder;
 					builder = new FNodeBuilder(Level, PolyStarts, PolyAnchors, Wad.LumpName(Lump), false);
-					if (builder == NULL)
+					if (builder == nullptr)
 					{
 						throw std::runtime_error("   Not enough memory to build regular nodes!");
 					}
@@ -597,11 +597,11 @@ void FProcessor::BuildNodes()
 			}
 		}
 		delete builder;
-		builder = NULL;
+		builder = nullptr;
 	}
 	catch (...)
 	{
-		if (builder != NULL)
+		if (builder != nullptr)
 		{
 			delete builder;
 		}
@@ -689,7 +689,7 @@ void FProcessor::Write (FWadWriter &out)
 		memcpy (Level.Blockmap, blocks, Level.BlockmapSize*sizeof(uint16_t));
 
 		Level.RejectSize = (Level.NumSectors()*Level.NumSectors() + 7) / 8;
-		Level.Reject = NULL;
+		Level.Reject = nullptr;
 
 		switch (RejectMode)
 		{
@@ -710,7 +710,7 @@ void FProcessor::Write (FWadWriter &out)
 					{
 						// If the reject is the wrong size, don't use it.
 						delete[] Level.Reject;
-						Level.Reject = NULL;
+						Level.Reject = nullptr;
 						if (Level.RejectSize != 0)
 						{ // Do not warn about 0-length rejects
 							printf ("   REJECT is the wrong size, so it will be removed.\n");
@@ -742,7 +742,7 @@ void FProcessor::Write (FWadWriter &out)
 	if (!isUDMF)
 	{
 
-		if (Level.GLNodes != NULL )
+		if (Level.GLNodes != nullptr )
 		{
 			gl5 = V5GLNodes ||
 				  (Level.NumGLVertices > 32767) ||
@@ -826,7 +826,7 @@ void FProcessor::Write (FWadWriter &out)
 		{
 			LMBuilder.AddLightmapLump(out);
 		}*/
-		if (Level.GLNodes != NULL && !compressGL)
+		if (Level.GLNodes != nullptr && !compressGL)
 		{
 			char glname[9];
 			glname[0] = 'G';
@@ -878,7 +878,7 @@ MapNodeEx *FProcessor::NodesToEx (const MapNode *nodes, int count)
 {
 	if (count == 0)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	MapNodeEx *Nodes = new MapNodeEx[Level.NumNodes];
@@ -913,7 +913,7 @@ MapSubsectorEx *FProcessor::SubsectorsToEx (const MapSubsector *ssec, int count)
 {
 	if (count == 0)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	MapSubsectorEx *out = new MapSubsectorEx[Level.NumSubsectors];
@@ -932,7 +932,7 @@ MapSegGLEx *FProcessor::SegGLsToEx (const MapSegGL *segs, int count)
 {
 	if (count == 0)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	MapSegGLEx *out = new MapSegGLEx[count];
@@ -1238,7 +1238,7 @@ void FProcessor::WriteBlockmap (FWadWriter &out)
 
 void FProcessor::WriteReject (FWadWriter &out)
 {
-	if (RejectMode == ERM_Create0 || Level.Reject == NULL)
+	if (RejectMode == ERM_Create0 || Level.Reject == nullptr)
 	{
 		out.CreateLabel ("REJECT");
 	}

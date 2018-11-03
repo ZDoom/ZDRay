@@ -116,7 +116,7 @@ static void SC_PrepareScript ()
 	ScriptOpen = true;
 	sc_String = StringBuffer;
 	AlreadyGot = false;
-	SavedScriptPtr = NULL;
+	SavedScriptPtr = nullptr;
 	CMode = false;
 }
 
@@ -130,7 +130,7 @@ void SC_Close ()
 {
 	if (ScriptOpen)
 	{
-		ScriptBuffer = NULL;
+		ScriptBuffer = nullptr;
 		ScriptOpen = false;
 	}
 }
@@ -148,7 +148,7 @@ void SC_SavePos ()
 	CheckOpen ();
 	if (sc_End)
 	{
-		SavedScriptPtr = NULL;
+		SavedScriptPtr = nullptr;
 	}
 	else
 	{
@@ -341,7 +341,7 @@ bool SC_GetString ()
 		else
 		{
 grabtoken:
-			while ((*ScriptPtr > ' ') && (strchr (stopchars, *ScriptPtr) == NULL)
+			while ((*ScriptPtr > ' ') && (strchr (stopchars, *ScriptPtr) == nullptr)
 				&& (CMode || *ScriptPtr != ASCII_COMMENT)
 				&& !(ScriptPtr[0] == CPP_COMMENT && (ScriptPtr < ScriptEndPtr - 1) &&
 					 (ScriptPtr[1] == CPP_COMMENT || ScriptPtr[1] == C_COMMENT)))
@@ -632,7 +632,7 @@ int SC_MatchString (const char **strings)
 {
 	int i;
 
-	for (i = 0; *strings != NULL; i++)
+	for (i = 0; *strings != nullptr; i++)
 	{
 		if (SC_Compare (*strings++))
 		{
@@ -655,7 +655,7 @@ int SC_MustMatchString (const char **strings)
 	i = SC_MatchString (strings);
 	if (i == -1)
 	{
-		SC_ScriptError (NULL);
+		SC_ScriptError (nullptr);
 	}
 	return i;
 }
@@ -684,7 +684,7 @@ bool SC_Compare (const char *text)
 void SC_ScriptError (const char *message, ...)
 {
 	char composed[2048];
-	if (message == NULL)
+	if (message == nullptr)
 	{
 		message = "Bad syntax.";
 	}

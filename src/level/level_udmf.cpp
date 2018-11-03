@@ -78,7 +78,7 @@ public:
 
 	char * Copy(const char * p)
 	{
-		return p != NULL? strcpy(Alloc(strlen(p)+1) , p) : NULL;
+		return p != nullptr? strcpy(Alloc(strlen(p)+1) , p) : nullptr;
 	}
 };
 
