@@ -43,6 +43,7 @@
 #include <vector>
 
 extern int Multisample;
+extern thread_local kexVec3 *colorSamples;
 
 const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
 
@@ -413,8 +414,6 @@ void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
 // For each non-occluded trace, color is accumulated and saved off into the lightmap texture based on what block is mapped to
 void kexLightmapBuilder::TraceSurface(surface_t *surface)
 {
-	static thread_local kexVec3 colorSamples[1024 * 1024];
-
 	int sampleWidth;
 	int sampleHeight;
 	kexVec3 normal;
