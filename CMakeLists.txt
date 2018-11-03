@@ -133,6 +133,8 @@ set( SOURCES
 	src/main.cpp
 	src/commandline/getopt.c
 	src/commandline/getopt1.c
+	src/framework/halffloat.cpp
+	src/framework/binfile.cpp
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/level/level.cpp
 	src/level/level_udmf.cpp
@@ -151,8 +153,6 @@ set( SOURCES
 	src/lightmap/trace.cpp
 	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
-	src/lightmap/halffloat.cpp
-	src/lightmap/kexlib/binfile.cpp
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp
@@ -183,6 +183,8 @@ set( HEADERS
 	src/framework/templates.h
 	src/framework/zdray.h
 	src/framework/xs_Float.h
+	src/framework/halffloat.h
+	src/framework/binfile.h
 	src/lightmap/lightmap.h
 	src/lightmap/lightsurface.h
 	src/lightmap/mapdata.h
@@ -190,8 +192,6 @@ set( HEADERS
 	src/lightmap/trace.h
 	src/lightmap/worker.h
 	src/lightmap/collision.h
-	src/lightmap/halffloat.h
-	src/lightmap/kexlib/binfile.h
 	src/math/mathlib.h
 )
 
@@ -264,4 +264,3 @@ source_group("Sources\\Viewer" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/
 source_group("Sources\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
 source_group("Sources\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
 source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
-source_group("Sources\\Lightmap\\kexlib" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/kexlib/.+")

@@ -30,7 +30,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "lightmap/kexlib/binfile.h"
+#include "framework/binfile.h"
 
 typedef union
 {

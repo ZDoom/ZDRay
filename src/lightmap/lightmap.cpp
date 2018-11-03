@@ -36,9 +36,9 @@
 #include "mapdata.h"
 #include "lightmap.h"
 #include "worker.h"
-#include "kexlib/binfile.h"
+#include "framework/binfile.h"
 #include "framework/templates.h"
-#include "halffloat.h"
+#include "framework/halffloat.h"
 #include <map>
 #include <vector>
 #include <algorithm>
