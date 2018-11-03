@@ -219,9 +219,9 @@ kexVec3 kexBinFile::ReadVector()
 	return vec;
 }
 
-kexStr kexBinFile::ReadString()
+std::string kexBinFile::ReadString()
 {
-	kexStr str;
+	std::string str;
 	char c = 0;
 
 	while (1)
@@ -278,11 +278,11 @@ void kexBinFile::WriteVector(const kexVec3 &val)
 	WriteFloat(val.z);
 }
 
-void kexBinFile::WriteString(const kexStr &val)
+void kexBinFile::WriteString(const std::string &val)
 {
 	const char *c = val.c_str();
 
-	for (int i = 0; i < val.Length(); i++)
+	for (size_t i = 0; i < val.size(); i++)
 	{
 		Write8(c[i]);
 	}

@@ -162,7 +162,7 @@ public:
 	kexVec2                 Lerp(const kexVec2 &next, float movement) const;
 	kexVec2                 &Lerp(const kexVec2 &next, const float movement);
 	kexVec2                 &Lerp(const kexVec2 &start, const kexVec2 &next, float movement);
-	kexStr                  ToString() const;
+	//kexStr                  ToString() const;
 	float                   ToYaw() const;
 	float                   *ToFloatPtr();
 	kexVec3                 ToVec3();
@@ -230,7 +230,7 @@ public:
 	kexQuat                 ToQuat();
 	float                   ToYaw() const;
 	float                   ToPitch() const;
-	kexStr                  ToString() const;
+	//kexStr                  ToString() const;
 	float                   *ToFloatPtr();
 	kexVec2                 ToVec2();
 	kexVec2                 ToVec2() const;

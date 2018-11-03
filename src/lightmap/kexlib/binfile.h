@@ -28,6 +28,7 @@
 #pragma once
 
 #include "lightmap/kexlib/math/mathlib.h"
+#include <string>
 
 class kexBinFile
 {
@@ -47,14 +48,14 @@ public:
 	int Read32();
 	float ReadFloat();
 	kexVec3 ReadVector();
-	kexStr ReadString();
+	std::string ReadString();
 
 	void Write8(const byte val);
 	void Write16(const short val);
 	void Write32(const int val);
 	void WriteFloat(const float val);
 	void WriteVector(const kexVec3 &val);
-	void WriteString(const kexStr &val);
+	void WriteString(const std::string &val);
 
 	int GetOffsetValue(int id);
 	byte *GetOffset(int id, byte *subdata = NULL, int *count = NULL);

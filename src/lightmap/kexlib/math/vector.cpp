@@ -268,13 +268,14 @@ float kexVec2::ToYaw() const
 //
 // kexVec2::ToString
 //
-
+/*
 kexStr kexVec2::ToString() const
 {
 	kexStr str;
 	str = str + x + " " + y;
 	return str;
 }
+*/
 
 //
 // kexVec2::ToFloatPtr
@@ -774,13 +775,14 @@ float kexVec3::ToPitch() const
 //
 // kexVec3::ToString
 //
-
+/*
 kexStr kexVec3::ToString() const
 {
 	kexStr str;
 	str = str + x + " " + y + " " + z;
 	return str;
 }
+*/
 
 //
 // kexVec3::ToFloatPtr

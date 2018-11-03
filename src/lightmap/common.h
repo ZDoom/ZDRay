@@ -154,7 +154,6 @@ typedef union
 #endif
 
 #include "kexlib/memheap.h"
-#include "kexlib/kstring.h"
 #include "kexlib/math/mathlib.h"
 
 void Error(const char *error, ...);
