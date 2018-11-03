@@ -35,10 +35,9 @@ struct surfaceLightDef;
 class kexLightSurface
 {
 public:
-	kexLightSurface();
+	kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall);
 	~kexLightSurface();
 
-	void Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall);
 	void Subdivide(const float divide);
 	void CreateCenterOrigin();
 	float TraceSurface(FLevel *doomMap, const surface_t *surface, const kexVec3 &origin);

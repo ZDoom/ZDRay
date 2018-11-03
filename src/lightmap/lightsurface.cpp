@@ -36,21 +36,17 @@
 #include "level/level.h"
 #include "lightsurface.h"
 
-kexLightSurface::kexLightSurface()
-{
-}
-
-kexLightSurface::~kexLightSurface()
-{
-}
-
-void kexLightSurface::Init(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall)
+kexLightSurface::kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall)
 {
 	this->intensity = lightSurfaceDef.intensity;
 	this->distance = lightSurfaceDef.distance;
 	this->rgb = lightSurfaceDef.rgb;
 	this->surface = surface;
 	this->bWall = bWall;
+}
+
+kexLightSurface::~kexLightSurface()
+{
 }
 
 // Creates a single origin point if we're not intending on subdividing this light surface
