@@ -48,10 +48,11 @@ public:
 	const kexVec3 GetRGB() const { return rgb; }
 	const bool IsAWall() const { return bWall; }
 	const surface_t *Surface() const { return surface; }
-	const vertexBatch_t Origins() const { return origins; }
 
 private:
-	bool SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<vertexBatch_t*> &points);
+	typedef std::vector<kexVec3> vertexBatch_t;
+
+	bool SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points);
 	void Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
 
 	float distance;

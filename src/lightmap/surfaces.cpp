@@ -39,11 +39,10 @@
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
-std::vector<surface_t*> surfaces;
+std::vector<std::unique_ptr<surface_t>> surfaces;
 
 static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
-	surface_t *surf;
 	IntSector *front;
 	IntSector *back;
 
@@ -83,7 +82,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		{
 			if (side->bottomtexture[0] != '-')
 			{
-				surf = new surface_t();
+				auto surf = std::make_unique<surface_t>();
 				surf->numVerts = 4;
 				surf->verts.resize(4);
 
@@ -101,7 +100,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = side - &doomMap.Sides[0];
 
-				surfaces.push_back(surf);
+				surfaces.push_back(std::move(surf));
 			}
 
 			v1Bottom = v1BottomBack;
@@ -125,7 +124,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			if (side->toptexture[0] != '-' || bSky)
 			{
-				surf = new surface_t();
+				auto surf = std::make_unique<surface_t>();
 				surf->numVerts = 4;
 				surf->verts.resize(4);
 
@@ -144,7 +143,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->typeIndex = side - &doomMap.Sides[0];
 				surf->bSky = bSky;
 
-				surfaces.push_back(surf);
+				surfaces.push_back(std::move(surf));
 			}
 
 			v1Top = v1TopBack;
@@ -155,7 +154,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	// middle seg
 	if (back == nullptr)
 	{
-		surf = new surface_t();
+		auto surf = std::make_unique<surface_t>();
 		surf->numVerts = 4;
 		surf->verts.resize(4);
 
@@ -173,20 +172,15 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = side - &doomMap.Sides[0];
 
-		surfaces.push_back(surf);
+		surfaces.push_back(std::move(surf));
 	}
 }
 
 static void CreateSubsectorSurfaces(FLevel &doomMap)
 {
-	surface_t *surf;
-	IntSector *sector = nullptr;
-	int i;
-	int j;
-
 	printf("------------- Building subsector surfaces -------------\n");
 
-	for (i = 0; i < doomMap.NumGLSubsectors; i++)
+	for (int i = 0; i < doomMap.NumGLSubsectors; i++)
 	{
 		printf("subsectors: %i / %i\r", i + 1, doomMap.NumGLSubsectors);
 
@@ -197,7 +191,7 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 			continue;
 		}
 
-		sector = doomMap.GetSectorFromSubSector(sub);
+		IntSector *sector = doomMap.GetSectorFromSubSector(sub);
 
 		if (!sector)
 			continue;
@@ -205,12 +199,12 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		if (sector->controlsector)
 			continue;
 
-		surf = new surface_t();
+		auto surf = std::make_unique<surface_t>();
 		surf->numVerts = sub->numlines;
 		surf->verts.resize(surf->numVerts);
 
 		// floor verts
-		for (j = 0; j < surf->numVerts; j++)
+		for (int j = 0; j < surf->numVerts; j++)
 		{
 			MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
 			FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
@@ -224,9 +218,9 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		surf->type = ST_FLOOR;
 		surf->typeIndex = i;
 
-		surfaces.push_back(surf);
+		surfaces.push_back(std::move(surf));
 
-		surf = new surface_t();
+		surf = std::make_unique<surface_t>();
 		surf->numVerts = sub->numlines;
 		surf->verts.resize(surf->numVerts);
 
@@ -236,7 +230,7 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		}
 
 		// ceiling verts
-		for (j = 0; j < surf->numVerts; j++)
+		for (int j = 0; j < surf->numVerts; j++)
 		{
 			MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + j];
 			FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
@@ -250,7 +244,7 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		surf->type = ST_CEILING;
 		surf->typeIndex = i;
 
-		surfaces.push_back(surf);
+		surfaces.push_back(std::move(surf));
 	}
 
 	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
@@ -274,9 +268,7 @@ static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2
 
 void CreateSurfaces(FLevel &doomMap)
 {
-	for (size_t i = 0; i < surfaces.size(); i++)
-		delete surfaces[i];
-	surfaces = {};
+	surfaces.clear();
 
 	for (unsigned int i = 0; i < doomMap.Sectors.Size(); i++)
 		doomMap.Sectors[i].controlsector = false;
@@ -370,5 +362,5 @@ void CreateSurfaces(FLevel &doomMap)
 		}
 	}
 
-	doomMap.CollisionMesh.reset(new TriangleMeshShape(&doomMap.MeshVertices[0], doomMap.MeshVertices.Size(), &doomMap.MeshElements[0], doomMap.MeshElements.Size(), &doomMap.MeshSurfaces[0]));
+	doomMap.CollisionMesh = std::make_unique<TriangleMeshShape>(&doomMap.MeshVertices[0], doomMap.MeshVertices.Size(), &doomMap.MeshElements[0], doomMap.MeshElements.Size(), &doomMap.MeshSurfaces[0]);
 }

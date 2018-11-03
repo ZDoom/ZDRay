@@ -55,13 +55,6 @@ const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
 
 kexLightmapBuilder::kexLightmapBuilder()
 {
-	textureWidth = 128;
-	textureHeight = 128;
-	numTextures = 0;
-	samples = 16;
-	extraSamples = 2;
-	ambience = 0.0f;
-	tracedTexels = 0;
 }
 
 kexLightmapBuilder::~kexLightmapBuilder()
@@ -72,11 +65,8 @@ void kexLightmapBuilder::NewTexture()
 {
 	numTextures++;
 
-	allocBlocks.push_back(new int[textureWidth]);
-	memset(allocBlocks.back(), 0, sizeof(int) * textureWidth);
-
-	uint16_t *texture = new uint16_t[textureWidth * textureHeight * 3];
-	textures.push_back(texture);
+	allocBlocks.push_back(std::vector<int>(textureWidth));
+	textures.push_back(std::vector<uint16_t>(textureWidth * textureHeight * 3));
 }
 
 // Determines where to map a new block on to the lightmap texture
@@ -225,9 +215,9 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 	kexVec3 color(0.0f, 0.0f, 0.0f);
 
 	// check all thing lights
-	for (unsigned int i = 0; i < map->thingLights.Size(); i++)
+	for (size_t i = 0; i < map->thingLights.size(); i++)
 	{
-		thingLight_t *tl = map->thingLights[i];
+		thingLight_t *tl = map->thingLights[i].get();
 
 		float originZ;
 		if (!tl->bCeiling)
@@ -301,9 +291,9 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 	}
 
 	// trace against surface lights
-	for (unsigned int i = 0; i < map->lightSurfaces.Size(); ++i)
+	for (size_t i = 0; i < map->lightSurfaces.size(); ++i)
 	{
-		kexLightSurface *surfaceLight = map->lightSurfaces[i];
+		kexLightSurface *surfaceLight = map->lightSurfaces[i].get();
 
 		float attenuation = surfaceLight->TraceSurface(map, surface, origin);
 		if (attenuation > 0.0f)
@@ -386,7 +376,7 @@ void kexLightmapBuilder::BuildSurfaceParams(surface_t *surface)
 		height = textureHeight;
 	}
 
-	surface->lightmapCoords = new float[surface->numVerts * 2];
+	surface->lightmapCoords.resize(surface->numVerts * 2);
 
 	surface->textureCoords[0] = tCoords[0];
 	surface->textureCoords[1] = tCoords[1];
@@ -523,7 +513,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 	}
 
 	std::unique_lock<std::mutex> lock(mutex);
-	currentTexture = textures[surface->lightmapNum];
+	currentTexture = textures[surface->lightmapNum].data();
 	lock.unlock();
 
 	// store results to lightmap texture
@@ -553,8 +543,8 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 		return;
 	}
 
-	BuildSurfaceParams(surfaces[surfid]);
-	TraceSurface(surfaces[surfid]);
+	BuildSurfaceParams(surfaces[surfid].get());
+	TraceSurface(surfaces[surfid].get());
 
 	std::unique_lock<std::mutex> lock(mutex);
 
@@ -731,7 +721,7 @@ void kexLightmapBuilder::WriteMeshToOBJ()
 	std::map<int, std::vector<surface_t*>> sortedSurfs;
 
 	for (unsigned int i = 0; i < surfaces.size(); i++)
-		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i]);
+		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i].get());
 
 	for (const auto &it : sortedSurfs)
 	{

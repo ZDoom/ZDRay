@@ -4,8 +4,6 @@
 #include <vector>
 #include <thread>
 #include <algorithm>
-#undef min
-#undef max
 
 extern int NumThreads;
 
@@ -26,7 +24,8 @@ void kexWorker::RunJob(int count, std::function<void(int)> callback)
 	{
 		threads.push_back(std::thread([=]() {
 
-			colorSamples = new kexVec3[1024 * 1024];
+			std::vector<kexVec3> samples(1024 * 1024);
+			colorSamples = samples.data();
 
 			int start = threadIndex * count / numThreads;
 			int end = std::min((threadIndex + 1) * count / numThreads, count);
@@ -34,8 +33,6 @@ void kexWorker::RunJob(int count, std::function<void(int)> callback)
 			{
 				callback(i);
 			}
-
-			delete[] colorSamples;
 
 		}));
 	}

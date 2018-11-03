@@ -363,12 +363,11 @@ struct FLevel
 
 	std::vector<bool> bSkySectors;
 
-	TArray<thingLight_t*> thingLights;
-	TArray<kexLightSurface*> lightSurfaces;
+	std::vector<std::unique_ptr<thingLight_t>> thingLights;
+	std::vector<std::unique_ptr<kexLightSurface>> lightSurfaces;
 
 	void SetupDlight();
 	void CreateLights();
-	void CleanupThingLights();
 
 	LevelTraceHit Trace(const kexVec3 &startVec, const kexVec3 &endVec);
 

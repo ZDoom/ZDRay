@@ -28,6 +28,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 struct MapSubsectorEx;
 
@@ -40,8 +41,6 @@ enum surfaceType_t
 	ST_CEILING,
 	ST_FLOOR
 };
-
-typedef std::vector<kexVec3> vertexBatch_t;
 
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
@@ -58,13 +57,13 @@ struct surface_t
 	kexBBox bounds;
 	int numVerts;
 	std::vector<kexVec3> verts;
-	float *lightmapCoords;
+	std::vector<float> lightmapCoords;
 	surfaceType_t type;
 	int typeIndex;
 	bool bSky;
 };
 
-extern std::vector<surface_t*> surfaces;
+extern std::vector<std::unique_ptr<surface_t>> surfaces;
 
 struct FLevel;
 

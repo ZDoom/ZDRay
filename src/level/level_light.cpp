@@ -170,14 +170,7 @@ FloatVertex FLevel::GetSegVertex(int index)
 
 void FLevel::CreateLights()
 {
-	thingLight_t *thingLight;
-	size_t j;
-	int numSurfLights;
-	kexVec2 pt;
-
-	//
 	// add lights from thing sources
-	//
 	for (int i = 0; i < (int)Things.Size(); ++i)
 	{
 		IntThing *thing = &Things[i];
@@ -218,7 +211,7 @@ void FLevel::CreateLights()
 			int x = thing->x >> FRACBITS;
 			int y = thing->y >> FRACBITS;
 
-			thingLight = new thingLight_t();
+			auto thingLight = std::make_unique<thingLight_t>();
 
 			thingLight->mapThing = thing;
 			thingLight->rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
@@ -234,20 +227,17 @@ void FLevel::CreateLights()
 			thingLight->sector = GetSectorFromSubSector(thingLight->ssect);
 
 			thingLight->origin.Set(x, y);
-			thingLights.Push(thingLight);
+			thingLights.push_back(std::move(thingLight));
 		}
 	}
 
-	printf("Thing lights: %i\n", thingLights.Size());
+	printf("Thing lights: %i\n", (int)thingLights.size());
 
-	numSurfLights = 0;
-
-	//
 	// add surface lights
-	//
-	for (j = 0; j < surfaces.size(); ++j)
+	int numSurfLights = 0;
+	for (size_t j = 0; j < surfaces.size(); ++j)
 	{
-		surface_t *surface = surfaces[j];
+		surface_t *surface = surfaces[j].get();
 
 		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
 		{
@@ -284,11 +274,11 @@ void FLevel::CreateLights()
 					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
-					kexLightSurface *lightSurface = new kexLightSurface();
+					auto lightSurface = std::make_unique<kexLightSurface>();
 					lightSurface->Init(desc, surface, true);
 					lightSurface->Subdivide(16);
 					//lightSurface->CreateCenterOrigin();
-					lightSurfaces.Push(lightSurface);
+					lightSurfaces.push_back(std::move(lightSurface));
 					numSurfLights++;
 				}
 			}
@@ -348,10 +338,10 @@ void FLevel::CreateLights()
 					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
-					kexLightSurface *lightSurface = new kexLightSurface();
+					auto lightSurface = std::make_unique<kexLightSurface>();
 					lightSurface->Init(desc, surface, false);
 					lightSurface->Subdivide(16);
-					lightSurfaces.Push(lightSurface);
+					lightSurfaces.push_back(std::move(lightSurface));
 					numSurfLights++;
 				}
 			}
@@ -359,14 +349,6 @@ void FLevel::CreateLights()
 	}
 
 	printf("Surface lights: %i\n", numSurfLights);
-}
-
-void FLevel::CleanupThingLights()
-{
-	for (unsigned int i = 0; i < thingLights.Size(); i++)
-	{
-		delete thingLights[i];
-	}
 }
 
 LevelTraceHit FLevel::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
@@ -377,6 +359,6 @@ LevelTraceHit FLevel::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
 	trace.start = startVec;
 	trace.end = endVec;
 	trace.fraction = hit.fraction;
-	trace.hitSurface = (trace.fraction < 1.0f) ? surfaces[hit.surface] : nullptr;
+	trace.hitSurface = (trace.fraction < 1.0f) ? surfaces[hit.surface].get() : nullptr;
 	return trace;
 }

@@ -19,6 +19,7 @@
 */
 
 #include "level/level.h"
+#include "lightmap/lightsurface.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
@@ -53,7 +54,6 @@ FLevel::FLevel ()
 
 FLevel::~FLevel ()
 {
-	CleanupThingLights();
 	if (Vertices)		delete[] Vertices;
 	if (Subsectors)		delete[] Subsectors;
 	if (Segs)			delete[] Segs;

@@ -150,13 +150,11 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
 }
 
 // Recursively divides the surface
-bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<vertexBatch_t*> &points)
+bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points)
 {
 	kexBBox bounds;
 	kexVec3 splitNormal;
 	float dist;
-	vertexBatch_t *frontPoints;
-	vertexBatch_t *backPoints;
 
 	// get bounds from current set of points
 	for (unsigned int i = 0; i < surfPoints.size(); ++i)
@@ -174,28 +172,20 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 
 			dist = (bounds.max[i] + bounds.min[i]) * 0.5f;
 
-			frontPoints = new vertexBatch_t;
-			backPoints = new vertexBatch_t;
+			auto frontPoints = std::make_unique<vertexBatch_t>();
+			auto backPoints = std::make_unique<vertexBatch_t>();
 
 			// start clipping
-			Clip(surfPoints, splitNormal, dist, frontPoints, backPoints);
+			Clip(surfPoints, splitNormal, dist, frontPoints.get(), backPoints.get());
 
 			if (!SubdivideRecursion(*frontPoints, divide, points))
 			{
-				points.push_back(frontPoints);
-			}
-			else
-			{
-				delete frontPoints;
+				points.push_back(std::move(frontPoints));
 			}
 
 			if (!SubdivideRecursion(*backPoints, divide, points))
 			{
-				points.push_back(backPoints);
-			}
-			else
-			{
-				delete backPoints;
+				points.push_back(std::move(backPoints));
 			}
 
 			return true;
@@ -207,7 +197,7 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 
 void kexLightSurface::Subdivide(const float divide)
 {
-	std::vector<vertexBatch_t*> points;
+	std::vector<std::unique_ptr<vertexBatch_t>> points;
 	vertexBatch_t surfPoints;
 
 	for (int i = 0; i < surface->numVerts; ++i)
@@ -221,7 +211,7 @@ void kexLightSurface::Subdivide(const float divide)
 	// creating a origin point based on the center of that group
 	for (size_t i = 0; i < points.size(); ++i)
 	{
-		vertexBatch_t *vb = points[i];
+		vertexBatch_t *vb = points[i].get();
 		kexVec3 center;
 
 		for (unsigned int j = 0; j < vb->size(); ++j)
@@ -230,13 +220,6 @@ void kexLightSurface::Subdivide(const float divide)
 		}
 
 		origins.push_back(center / (float)vb->size());
-	}
-
-	for (size_t i = 0; i < points.size(); ++i)
-	{
-		vertexBatch_t *vb = points[i];
-
-		delete vb;
 	}
 }
 

@@ -48,10 +48,10 @@ public:
 	void WriteMeshToOBJ();
 	void AddLightmapLump(FWadWriter &wadFile);
 
-	int samples;
-	float ambience;
-	int textureWidth;
-	int textureHeight;
+	int samples = 16;
+	float ambience = 0.0f;
+	int textureWidth = 128;
+	int textureHeight = 128;
 
 	static const kexVec3 gridSize;
 
@@ -63,11 +63,11 @@ private:
 	bool EmitFromCeiling(const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
 
 	FLevel *map;
-	std::vector<uint16_t*> textures;
-	std::vector<int*> allocBlocks;
-	int numTextures;
-	int extraSamples;
-	int tracedTexels;
+	std::vector<std::vector<uint16_t>> textures;
+	std::vector<std::vector<int>> allocBlocks;
+	int numTextures = 0;
+	int extraSamples = 2;
+	int tracedTexels = 0;
 
 	std::mutex mutex;
 	int processed = 0;
