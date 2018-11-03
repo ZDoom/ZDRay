@@ -34,7 +34,6 @@
 
 #include "math/mathlib.h"
 #include "level/level.h"
-#include "trace.h"
 #include "lightsurface.h"
 
 kexLightSurface::kexLightSurface()
@@ -241,7 +240,7 @@ void kexLightSurface::Subdivide(const float divide)
 	}
 }
 
-float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surface_t *surf, const kexVec3 &origin)
+float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const kexVec3 &origin)
 {
 	// light surface will always be fullbright
 	if (surf == surface)
@@ -302,7 +301,7 @@ float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surf
 
 		// trace the origin to the center of the light surface. nudge by the normals in
 		// case the start/end points are directly on or inside the surface
-		trace.Trace(center + lnormal, origin + normal);
+		LevelTraceHit trace = map->Trace(center + lnormal, origin + normal);
 
 		if (trace.fraction < 1.0f)
 		{

@@ -150,7 +150,6 @@ set( SOURCES
 	src/lightmap/lightmap.cpp
 	src/lightmap/lightsurface.cpp
 	src/lightmap/surfaces.cpp
-	src/lightmap/trace.cpp
 	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
 	src/math/angle.cpp
@@ -183,7 +182,6 @@ set( HEADERS
 	src/lightmap/lightmap.h
 	src/lightmap/lightsurface.h
 	src/lightmap/surfaces.h
-	src/lightmap/trace.h
 	src/lightmap/worker.h
 	src/lightmap/collision.h
 	src/math/mathlib.h

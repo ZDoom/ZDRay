@@ -368,3 +368,15 @@ void FLevel::CleanupThingLights()
 		delete thingLights[i];
 	}
 }
+
+LevelTraceHit FLevel::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
+{
+	TraceHit hit = TriangleMeshShape::find_first_hit(CollisionMesh.get(), startVec, endVec);
+
+	LevelTraceHit trace;
+	trace.start = startVec;
+	trace.end = endVec;
+	trace.fraction = hit.fraction;
+	trace.hitSurface = (trace.fraction < 1.0f) ? surfaces[hit.surface] : nullptr;
+	return trace;
+}

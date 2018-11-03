@@ -32,7 +32,6 @@
 
 #define LIGHTMAP_MAX_SIZE  1024
 
-class kexTrace;
 class FWadWriter;
 
 class kexLightmapBuilder
@@ -60,8 +59,8 @@ private:
 	void NewTexture();
 	bool MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
 	kexBBox GetBoundsFromSurface(const surface_t *surface);
-	kexVec3 LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface);
-	bool EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
+	kexVec3 LightTexelSample(const kexVec3 &origin, surface_t *surface);
+	bool EmitFromCeiling(const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
 
 	FLevel *map;
 	std::vector<uint16_t*> textures;

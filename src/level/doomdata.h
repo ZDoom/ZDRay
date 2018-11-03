@@ -305,6 +305,14 @@ enum mapFlags_t
 #define NO_SIDE_INDEX           -1
 #define NO_LINE_INDEX           0xffffffff
 
+struct LevelTraceHit
+{
+	kexVec3 start;
+	kexVec3 end;
+	surface_t *hitSurface;
+	float fraction;
+};
+
 struct FLevel
 {
 	FLevel ();
@@ -361,6 +369,8 @@ struct FLevel
 	void SetupDlight();
 	void CreateLights();
 	void CleanupThingLights();
+
+	LevelTraceHit Trace(const kexVec3 &startVec, const kexVec3 &endVec);
 
 	const kexVec3 &GetSunColor() const;
 	const kexVec3 &GetSunDirection() const;

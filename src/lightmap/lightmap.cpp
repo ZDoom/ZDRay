@@ -32,7 +32,6 @@
 
 #include "math/mathlib.h"
 #include "surfaces.h"
-#include "trace.h"
 #include "level/level.h"
 #include "lightmap.h"
 #include "lightsurface.h"
@@ -174,7 +173,7 @@ kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 }
 
 // Traces to the ceiling surface. Will emit light if the surface that was traced is a sky
-bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
+bool kexLightmapBuilder::EmitFromCeiling(const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
 {
 	float attenuation = normal.Dot(map->GetSunDirection());
 
@@ -184,7 +183,7 @@ bool kexLightmapBuilder::EmitFromCeiling(kexTrace &trace, const surface_t *surfa
 		return false;
 	}
 
-	trace.Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
+	LevelTraceHit trace = map->Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
 
 	if (trace.fraction == 1.0f)
 	{
@@ -220,7 +219,7 @@ static float radians(float degrees)
 }
 
 // Traces a line from the texel's origin to the sunlight direction and against all nearby thing lights
-kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &origin, surface_t *surface)
+kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *surface)
 {
 	kexPlane plane = surface->plane;
 	kexVec3 color(0.0f, 0.0f, 0.0f);
@@ -275,7 +274,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 			}
 		}
 
-		trace.Trace(lightOrigin, origin);
+		LevelTraceHit trace = map->Trace(lightOrigin, origin);
 
 		if (trace.fraction != 1)
 		{
@@ -297,7 +296,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 	if (surface->type != ST_CEILING)
 	{
 		// see if it's exposed to sunlight
-		if (EmitFromCeiling(trace, surface, origin, plane.Normal(), color))
+		if (EmitFromCeiling(surface, origin, plane.Normal(), color))
 			tracedTexels++;
 	}
 
@@ -306,7 +305,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(kexTrace &trace, const kexVec3 &ori
 	{
 		kexLightSurface *surfaceLight = map->lightSurfaces[i];
 
-		float attenuation = surfaceLight->TraceSurface(map, trace, surface, origin);
+		float attenuation = surfaceLight->TraceSurface(map, surface, origin);
 		if (attenuation > 0.0f)
 		{
 			color += surfaceLight->GetRGB() * surfaceLight->Intensity() * attenuation;
@@ -424,11 +423,8 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 	kexVec3 tDelta;
 	int i;
 	int j;
-	kexTrace trace;
 	uint16_t *currentTexture;
 	bool bShouldLookupTexture = false;
-
-	trace.Init(*map);
 
 	sampleWidth = surface->lightmapDims[0];
 	sampleHeight = surface->lightmapDims[1];
@@ -463,7 +459,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 					(surface->lightmapSteps[0] * multisamplePos.x) +
 					(surface->lightmapSteps[1] * multisamplePos.y);
 
-				c += LightTexelSample(trace, pos, surface);
+				c += LightTexelSample(pos, surface);
 			}
 
 			c /= multisampleCount;
