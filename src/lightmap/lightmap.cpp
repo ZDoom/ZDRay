@@ -463,7 +463,7 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 			}
 
 			kexMath::Clamp(c, 0, 1);
-			colorSamples[i * 1024 + j] = c;
+			colorSamples[i * LIGHTMAP_MAX_SIZE + j] = c;
 		}
 	}
 
@@ -525,9 +525,9 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 			int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
 
 			// convert RGB to bytes
-			currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * 1024 + j].x);
-			currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * 1024 + j].y);
-			currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * 1024 + j].z);
+			currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * LIGHTMAP_MAX_SIZE + j].x);
+			currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * LIGHTMAP_MAX_SIZE + j].y);
+			currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * LIGHTMAP_MAX_SIZE + j].z);
 		}
 	}
 }

@@ -1,6 +1,7 @@
 
 #include "worker.h"
 #include "math/mathlib.h"
+#include "lightmap.h"
 #include <vector>
 #include <thread>
 #include <algorithm>
@@ -24,7 +25,7 @@ void kexWorker::RunJob(int count, std::function<void(int)> callback)
 	{
 		threads.push_back(std::thread([=]() {
 
-			std::vector<kexVec3> samples(1024 * 1024);
+			std::vector<kexVec3> samples(LIGHTMAP_MAX_SIZE * LIGHTMAP_MAX_SIZE);
 			colorSamples = samples.data();
 
 			int start = threadIndex * count / numThreads;
