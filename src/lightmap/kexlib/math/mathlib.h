@@ -500,7 +500,7 @@ public:
 // kexMath::Sin
 //
 
-d_inline float kexMath::Sin(float x)
+inline float kexMath::Sin(float x)
 {
 	return sinf(x);
 }
@@ -509,7 +509,7 @@ d_inline float kexMath::Sin(float x)
 // kexMath::Cos
 //
 
-d_inline float kexMath::Cos(float x)
+inline float kexMath::Cos(float x)
 {
 	return cosf(x);
 }
@@ -518,7 +518,7 @@ d_inline float kexMath::Cos(float x)
 // kexMath::Tan
 //
 
-d_inline float kexMath::Tan(float x)
+inline float kexMath::Tan(float x)
 {
 	return tanf(x);
 }
@@ -527,7 +527,7 @@ d_inline float kexMath::Tan(float x)
 // kexMath::ATan2
 //
 
-d_inline float kexMath::ATan2(float x, float y)
+inline float kexMath::ATan2(float x, float y)
 {
 	return atan2f(x, y);
 }
@@ -536,7 +536,7 @@ d_inline float kexMath::ATan2(float x, float y)
 // kexMath::ACos
 //
 
-d_inline float kexMath::ACos(float x)
+inline float kexMath::ACos(float x)
 {
 	return acosf(x);
 }
@@ -545,7 +545,7 @@ d_inline float kexMath::ACos(float x)
 // kexMath::Sqrt
 //
 
-d_inline float kexMath::Sqrt(float x)
+inline float kexMath::Sqrt(float x)
 {
 	return x * InvSqrt(x);
 }
@@ -554,7 +554,7 @@ d_inline float kexMath::Sqrt(float x)
 // kexMath::Pow
 //
 
-d_inline float kexMath::Pow(float x, float y)
+inline float kexMath::Pow(float x, float y)
 {
 	return powf(x, y);
 }
@@ -563,7 +563,7 @@ d_inline float kexMath::Pow(float x, float y)
 // kexMath::Log
 //
 
-d_inline float kexMath::Log(float x)
+inline float kexMath::Log(float x)
 {
 	return logf(x);
 }
@@ -572,7 +572,7 @@ d_inline float kexMath::Log(float x)
 // kexMath::Floor
 //
 
-d_inline float kexMath::Floor(float x)
+inline float kexMath::Floor(float x)
 {
 	return floorf(x);
 }
@@ -581,7 +581,7 @@ d_inline float kexMath::Floor(float x)
 // kexMath::Ceil
 //
 
-d_inline float kexMath::Ceil(float x)
+inline float kexMath::Ceil(float x)
 {
 	return ceilf(x);
 }
@@ -590,7 +590,7 @@ d_inline float kexMath::Ceil(float x)
 // kexMath::Deg2Rad
 //
 
-d_inline float kexMath::Deg2Rad(float x)
+inline float kexMath::Deg2Rad(float x)
 {
 	return DEG2RAD(x);
 }
@@ -599,7 +599,7 @@ d_inline float kexMath::Deg2Rad(float x)
 // kexMath::Rad2Deg
 //
 
-d_inline float kexMath::Rad2Deg(float x)
+inline float kexMath::Rad2Deg(float x)
 {
 	return RAD2DEG(x);
 }
@@ -608,7 +608,7 @@ d_inline float kexMath::Rad2Deg(float x)
 // kexMath::Abs
 //
 
-d_inline int kexMath::Abs(int x)
+inline int kexMath::Abs(int x)
 {
 	int y = x >> 31;
 	return ((x ^ y) - y);
@@ -618,7 +618,7 @@ d_inline int kexMath::Abs(int x)
 // kexMath::Fabs
 //
 
-d_inline float kexMath::Fabs(float x)
+inline float kexMath::Fabs(float x)
 {
 	int tmp = *reinterpret_cast<int*>(&x);
 	tmp &= 0x7FFFFFFF;
@@ -629,7 +629,7 @@ d_inline float kexMath::Fabs(float x)
 // kexMath::InvSqrt
 //
 
-d_inline float kexMath::InvSqrt(float x)
+inline float kexMath::InvSqrt(float x)
 {
 	unsigned int i;
 	float r;
@@ -648,7 +648,7 @@ d_inline float kexMath::InvSqrt(float x)
 // kexMath::Clamp
 //
 
-d_inline void kexMath::Clamp(float &f, const float min, const float max)
+inline void kexMath::Clamp(float &f, const float min, const float max)
 {
 	if (f < min) { f = min; }
 	if (f > max) { f = max; }
@@ -658,7 +658,7 @@ d_inline void kexMath::Clamp(float &f, const float min, const float max)
 // kexMath::Clamp
 //
 
-d_inline void kexMath::Clamp(uint8_t &b, const uint8_t min, const uint8_t max)
+inline void kexMath::Clamp(uint8_t &b, const uint8_t min, const uint8_t max)
 {
 	if (b < min) { b = min; }
 	if (b > max) { b = max; }
@@ -668,7 +668,7 @@ d_inline void kexMath::Clamp(uint8_t &b, const uint8_t min, const uint8_t max)
 // kexMath::Clamp
 //
 
-d_inline void kexMath::Clamp(int &i, const int min, const int max)
+inline void kexMath::Clamp(int &i, const int min, const int max)
 {
 	if (i < min) { i = min; }
 	if (i > max) { i = max; }
@@ -678,7 +678,7 @@ d_inline void kexMath::Clamp(int &i, const int min, const int max)
 // kexMath::Clamp
 //
 
-d_inline void kexMath::Clamp(kexVec3 &v, const float min, const float max)
+inline void kexMath::Clamp(kexVec3 &v, const float min, const float max)
 {
 	if (v.x < min) { v.x = min; }
 	if (v.x > max) { v.x = max; }

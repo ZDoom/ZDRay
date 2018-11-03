@@ -42,12 +42,4 @@
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
-#if defined(__GNUC__) || defined(__APPLE__)
-#define d_inline __inline__
-#elif defined(_MSC_VER)
-#define d_inline __forceinline
-#else
-#define d_inline
-#endif
-
 #include "kexlib/math/mathlib.h"
