@@ -94,10 +94,10 @@ public:
 	void StartWritingLump (const char *name);
 	void AddToLump (const void *data, int len);
 
-	FWadWriter &operator << (BYTE);
-	FWadWriter &operator << (WORD);
-	FWadWriter &operator << (SWORD);
-	FWadWriter &operator << (DWORD);
+	FWadWriter &operator << (uint8_t);
+	FWadWriter &operator << (uint16_t);
+	FWadWriter &operator << (int16_t);
+	FWadWriter &operator << (uint32_t);
 	FWadWriter &operator << (fixed_t);
 
 private:

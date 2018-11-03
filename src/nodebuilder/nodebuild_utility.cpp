@@ -108,7 +108,7 @@ void FNodeBuilder::MakeSegsFromSides ()
 int FNodeBuilder::CreateSeg (int linenum, int sidenum)
 {
 	FPrivSeg seg;
-	DWORD backside;
+	uint32_t backside;
 	int segnum;
 
 	seg.next = DWORD_MAX;
@@ -287,7 +287,7 @@ void FNodeBuilder::FindPolyContainers (TArray<FPolyStart> &spots, TArray<FPolySt
 				// Scan right for the seg closest to the polyobject's center after it
 				// gets moved to its start spot.
 				fixed_t closestdist = FIXED_MAX;
-				DWORD closestseg = 0;
+				uint32_t closestseg = 0;
 
 				P(Printf ("start %d,%d -- center %d, %d\n", spot->x>>16, spot->y>>16, center.x>>16, center.y>>16));
 
@@ -333,7 +333,7 @@ void FNodeBuilder::FindPolyContainers (TArray<FPolyStart> &spots, TArray<FPolySt
 	}
 }
 
-int FNodeBuilder::MarkLoop (DWORD firstseg, int loopnum)
+int FNodeBuilder::MarkLoop (uint32_t firstseg, int loopnum)
 {
 	int seg;
 	int sec = Segs[firstseg].frontsector;
@@ -355,8 +355,8 @@ int FNodeBuilder::MarkLoop (DWORD firstseg, int loopnum)
 				Vertices[s1->v1].x>>16, Vertices[s1->v1].y>>16,
 				Vertices[s1->v2].x>>16, Vertices[s1->v2].y>>16));
 
-		DWORD bestseg = DWORD_MAX;
-		DWORD tryseg = Vertices[s1->v2].segs;
+		uint32_t bestseg = DWORD_MAX;
+		uint32_t tryseg = Vertices[s1->v2].segs;
 		angle_t bestang = ANGLE_MAX;
 		angle_t ang1 = s1->angle;
 

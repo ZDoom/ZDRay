@@ -45,22 +45,14 @@ extern int				 SSELevel;
 #define FRACBITS		16
 
 typedef int fixed_t;
-typedef unsigned char BYTE;
-typedef unsigned short WORD;
-typedef   signed short SWORD;
-#ifdef _WIN32
-typedef unsigned long DWORD;
-#else
-typedef uint32_t DWORD;
-#endif
 typedef uint32_t angle_t;
 
 angle_t PointToAngle (fixed_t x, fixed_t y);
 
-static const WORD NO_MAP_INDEX = 0xffff;
-static const DWORD NO_INDEX = 0xffffffff;
+static const uint16_t NO_MAP_INDEX = 0xffff;
+static const uint32_t NO_INDEX = 0xffffffff;
 static const angle_t ANGLE_MAX = 0xffffffff;
-static const DWORD DWORD_MAX = 0xffffffff;
+static const uint32_t DWORD_MAX = 0xffffffff;
 static const angle_t ANGLE_180 = (1u<<31);
 static const angle_t ANGLE_EPSILON = 5000;
 

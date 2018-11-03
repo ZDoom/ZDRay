@@ -37,7 +37,7 @@ struct MapSideDef
 	char	toptexture[8];
 	char	bottomtexture[8];
 	char	midtexture[8];
-	WORD	sector;
+	uint16_t	sector;
 };
 
 struct IntLineDef;
@@ -60,32 +60,32 @@ struct IntSideDef
 
 struct MapLineDef
 {
-	WORD	v1;
-	WORD	v2;
+	uint16_t	v1;
+	uint16_t	v2;
 	short	flags;
 	short	special;
 	short	tag;
-	WORD	sidenum[2];
+	uint16_t	sidenum[2];
 };
 
 struct MapLineDef2
 {
-	WORD	v1;
-	WORD	v2;
+	uint16_t	v1;
+	uint16_t	v2;
 	short	flags;
 	unsigned char	special;
 	unsigned char	args[5];
-	WORD	sidenum[2];
+	uint16_t	sidenum[2];
 };
 
 struct IntLineDef
 {
-	DWORD v1;
-	DWORD v2;
+	uint32_t v1;
+	uint32_t v2;
 	int flags;
 	int special;
 	int args[5];
-	DWORD sidenum[2];
+	uint32_t sidenum[2];
 
 	TArray<UDMFKey> props;
 };
@@ -120,52 +120,52 @@ struct IntSector
 
 struct MapSubsector
 {
-	WORD	numlines;
-	WORD	firstline;
+	uint16_t	numlines;
+	uint16_t	firstline;
 };
 
 struct MapSubsectorEx
 {
-	DWORD	numlines;
-	DWORD	firstline;
+	uint32_t	numlines;
+	uint32_t	firstline;
 };
 
 struct MapSeg
 {
-	WORD	v1;
-	WORD	v2;
-	WORD	angle;
-	WORD	linedef;
+	uint16_t	v1;
+	uint16_t	v2;
+	uint16_t	angle;
+	uint16_t	linedef;
 	short	side;
 	short	offset;
 };
 
 struct MapSegEx
 {
-	DWORD	v1;
-	DWORD	v2;
-	WORD	angle;
-	WORD	linedef;
+	uint32_t	v1;
+	uint32_t	v2;
+	uint16_t	angle;
+	uint16_t	linedef;
 	short	side;
 	short	offset;
 };
 
 struct MapSegGL
 {
-	WORD	v1;
-	WORD	v2;
-	WORD	linedef;
-	WORD	side;
-	WORD	partner;
+	uint16_t	v1;
+	uint16_t	v2;
+	uint16_t	linedef;
+	uint16_t	side;
+	uint16_t	partner;
 };
 
 struct MapSegGLEx
 {
-	DWORD	v1;
-	DWORD	v2;
-	DWORD	linedef;
-	WORD	side;
-	DWORD	partner;
+	uint32_t	v1;
+	uint32_t	v2;
+	uint32_t	linedef;
+	uint16_t	side;
+	uint32_t	partner;
 };
 
 #define NF_SUBSECTOR	0x8000
@@ -175,21 +175,21 @@ struct MapNode
 {
 	short 	x,y,dx,dy;
 	short 	bbox[2][4];
-	WORD	children[2];
+	uint16_t	children[2];
 };
 
 struct MapNodeExO
 {
 	short	x,y,dx,dy;
 	short	bbox[2][4];
-	DWORD	children[2];
+	uint32_t	children[2];
 };
 
 struct MapNodeEx
 {
 	int		x,y,dx,dy;
 	short	bbox[2][4];
-	DWORD	children[2];
+	uint32_t	children[2];
 };
 
 struct MapThing
@@ -319,18 +319,18 @@ struct FLevel
 	MapSubsectorEx *Subsectors;	int NumSubsectors;
 	MapSegEx *Segs;				int NumSegs;
 	MapNodeEx *Nodes;			int NumNodes;
-	WORD *Blockmap;				int BlockmapSize;
-	BYTE *Reject;				int RejectSize;
+	uint16_t *Blockmap;				int BlockmapSize;
+	uint8_t *Reject;				int RejectSize;
 
 	MapSubsectorEx *GLSubsectors;	int NumGLSubsectors;
 	MapSegGLEx *GLSegs;				int NumGLSegs;
 	MapNodeEx *GLNodes;				int NumGLNodes;
 	WideVertex *GLVertices;			int NumGLVertices;
-	BYTE *GLPVS;					int GLPVSSize;
+	uint8_t *GLPVS;					int GLPVSSize;
 
 	int NumOrgVerts;
 
-	DWORD *OrgSectorMap;			int NumOrgSectors;
+	uint32_t *OrgSectorMap;			int NumOrgSectors;
 
 	fixed_t MinX, MinY, MaxX, MaxY;
 

@@ -234,7 +234,7 @@ static TArray<short> DesiredHistory;
 
 static void DrawSubsector (HDC dc, int ssec)
 {
-	for (DWORD i = 0; i < Level->Subsectors[ssec].numlines; ++i)
+	for (uint32_t i = 0; i < Level->Subsectors[ssec].numlines; ++i)
 	{
 		int seg = Level->Subsectors[ssec].firstline + i;
 		if (Level->Segs[seg].side == 0)
@@ -256,7 +256,7 @@ static void DrawSubsectorGL (HDC dc, int ssec, HPEN miniPen, HPEN badPen)
 
 	seg = Level->GLSubsectors[ssec].firstline;
 	MoveToEx (dc, GLVERTX(Level->GLSegs[seg].v1), GLVERTY(Level->GLSegs[seg].v1), NULL);
-	for (DWORD i = 0; i < Level->GLSubsectors[ssec].numlines; ++i)
+	for (uint32_t i = 0; i < Level->GLSubsectors[ssec].numlines; ++i)
 	{
 		HPEN oldPen = NULL;
 		seg = Level->GLSubsectors[ssec].firstline + i;

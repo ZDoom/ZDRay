@@ -415,10 +415,10 @@ void FWadWriter::WriteLump (const char *name, const void *data, int len)
 
 void FWadWriter::CopyLump (FWadReader &wad, int lump)
 {
-	BYTE *data;
+	uint8_t *data;
 	int size;
 
-	ReadLump<BYTE> (wad, lump, data, size);
+	ReadLump<uint8_t> (wad, lump, data, size);
 	if (data != NULL)
 	{
 		WriteLump (wad.LumpName (lump), data, size);
@@ -449,37 +449,37 @@ void FWadWriter::SafeWrite (const void *buffer, size_t size)
 	}
 }
 
-FWadWriter &FWadWriter::operator << (BYTE val)
+FWadWriter &FWadWriter::operator << (uint8_t val)
 {
 	AddToLump (&val, 1);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (WORD val)
+FWadWriter &FWadWriter::operator << (uint16_t val)
 {
 	val = LittleShort(val);
-	AddToLump ((BYTE *)&val, 2);
+	AddToLump ((uint8_t *)&val, 2);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (SWORD val)
+FWadWriter &FWadWriter::operator << (int16_t val)
 {
 	val = LittleShort(val);
-	AddToLump ((BYTE *)&val, 2);
+	AddToLump ((uint8_t *)&val, 2);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (DWORD val)
+FWadWriter &FWadWriter::operator << (uint32_t val)
 {
 	val = LittleLong(val);
-	AddToLump ((BYTE *)&val, 4);
+	AddToLump ((uint8_t *)&val, 4);
 	return *this;
 }
 
 FWadWriter &FWadWriter::operator << (fixed_t val)
 {
 	val = LittleLong(val);
-	AddToLump ((BYTE *)&val, 4);
+	AddToLump ((uint8_t *)&val, 4);
 	return *this;
 }
 

@@ -317,7 +317,7 @@ int FNodeBuilder::OutputDegenerateSubsector (TArray<MapSegGLEx> &segs, int subse
 	return count;
 }
 
-DWORD FNodeBuilder::PushGLSeg (TArray<MapSegGLEx> &segs, const FPrivSeg *seg)
+uint32_t FNodeBuilder::PushGLSeg (TArray<MapSegGLEx> &segs, const FPrivSeg *seg)
 {
 	MapSegGLEx newseg;
 

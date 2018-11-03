@@ -9,13 +9,13 @@ class FBlockmapBuilder
 {
 public:
 	FBlockmapBuilder (FLevel &level);
-	WORD *GetBlockmap (int &size);
+	uint16_t *GetBlockmap (int &size);
 
 private:
 	FLevel &Level;
-	TArray<WORD> BlockMap;
+	TArray<uint16_t> BlockMap;
 
 	void BuildBlockmap ();
-	void CreateUnpackedBlockmap (TArray<WORD> *blocks, int bmapwidth, int bmapheight);
-	void CreatePackedBlockmap (TArray<WORD> *blocks, int bmapwidth, int bmapheight);
+	void CreateUnpackedBlockmap (TArray<uint16_t> *blocks, int bmapwidth, int bmapheight);
+	void CreatePackedBlockmap (TArray<uint16_t> *blocks, int bmapwidth, int bmapheight);
 };
