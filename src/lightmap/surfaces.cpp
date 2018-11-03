@@ -31,7 +31,7 @@
 //-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
-#include "mapdata.h"
+#include "level/level.h"
 #include "surfaces.h"
 
 #ifdef _MSC_VER

@@ -31,8 +31,8 @@
 //-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
-#include "mapdata.h"
-#include "lightsurface.h"
+#include "level/level.h"
+#include "lightmap/lightsurface.h"
 #include <algorithm>
 
 #ifdef _MSC_VER

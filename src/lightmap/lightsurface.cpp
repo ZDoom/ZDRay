@@ -33,7 +33,7 @@
 //-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
-#include "mapdata.h"
+#include "level/level.h"
 #include "trace.h"
 #include "lightsurface.h"
 

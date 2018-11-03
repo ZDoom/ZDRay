@@ -32,7 +32,7 @@
 //-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
-#include "mapdata.h"
+#include "level/level.h"
 #include "trace.h"
 
 void kexTrace::Init(FLevel &doomMap)

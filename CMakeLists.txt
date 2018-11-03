@@ -138,6 +138,7 @@ set( SOURCES
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/level/level.cpp
 	src/level/level_udmf.cpp
+	src/level/level_light.cpp
 	src/parse/sc_man.cpp
 	src/wad/wad.cpp
 	src/nodebuilder/nodebuild.cpp
@@ -148,7 +149,6 @@ set( SOURCES
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
 	src/lightmap/lightmap.cpp
 	src/lightmap/lightsurface.cpp
-	src/lightmap/mapdata.cpp
 	src/lightmap/surfaces.cpp
 	src/lightmap/trace.cpp
 	src/lightmap/worker.cpp
@@ -187,7 +187,6 @@ set( HEADERS
 	src/framework/binfile.h
 	src/lightmap/lightmap.h
 	src/lightmap/lightsurface.h
-	src/lightmap/mapdata.h
 	src/lightmap/surfaces.h
 	src/lightmap/trace.h
 	src/lightmap/worker.h
