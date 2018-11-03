@@ -165,7 +165,7 @@ FloatVertex FLevel::GetSegVertex(int index)
 void FLevel::CreateLights()
 {
 	thingLight_t *thingLight;
-	unsigned int j;
+	size_t j;
 	int numSurfLights;
 	kexVec2 pt;
 
@@ -239,7 +239,7 @@ void FLevel::CreateLights()
 	//
 	// add surface lights
 	//
-	for (j = 0; j < surfaces.Length(); ++j)
+	for (j = 0; j < surfaces.size(); ++j)
 	{
 		surface_t *surface = surfaces[j];
 

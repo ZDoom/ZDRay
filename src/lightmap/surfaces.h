@@ -39,7 +39,7 @@ enum surfaceType_t
 	ST_FLOOR
 };
 
-typedef kexArray<kexVec3> vertexBatch_t;
+typedef std::vector<kexVec3> vertexBatch_t;
 
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
@@ -62,7 +62,7 @@ struct surface_t
 	bool bSky;
 };
 
-extern kexArray<surface_t*> surfaces;
+extern std::vector<surface_t*> surfaces;
 
 struct FLevel;
 

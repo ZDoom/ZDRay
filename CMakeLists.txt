@@ -194,7 +194,6 @@ set( HEADERS
 	src/lightmap/worker.h
 	src/lightmap/collision.h
 	src/lightmap/halffloat.h
-	src/lightmap/kexlib/array.h
 	src/lightmap/kexlib/binfile.h
 	src/lightmap/kexlib/kstring.h
 	src/lightmap/kexlib/memheap.h

@@ -481,7 +481,7 @@ kexStr kexStr::Substr(int start, int len) const
 
 	return str.Concat((const char*)&charPtr[start], len);
 }
-
+/*
 void kexStr::Split(kexStrList &list, const char seperator)
 {
 	int splitLen = 0;
@@ -509,7 +509,7 @@ void kexStr::Split(kexStrList &list, const char seperator)
 		list.Push(kexStr(&charPtr[startOffs], splitLen));
 	}
 }
-
+*/
 int kexStr::Atoi()
 {
 	return atoi(charPtr);

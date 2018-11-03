@@ -64,7 +64,7 @@ private:
 	bool EmitFromCeiling(kexTrace &trace, const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
 
 	FLevel *map;
-	kexArray<uint16_t*> textures;
+	std::vector<uint16_t*> textures;
 	int **allocBlocks;
 	int numTextures;
 	int extraSamples;

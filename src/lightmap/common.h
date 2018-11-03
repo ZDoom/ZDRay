@@ -34,6 +34,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <cstdint>
+#include <vector>
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data

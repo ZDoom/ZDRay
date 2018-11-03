@@ -66,11 +66,11 @@ void kexLightSurface::CreateCenterOrigin()
 			center += surface->verts[i];
 		}
 
-		origins.Push(center / (float)surface->numVerts);
+		origins.push_back(center / (float)surface->numVerts);
 	}
 	else
 	{
-		origins.Push(kexVec3((surface->verts[1].x + surface->verts[0].x) * 0.5f,
+		origins.push_back(kexVec3((surface->verts[1].x + surface->verts[0].x) * 0.5f,
 			(surface->verts[1].y + surface->verts[0].y) * 0.5f,
 			(surface->verts[2].z + surface->verts[0].z) * 0.5f));
 	}
@@ -79,32 +79,32 @@ void kexLightSurface::CreateCenterOrigin()
 // Splits surface vertices into two groups while adding new ones caused by the split
 void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
 {
-	kexArray<float> dists;
-	kexArray<char> sides;
+	std::vector<float> dists;
+	std::vector<char> sides;
 
 	// determines what sides the vertices lies on
-	for (unsigned int i = 0; i < points.Length(); ++i)
+	for (size_t i = 0; i < points.size(); ++i)
 	{
 		float d = points[i].Dot(normal) - dist;
 
-		dists.Push(d);
+		dists.push_back(d);
 
 		if (d > 0.1f)
 		{
-			sides.Push(1);      // front
+			sides.push_back(1);      // front
 		}
 		else if (d < -0.1f)
 		{
-			sides.Push(-1);     // directly on the split plane
+			sides.push_back(-1);     // directly on the split plane
 		}
 		else
 		{
-			sides.Push(0);      // back
+			sides.push_back(0);      // back
 		}
 	}
 
 	// add points
-	for (unsigned int i = 0; i < points.Length(); ++i)
+	for (unsigned int i = 0; i < points.size(); ++i)
 	{
 		int next;
 		float frac;
@@ -113,16 +113,16 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
 		switch (sides[i])
 		{
 		case -1:
-			backPoints->Push(points[i]);
+			backPoints->push_back(points[i]);
 			break;
 
 		case 1:
-			frontPoints->Push(points[i]);
+			frontPoints->push_back(points[i]);
 			break;
 
 		default:
-			frontPoints->Push(points[i]);
-			backPoints->Push(points[i]);
+			frontPoints->push_back(points[i]);
+			backPoints->push_back(points[i]);
 
 			// point is on the split plane so no new split vertex is needed
 			continue;
@@ -130,7 +130,7 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
 		}
 
 		// check if the edge crosses the split plane
-		next = (i + 1) % points.Length();
+		next = (i + 1) % points.size();
 
 		if (sides[next] == 0 || sides[next] == sides[i])
 		{
@@ -145,13 +145,13 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
 		frac = dists[i] / (dists[i] - dists[next]);
 		pt3 = pt1.Lerp(pt2, frac);
 
-		frontPoints->Push(pt3);
-		backPoints->Push(pt3);
+		frontPoints->push_back(pt3);
+		backPoints->push_back(pt3);
 	}
 }
 
 // Recursively divides the surface
-bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, kexArray<vertexBatch_t*> &points)
+bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<vertexBatch_t*> &points)
 {
 	kexBBox bounds;
 	kexVec3 splitNormal;
@@ -160,7 +160,7 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 	vertexBatch_t *backPoints;
 
 	// get bounds from current set of points
-	for (unsigned int i = 0; i < surfPoints.Length(); ++i)
+	for (unsigned int i = 0; i < surfPoints.size(); ++i)
 	{
 		bounds.AddPoint(surfPoints[i]);
 	}
@@ -183,7 +183,7 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 
 			if (!SubdivideRecursion(*frontPoints, divide, points))
 			{
-				points.Push(frontPoints);
+				points.push_back(frontPoints);
 			}
 			else
 			{
@@ -192,7 +192,7 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 
 			if (!SubdivideRecursion(*backPoints, divide, points))
 			{
-				points.Push(backPoints);
+				points.push_back(backPoints);
 			}
 			else
 			{
@@ -208,36 +208,35 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 
 void kexLightSurface::Subdivide(const float divide)
 {
-	kexArray<vertexBatch_t*> points;
+	std::vector<vertexBatch_t*> points;
 	vertexBatch_t surfPoints;
 
 	for (int i = 0; i < surface->numVerts; ++i)
 	{
-		surfPoints.Push(surface->verts[i]);
+		surfPoints.push_back(surface->verts[i]);
 	}
 
 	SubdivideRecursion(surfPoints, divide, points);
 
 	// from each group of vertices caused by the split, begin
 	// creating a origin point based on the center of that group
-	for (unsigned int i = 0; i < points.Length(); ++i)
+	for (size_t i = 0; i < points.size(); ++i)
 	{
 		vertexBatch_t *vb = points[i];
 		kexVec3 center;
 
-		for (unsigned int j = 0; j < vb->Length(); ++j)
+		for (unsigned int j = 0; j < vb->size(); ++j)
 		{
 			center += (*vb)[j];
 		}
 
-		origins.Push(center / (float)vb->Length());
+		origins.push_back(center / (float)vb->size());
 	}
 
-	for (unsigned int i = 0; i < points.Length(); ++i)
+	for (size_t i = 0; i < points.size(); ++i)
 	{
 		vertexBatch_t *vb = points[i];
 
-		vb->Empty();
 		delete vb;
 	}
 }
@@ -272,7 +271,7 @@ float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surf
 
 	float total = 0.0f;
 	float closestDistance = distance * gzdoomRadiusScale;
-	for (unsigned int i = 0; i < origins.Length(); ++i)
+	for (size_t i = 0; i < origins.size(); ++i)
 	{
 		kexVec3 center = origins[i];
 
@@ -318,5 +317,5 @@ float kexLightSurface::TraceSurface(FLevel *doomMap, kexTrace &trace, const surf
 	}
 
 	float attenuation = 1.0f - closestDistance / (distance * gzdoomRadiusScale);
-	return attenuation * total / origins.Length();
+	return attenuation * total / origins.size();
 }

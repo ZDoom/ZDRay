@@ -34,7 +34,7 @@
 #include "mapdata.h"
 #include "surfaces.h"
 
-kexArray<surface_t*> surfaces;
+std::vector<surface_t*> surfaces;
 
 static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
@@ -96,7 +96,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = side - &doomMap.Sides[0];
 
-				surfaces.Push(surf);
+				surfaces.push_back(surf);
 			}
 
 			v1Bottom = v1BottomBack;
@@ -139,7 +139,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->typeIndex = side - &doomMap.Sides[0];
 				surf->bSky = bSky;
 
-				surfaces.Push(surf);
+				surfaces.push_back(surf);
 			}
 
 			v1Top = v1TopBack;
@@ -168,7 +168,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = side - &doomMap.Sides[0];
 
-		surfaces.Push(surf);
+		surfaces.push_back(surf);
 	}
 }
 
@@ -224,7 +224,7 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		surf->type = ST_FLOOR;
 		surf->typeIndex = i;
 
-		surfaces.Push(surf);
+		surfaces.push_back(surf);
 
 		surf = (surface_t*)Mem_Calloc(sizeof(surface_t), hb_static);
 		surf->numVerts = sub->numlines;
@@ -250,10 +250,10 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		surf->type = ST_CEILING;
 		surf->typeIndex = i;
 
-		surfaces.Push(surf);
+		surfaces.push_back(surf);
 	}
 
-	printf("\nLeaf surfaces: %i\n", surfaces.Length() - doomMap.NumGLSubsectors);
+	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
 }
 
 static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2)
@@ -274,7 +274,7 @@ static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2
 
 void CreateSurfaces(FLevel &doomMap)
 {
-	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	for (size_t i = 0; i < surfaces.size(); i++)
 		Mem_Free(surfaces[i]);
 	surfaces = {};
 
@@ -321,15 +321,15 @@ void CreateSurfaces(FLevel &doomMap)
 		printf("sides: %i / %i\r", i + 1, doomMap.Sides.Size());
 	}
 
-	printf("\nSide surfaces: %i\n", surfaces.Length());
+	printf("\nSide surfaces: %i\n", (int)surfaces.size());
 
 	CreateSubsectorSurfaces(doomMap);
 
-	printf("Surfaces total: %i\n\n", surfaces.Length());
+	printf("Surfaces total: %i\n\n", (int)surfaces.size());
 
 	printf("Building collision mesh..\n\n");
 
-	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		const auto &s = surfaces[i];
 		int numVerts = s->numVerts;

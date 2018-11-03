@@ -29,11 +29,10 @@
 
 #include <string.h>
 #include "lightmap/common.h"
-#include "array.h"
 
 class kexStr;
 
-typedef kexArray<kexStr>        kexStrList;
+//typedef kexArray<kexStr>        kexStrList;
 
 class kexStr
 {
@@ -60,7 +59,7 @@ public:
 	kexStr              &ToLower();
 	int                 Hash();
 	kexStr              Substr(int start, int len) const;
-	void                Split(kexStrList &list, const char seperator);
+	//void                Split(kexStrList &list, const char seperator);
 	int                 Atoi();
 	float               Atof();
 	void                WriteToFile(const char *file);

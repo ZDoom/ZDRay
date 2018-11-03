@@ -73,7 +73,7 @@ void kexLightmapBuilder::NewTexture()
 	memset(allocBlocks[numTextures - 1], 0, sizeof(int) * textureWidth);
 
 	uint16_t *texture = (uint16_t*)Mem_Calloc((textureWidth * textureHeight) * 3 * 2, hb_static);
-	textures.Push(texture);
+	textures.push_back(texture);
 }
 
 // Determines where to map a new block on to the lightmap texture
@@ -547,10 +547,10 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 void kexLightmapBuilder::LightSurface(const int surfid)
 {
 	float remaining;
-	int numsurfs = surfaces.Length();
+	int numsurfs = surfaces.size();
 
 	// TODO: this should NOT happen, but apparently, it can randomly occur
-	if (surfaces.Length() == 0)
+	if (surfaces.size() == 0)
 	{
 		return;
 	}
@@ -577,7 +577,7 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 	printf("------------- Tracing surfaces -------------\n");
 
 	processed = 0;
-	kexWorker::RunJob(surfaces.Length(), [=](int id) {
+	kexWorker::RunJob(surfaces.size(), [=](int id) {
 		LightSurface(id);
 	});
 
@@ -589,7 +589,7 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	// Calculate size of lump
 	int numTexCoords = 0;
 	int numSurfaces = 0;
-	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		if (surfaces[i]->lightmapNum != -1)
 		{
@@ -599,9 +599,9 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	}
 	int version = 0;
 	int headerSize = 3 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
-	int surfacesSize = surfaces.Length() * 5 * sizeof(uint32_t);
+	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
-	int texDataSize = textures.Length() * textureWidth * textureHeight * 3 * 2;
+	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
 	int lumpSize = headerSize + surfacesSize + texCoordsSize + texDataSize;
 
 	// Setup buffer
@@ -612,13 +612,13 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	// Write header
 	lumpFile.Write32(version);
 	lumpFile.Write16(textureWidth);
-	lumpFile.Write16(textures.Length());
+	lumpFile.Write16(textures.size());
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
 
 	// Write surfaces
 	int coordOffsets = 0;
-	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		if (surfaces[i]->lightmapNum == -1)
 			continue;
@@ -632,7 +632,7 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	}
 
 	// Write texture coordinates
-	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		if (surfaces[i]->lightmapNum == -1)
 			continue;
@@ -673,7 +673,7 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	}
 
 	// Write lightmap textures
-	for (unsigned int i = 0; i < textures.Length(); i++)
+	for (size_t i = 0; i < textures.size(); i++)
 	{
 		unsigned int count = (textureWidth * textureHeight) * 3;
 		for (unsigned int j = 0; j < count; j++)
@@ -701,7 +701,7 @@ void kexLightmapBuilder::WriteTexturesToTGA()
 {
 	kexBinFile file;
 
-	for (unsigned int i = 0; i < textures.Length(); i++)
+	for (unsigned int i = 0; i < textures.size(); i++)
 	{
 		file.Create(Va("lightmap_%02d.tga", i));
 		file.Write16(0);
@@ -730,7 +730,7 @@ void kexLightmapBuilder::WriteMeshToOBJ()
 
 	std::map<int, std::vector<surface_t*>> sortedSurfs;
 
-	for (unsigned int i = 0; i < surfaces.Length(); i++)
+	for (unsigned int i = 0; i < surfaces.size(); i++)
 		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i]);
 
 	for (const auto &it : sortedSurfs)
