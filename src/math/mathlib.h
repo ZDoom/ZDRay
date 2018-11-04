@@ -29,6 +29,7 @@
 
 #include <math.h>
 #include <cstdint>
+#include <cstddef>
 
 #ifdef M_PI
 #undef M_PI

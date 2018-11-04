@@ -34,6 +34,7 @@
 #include "level/level.h"
 #include "lightmap/lightsurface.h"
 #include <algorithm>
+#include <memory>
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
@@ -198,11 +199,11 @@ void FLevel::CreateLights()
 			}
 			else if (!stricmp(key.key, "lightinnerangle"))
 			{
-				innerAngleCos = std::cosf(atof(key.value) * 3.14159265359f / 180.0f);
+				innerAngleCos = std::cos(atof(key.value) * 3.14159265359f / 180.0f);
 			}
 			else if (!stricmp(key.key, "lightouterangle"))
 			{
-				outerAngleCos = std::cosf(atof(key.value) * 3.14159265359f / 180.0f);
+				outerAngleCos = std::cos(atof(key.value) * 3.14159265359f / 180.0f);
 			}
 		}
 
