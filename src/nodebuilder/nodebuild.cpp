@@ -1078,7 +1078,7 @@ int ClassifyLineBackpatchC (node_t &node, const FSimpleVert *v1, const FSimpleVe
 	int *calleroffset;
 	int diff;
 	int (*func)(node_t &, const FSimpleVert *, const FSimpleVert *, int[2]);
-	uint32_t oldprotect;
+	DWORD oldprotect;
 
 #ifdef __GNUC__
 	calleroffset = (int *)__builtin_return_address(0);
