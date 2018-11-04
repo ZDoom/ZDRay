@@ -41,6 +41,39 @@ struct TraceHit
 	int surface = -1;
 };
 
+class CollisionBBox : public kexBBox
+{
+public:
+	CollisionBBox() = default;
+
+	CollisionBBox(const kexVec3 &aabb_min, const kexVec3 &aabb_max) : kexBBox(aabb_min, aabb_max)
+	{
+		auto halfmin = aabb_min * 0.5f;
+		auto halfmax = aabb_max * 0.5f;
+		Center = halfmax + halfmin;
+		Extents = halfmax - halfmin;
+	}
+
+	kexVec3 Center;
+	kexVec3 Extents;
+};
+
+class RayBBox
+{
+public:
+	RayBBox(const kexVec3 &ray_start, const kexVec3 &ray_end) : start(ray_start), end(ray_end)
+	{
+		c = (ray_start + ray_end) * 0.5f;
+		w = ray_end - c;
+		v.x = std::abs(w.x);
+		v.y = std::abs(w.y);
+		v.z = std::abs(w.z);
+	}
+
+	kexVec3 start, end;
+	kexVec3 c, w, v;
+};
+
 class TriangleMeshShape
 {
 public:
@@ -65,7 +98,7 @@ public:
 		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int element_index) : aabb(aabb_min, aabb_max), element_index(element_index) { }
 		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int left, int right) : aabb(aabb_min, aabb_max), left(left), right(right) { }
 
-		kexBBox aabb;
+		CollisionBBox aabb;
 		int left = -1;
 		int right = -1;
 		int element_index = -1;
@@ -85,12 +118,12 @@ private:
 
 	static bool find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2, int a);
-	static bool find_any_hit(TriangleMeshShape *shape1, const kexVec3 &ray_start, const kexVec3 &ray_end, int a);
+	static bool find_any_hit(TriangleMeshShape *shape1, const RayBBox &ray, int a);
 
-	static void find_first_hit(TriangleMeshShape *shape1, const kexVec3 &ray_start, const kexVec3 &ray_end, int a, TraceHit *hit);
+	static void find_first_hit(TriangleMeshShape *shape1, const RayBBox &ray, int a, TraceHit *hit);
 
-	inline static bool overlap_bv_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a);
-	inline static float intersect_triangle_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a);
+	inline static bool overlap_bv_ray(TriangleMeshShape *shape, const RayBBox &ray, int a);
+	inline static float intersect_triangle_ray(TriangleMeshShape *shape, const RayBBox &ray, int a);
 
 	inline static bool sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
 	inline static float sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
@@ -157,5 +190,5 @@ public:
 	static OverlapResult aabb(const kexBBox &a, const kexBBox &b);
 	static Result frustum_aabb(const FrustumPlanes &frustum, const kexBBox &box);
 	static Result frustum_obb(const FrustumPlanes &frustum, const kexOrientedBBox &box);
-	static OverlapResult ray_aabb(const kexVec3 &ray_start, const kexVec3 &ray_end, const kexBBox &box);
+	static OverlapResult ray_aabb(const RayBBox &ray, const CollisionBBox &box);
 };

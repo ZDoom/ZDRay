@@ -23,8 +23,6 @@
 #include "collision.h"
 #include <algorithm>
 #include <functional>
-#undef min
-#undef max
 
 TriangleMeshShape::TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements, const int *surfaces)
 	: vertices(vertices), num_vertices(num_vertices), elements(elements), num_elements(num_elements), surfaces(surfaces)
@@ -68,7 +66,7 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, SphereShape *sha
 
 bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end)
 {
-	return find_any_hit(shape, ray_start, ray_end, shape->root);
+	return find_any_hit(shape, RayBBox(ray_start, ray_end), shape->root);
 }
 
 TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end)
@@ -85,7 +83,7 @@ TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVe
 		float segstart = t / tracedist;
 		float segend = std::min(t + segmentlen, tracedist) / tracedist;
 
-		find_first_hit(shape, ray_start + ray_dir * segstart, ray_start + ray_dir * segend, shape->root, &hit);
+		find_first_hit(shape, RayBBox(ray_start + ray_dir * segstart, ray_start + ray_dir * segend), shape->root, &hit);
 		if (hit.fraction < 1.0f)
 		{
 			hit.fraction = segstart * (1.0f - hit.fraction) + segend * hit.fraction;
@@ -186,32 +184,32 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, TriangleMeshShap
 	}
 }
 
-bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a)
+bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const RayBBox &ray, int a)
 {
-	if (overlap_bv_ray(shape, ray_start, ray_end, a))
+	if (overlap_bv_ray(shape, ray, a))
 	{
 		if (shape->is_leaf(a))
 		{
-			return intersect_triangle_ray(shape, ray_start, ray_end, a) < 1.0f;
+			return intersect_triangle_ray(shape, ray, a) < 1.0f;
 		}
 		else
 		{
-			if (find_any_hit(shape, ray_start, ray_end, shape->nodes[a].left))
+			if (find_any_hit(shape, ray, shape->nodes[a].left))
 				return true;
 			else
-				return find_any_hit(shape, ray_start, ray_end, shape->nodes[a].right);
+				return find_any_hit(shape, ray, shape->nodes[a].right);
 		}
 	}
 	return false;
 }
 
-void TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a, TraceHit *hit)
+void TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const RayBBox &ray, int a, TraceHit *hit)
 {
-	if (overlap_bv_ray(shape, ray_start, ray_end, a))
+	if (overlap_bv_ray(shape, ray, a))
 	{
 		if (shape->is_leaf(a))
 		{
-			float t = intersect_triangle_ray(shape, ray_start, ray_end, a);
+			float t = intersect_triangle_ray(shape, ray, a);
 			if (t < hit->fraction)
 			{
 				hit->fraction = t;
@@ -220,18 +218,18 @@ void TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const kexVec3 &
 		}
 		else
 		{
-			find_first_hit(shape, ray_start, ray_end, shape->nodes[a].left, hit);
-			find_first_hit(shape, ray_start, ray_end, shape->nodes[a].right, hit);
+			find_first_hit(shape, ray, shape->nodes[a].left, hit);
+			find_first_hit(shape, ray, shape->nodes[a].right, hit);
 		}
 	}
 }
 
-bool TriangleMeshShape::overlap_bv_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a)
+bool TriangleMeshShape::overlap_bv_ray(TriangleMeshShape *shape, const RayBBox &ray, int a)
 {
-	return IntersectionTest::ray_aabb(ray_start, ray_end, shape->nodes[a].aabb) == IntersectionTest::overlap;
+	return IntersectionTest::ray_aabb(ray, shape->nodes[a].aabb) == IntersectionTest::overlap;
 }
 
-float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end, int a)
+float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const RayBBox &ray, int a)
 {
 	const int start_element = shape->nodes[a].element_index;
 
@@ -249,8 +247,8 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 
 	kexVec3 triangleNormal = kexVec3::Cross(e1, e2);
 	float dist = kexVec3::Dot(p[0], triangleNormal);
-	float distA = kexVec3::Dot(ray_start, triangleNormal) - dist;
-	float distB = kexVec3::Dot(ray_end, triangleNormal) - dist;
+	float distA = kexVec3::Dot(ray.start, triangleNormal) - dist;
+	float distB = kexVec3::Dot(ray.end, triangleNormal) - dist;
 
 	if (distA * distB >= 0.0f)
 		return 1.0f;
@@ -265,7 +263,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 		return 1.0f;
 
 	float edgeTolerance = triangleNormal.LengthSq() * -0.0001f;
-	kexVec3 point = ray_start * (1.0f - distance) + ray_end * distance;
+	kexVec3 point = ray.start * (1.0f - distance) + ray.end * distance;
 
 	kexVec3 v0p = p[0] - point;
 	kexVec3 v1p = p[1] - point;
@@ -287,7 +285,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 #else
 	// Moeller–Trumbore ray-triangle intersection algorithm:
 
-	kexVec3 D = ray_end - ray_start;
+	kexVec3 D = ray.end - ray.start;
 
 	// Find vectors for two edges sharing p[0]
 	kexVec3 e1 = p[1] - p[0];
@@ -308,7 +306,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 	float inv_det = 1.0f / det;
 
 	// Calculate distance from p[0] to ray origin
-	kexVec3 T = ray_start - p[0];
+	kexVec3 T = ray.start - p[0];
 
 	// Calculate u parameter and test bound
 	float u = kexVec3::Dot(T, P) * inv_det;
@@ -340,11 +338,10 @@ bool TriangleMeshShape::sweep_overlap_bv_sphere(TriangleMeshShape *shape1, Spher
 {
 	// Convert to ray test by expanding the AABB:
 
-	kexBBox aabb = shape1->nodes[a].aabb;
-	aabb.min -= shape2->radius;
-	aabb.max += shape2->radius;
+	CollisionBBox aabb = shape1->nodes[a].aabb;
+	aabb.Extents += shape2->radius;
 
-	return IntersectionTest::ray_aabb(shape2->center, target, aabb) == IntersectionTest::overlap;
+	return IntersectionTest::ray_aabb(RayBBox(shape2->center, target), aabb) == IntersectionTest::overlap;
 }
 
 float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target)
@@ -579,7 +576,7 @@ bool TriangleMeshShape::is_leaf(int node_index)
 
 float TriangleMeshShape::volume(int node_index)
 {
-	kexVec3 extents = nodes[node_index].aabb.Extents();
+	const kexVec3 &extents = nodes[node_index].aabb.Extents;
 	return extents.x * extents.y * extents.z;
 }
 
@@ -851,15 +848,12 @@ IntersectionTest::Result IntersectionTest::frustum_obb(const FrustumPlanes &frus
 		return inside;
 }
 
-IntersectionTest::OverlapResult IntersectionTest::ray_aabb(const kexVec3 &ray_start, const kexVec3 &ray_end, const kexBBox &aabb)
+IntersectionTest::OverlapResult IntersectionTest::ray_aabb(const RayBBox &ray, const CollisionBBox &aabb)
 {
-	kexVec3 c = (ray_start + ray_end) * 0.5f;
-	kexVec3 w = ray_end - c;
-	kexVec3 h = aabb.Extents();
-
-	c -= aabb.Center();
-
-	kexVec3 v(std::abs(w.x), std::abs(w.y), std::abs(w.z));
+	const kexVec3 &v = ray.v;
+	const kexVec3 &w = ray.w;
+	const kexVec3 &h = aabb.Extents;
+	auto c = ray.c - aabb.Center;
 
 	if (std::abs(c.x) > v.x + h.x || std::abs(c.y) > v.y + h.y || std::abs(c.z) > v.z + h.z)
 		return disjoint;
