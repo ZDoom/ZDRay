@@ -65,8 +65,47 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	float v2Top = front->ceilingplane.zAt(v2.x, v2.y);
 	float v2Bottom = front->floorplane.zAt(v2.x, v2.y);
 
+	int typeIndex = side - &doomMap.Sides[0];
+
 	if (back)
 	{
+		for (unsigned int j = 0; j < front->x3dfloors.Size(); j++)
+		{
+			IntSector *xfloor = front->x3dfloors[j];
+
+			// Don't create a line when both sectors have the same 3d floor
+			bool bothSides = false;
+			for (unsigned int k = 0; k < back->x3dfloors.Size(); k++)
+			{
+				if (back->x3dfloors[k] == xfloor)
+				{
+					bothSides = true;
+					break;
+				}
+			}
+			if (bothSides)
+				continue;
+
+			auto surf = std::make_unique<surface_t>();
+			surf->type = ST_MIDDLESIDE;
+			surf->typeIndex = typeIndex;
+			surf->controlSector = xfloor;
+			surf->numVerts = 4;
+			surf->verts.resize(4);
+			surf->verts[0].x = surf->verts[2].x = v2.x;
+			surf->verts[0].y = surf->verts[2].y = v2.y;
+			surf->verts[1].x = surf->verts[3].x = v1.x;
+			surf->verts[1].y = surf->verts[3].y = v1.y;
+			surf->verts[0].z = xfloor->floorplane.zAt(v2.x, v2.y);
+			surf->verts[1].z = xfloor->floorplane.zAt(v1.x, v1.y);
+			surf->verts[2].z = xfloor->ceilingplane.zAt(v2.x, v2.y);
+			surf->verts[3].z = xfloor->ceilingplane.zAt(v1.x, v1.y);
+			surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+			surf->plane.SetDistance(surf->verts[0]);
+
+			surfaces.push_back(std::move(surf));
+		}
+
 		float v1TopBack = back->ceilingplane.zAt(v1.x, v1.y);
 		float v1BottomBack = back->floorplane.zAt(v1.x, v1.y);
 		float v2TopBack = back->ceilingplane.zAt(v2.x, v2.y);
@@ -98,7 +137,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
 				surf->plane.SetDistance(surf->verts[0]);
 				surf->type = ST_LOWERSIDE;
-				surf->typeIndex = side - &doomMap.Sides[0];
+				surf->typeIndex = typeIndex;
 				surf->controlSector = nullptr;
 
 				surfaces.push_back(std::move(surf));
@@ -141,7 +180,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
 				surf->plane.SetDistance(surf->verts[0]);
 				surf->type = ST_UPPERSIDE;
-				surf->typeIndex = side - &doomMap.Sides[0];
+				surf->typeIndex = typeIndex;
 				surf->bSky = bSky;
 				surf->controlSector = nullptr;
 
@@ -172,7 +211,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
 		surf->plane.SetDistance(surf->verts[0]);
 		surf->type = ST_MIDDLESIDE;
-		surf->typeIndex = side - &doomMap.Sides[0];
+		surf->typeIndex = typeIndex;
 		surf->controlSector = nullptr;
 
 		surfaces.push_back(std::move(surf));
@@ -185,7 +224,15 @@ static void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
 
-	// floor verts
+	if (!is3DFloor)
+	{
+		surf->plane = sector->floorplane;
+	}
+	else
+	{
+		surf->plane = kexPlane::Inverse(sector->ceilingplane);
+	}
+
 	for (int j = 0; j < surf->numVerts; j++)
 	{
 		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
@@ -193,10 +240,9 @@ static void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *
 
 		surf->verts[j].x = v1.x;
 		surf->verts[j].y = v1.y;
-		surf->verts[j].z = sector->floorplane.zAt(surf->verts[j].x, surf->verts[j].y);
+		surf->verts[j].z = surf->plane.zAt(surf->verts[j].x, surf->verts[j].y);
 	}
 
-	surf->plane = sector->floorplane;
 	surf->type = ST_FLOOR;
 	surf->typeIndex = typeIndex;
 	surf->controlSector = is3DFloor ? sector : nullptr;
@@ -215,7 +261,15 @@ static void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector
 		surf->bSky = true;
 	}
 
-	// ceiling verts
+	if (!is3DFloor)
+	{
+		surf->plane = sector->ceilingplane;
+	}
+	else
+	{
+		surf->plane = kexPlane::Inverse(sector->floorplane);
+	}
+
 	for (int j = 0; j < surf->numVerts; j++)
 	{
 		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + j];
@@ -223,10 +277,9 @@ static void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector
 
 		surf->verts[j].x = v1.x;
 		surf->verts[j].y = v1.y;
-		surf->verts[j].z = sector->ceilingplane.zAt(surf->verts[j].x, surf->verts[j].y);
+		surf->verts[j].z = surf->plane.zAt(surf->verts[j].x, surf->verts[j].y);
 	}
 
-	surf->plane = sector->ceilingplane;
 	surf->type = ST_CEILING;
 	surf->typeIndex = typeIndex;
 	surf->controlSector = is3DFloor ? sector : nullptr;
@@ -259,7 +312,7 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 		for (unsigned int j = 0; j < sector->x3dfloors.Size(); j++)
 		{
 			CreateFloorSurface(doomMap, sub, sector->x3dfloors[j], i, true);
-			CreateCeilingSurface(doomMap, sub, sector->x3dfloors[j], i, false);
+			CreateCeilingSurface(doomMap, sub, sector->x3dfloors[j], i, true);
 		}
 	}
 

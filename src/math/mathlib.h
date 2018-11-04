@@ -409,6 +409,8 @@ public:
 	const planeAxis_t       BestAxis() const;
 	kexVec3                 GetInclination();
 
+	static kexPlane Inverse(const kexPlane &p) { return kexPlane(-p.a, -p.b, -p.c, -p.d); }
+
 	float zAt(float x, float y) const { return (d - a * x - b * y) / c; }
 
 	kexPlane                &operator|(const kexQuat &quat);
