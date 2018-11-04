@@ -52,7 +52,7 @@ void FLevel::CheckSkySectors()
 {
 	char name[9];
 
-	bSkySectors.resize(Sectors.Size());
+	bSkySectors = std::vector<bool>(Sectors.Size()); // Most retarded way to resize ever, but Microsoft apparently broke std::vector<bool> in the latest update..
 
 	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{
