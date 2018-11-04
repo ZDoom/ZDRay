@@ -250,11 +250,11 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 		if (tl->outerAngleCos > -1.0f)
 		{
 			float negPitch = -radians(tl->mapThing->pitch);
-			float xyLen = std::cosf(negPitch);
+			float xyLen = std::cos(negPitch);
 			kexVec3 spotDir;
-			spotDir.x = std::sinf(radians(tl->mapThing->angle)) * xyLen;
-			spotDir.y = std::cosf(radians(tl->mapThing->angle)) * xyLen;
-			spotDir.z = -std::sinf(negPitch);
+			spotDir.x = std::sin(radians(tl->mapThing->angle)) * xyLen;
+			spotDir.y = std::cos(radians(tl->mapThing->angle)) * xyLen;
+			spotDir.z = -std::sin(negPitch);
 			float cosDir = kexVec3::Dot(dir, spotDir);
 			spotAttenuation = smoothstep(tl->outerAngleCos, tl->innerAngleCos, cosDir);
 			if (spotAttenuation <= 0.0f)
