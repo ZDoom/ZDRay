@@ -1519,3 +1519,21 @@ inline float &kexVec4::operator[](int index)
 {
 	return (&x)[index];
 }
+
+/////////////////////////////////////////////////////////////////////////////
+
+inline kexVec3 kexBBox::Center() const
+{
+	return kexVec3(
+		(max.x + min.x) * 0.5f,
+		(max.y + min.y) * 0.5f,
+		(max.z + min.z) * 0.5f);
+}
+
+inline kexVec3 kexBBox::Extents() const
+{
+	return kexVec3(
+		(max.x - min.x) * 0.5f,
+		(max.y - min.y) * 0.5f,
+		(max.z - min.z) * 0.5f);
+}
