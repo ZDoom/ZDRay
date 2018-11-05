@@ -24,6 +24,7 @@
 
 #include "math/mathlib.h"
 #include <vector>
+#include <cmath>
 
 class SphereShape
 {
