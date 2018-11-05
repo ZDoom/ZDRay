@@ -249,6 +249,7 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const ke
 
 	float total = 0.0f;
 	float closestDistance = distance * gzdoomRadiusScale;
+	float maxDistanceSqr = closestDistance * closestDistance;
 	for (size_t i = 0; i < origins.size(); ++i)
 	{
 		kexVec3 center = origins[i];
@@ -261,7 +262,15 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const ke
 			continue;
 		}
 
-		kexVec3 dir = (origin - center).Normalize();
+		float dsqr = origin.DistanceSq(center);
+
+		if (dsqr > maxDistanceSqr)
+			continue; // out of range
+
+		float d = std::sqrt(dsqr);
+		float id = 1.0f / d;
+
+		kexVec3 dir = (origin - center) * id;
 		float attenuation = dir.Dot(lnormal);
 
 		if (attenuation <= 0.0f)
@@ -288,7 +297,6 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const ke
 			continue;
 		}
 
-		float d = origin.Distance(center);
 		if (d < closestDistance)
 			closestDistance = d;
 		total += attenuation;
