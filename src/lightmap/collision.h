@@ -56,6 +56,7 @@ public:
 
 	kexVec3 Center;
 	kexVec3 Extents;
+	float ssePadding = 0.0f; // Needed to safely load Extents directly into a sse register
 };
 
 class RayBBox
@@ -72,6 +73,7 @@ public:
 
 	kexVec3 start, end;
 	kexVec3 c, w, v;
+	float ssePadding = 0.0f; // Needed to safely load v directly into a sse register
 };
 
 class TriangleMeshShape

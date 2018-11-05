@@ -23,6 +23,9 @@
 #include "collision.h"
 #include <algorithm>
 #include <functional>
+#ifndef NO_SSE
+#include <immintrin.h>
+#endif
 
 TriangleMeshShape::TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements, const int *surfaces)
 	: vertices(vertices), num_vertices(num_vertices), elements(elements), num_elements(num_elements), surfaces(surfaces)
@@ -848,8 +851,40 @@ IntersectionTest::Result IntersectionTest::frustum_obb(const FrustumPlanes &frus
 		return inside;
 }
 
+static const uint32_t clearsignbitmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
+
 IntersectionTest::OverlapResult IntersectionTest::ray_aabb(const RayBBox &ray, const CollisionBBox &aabb)
 {
+#ifndef NO_SSE
+
+	__m128 v = _mm_loadu_ps(&ray.v.x);
+	__m128 w = _mm_loadu_ps(&ray.w.x);
+	__m128 h = _mm_loadu_ps(&aabb.Extents.x);
+	__m128 c = _mm_sub_ps(_mm_loadu_ps(&ray.c.x), _mm_loadu_ps(&aabb.Center.x));
+
+	__m128 clearsignbit = _mm_loadu_ps(reinterpret_cast<const float*>(clearsignbitmask));
+
+	__m128 abs_c = _mm_and_ps(c, clearsignbit);
+	int mask = _mm_movemask_ps(_mm_cmpgt_ps(abs_c, _mm_add_ps(v, h)));
+	if (mask & 7)
+		return disjoint;
+
+	__m128 c1 = _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 0, 0, 1)); // c.y, c.x, c.x
+	__m128 c2 = _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 1, 2, 2)); // c.z, c.z, c.y
+	__m128 w1 = _mm_shuffle_ps(w, w, _MM_SHUFFLE(3, 1, 2, 2)); // w.z, w.z, w.y
+	__m128 w2 = _mm_shuffle_ps(w, w, _MM_SHUFFLE(3, 0, 0, 1)); // w.y, w.x, w.x
+	__m128 lhs = _mm_and_ps(_mm_sub_ps(_mm_mul_ps(c1, w1), _mm_mul_ps(c2, w2)), clearsignbit);
+
+	__m128 h1 = _mm_shuffle_ps(h, h, _MM_SHUFFLE(3, 0, 0, 1)); // h.y, h.x, h.x
+	__m128 h2 = _mm_shuffle_ps(h, h, _MM_SHUFFLE(3, 1, 2, 2)); // h.z, h.z, h.y
+	__m128 v1 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 1, 2, 2)); // v.z, v.z, v.y
+	__m128 v2 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 0, 0, 1)); // v.y, v.x, v.x
+	__m128 rhs = _mm_add_ps(_mm_mul_ps(h1, v1), _mm_mul_ps(h2, v2));
+
+	mask = _mm_movemask_ps(_mm_cmpgt_ps(lhs, rhs));
+	return (mask & 7) ? disjoint : overlap;
+
+#else
 	const kexVec3 &v = ray.v;
 	const kexVec3 &w = ray.w;
 	const kexVec3 &h = aabb.Extents;
@@ -864,6 +899,7 @@ IntersectionTest::OverlapResult IntersectionTest::ray_aabb(const RayBBox &ray, c
 		return disjoint;
 
 	return overlap;
+#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////
