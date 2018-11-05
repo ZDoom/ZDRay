@@ -472,6 +472,7 @@ static void ShowUsage()
 		"Usage: zdray [options] sourcefile.wad\n"
 		"  -m, --map=MAP            Only affect the specified map\n"
 		"  -o, --output=FILE        Write output to FILE instead of tmp.wad\n"
+		"  -c, --comments           Write UDMF index comments\n"
 		"  -q, --no-prune           Keep unused sidedefs and sectors\n"
 		"  -N, --no-nodes           Do not rebuild nodes\n"
 		"  -g, --gl                 Build GL-friendly nodes\n"
