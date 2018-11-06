@@ -102,9 +102,9 @@ class kexQuat
 public:
 	kexQuat();
 
-	explicit kexQuat(const float angle, const float x, const float y, const float z);
-	explicit kexQuat(const float angle, kexVec3 &vector);
-	explicit kexQuat(const float angle, const kexVec3 &vector);
+	kexQuat(const float angle, const float x, const float y, const float z);
+	kexQuat(const float angle, kexVec3 &vector);
+	kexQuat(const float angle, const kexVec3 &vector);
 
 	void                    Set(const float x, const float y, const float z, const float w);
 	void                    Clear();
@@ -142,7 +142,7 @@ class kexVec2
 {
 public:
 	kexVec2();
-	explicit kexVec2(const float x, const float y);
+	kexVec2(const float x, const float y);
 
 	void                    Set(const float x, const float y);
 	void                    Clear();
@@ -209,7 +209,7 @@ class kexVec3
 {
 public:
 	kexVec3();
-	explicit kexVec3(const float x, const float y, const float z);
+	kexVec3(const float x, const float y, const float z);
 
 	void                    Set(const float x, const float y, const float z);
 	void                    Clear();
@@ -284,8 +284,8 @@ class kexVec4
 {
 public:
 	kexVec4();
-	explicit kexVec4(const float x, const float y, const float z, const float w);
-	explicit kexVec4(const kexVec3 &v, const float w);
+	kexVec4(const float x, const float y, const float z, const float w);
+	kexVec4(const kexVec3 &v, const float w);
 
 	void                    Set(const float x, const float y, const float z, const float w);
 	void                    Clear();
@@ -466,7 +466,7 @@ class kexBBox
 {
 public:
 	kexBBox();
-	explicit kexBBox(const kexVec3 &vMin, const kexVec3 &vMax);
+	kexBBox(const kexVec3 &vMin, const kexVec3 &vMax);
 
 	void                    Clear();
 	kexVec3                 Center() const;
