@@ -218,89 +218,64 @@ void kexLightSurface::Subdivide(const float divide)
 	}
 }
 
-float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const kexVec3 &origin)
+float kexLightSurface::TraceSurface(FLevel *map, const surface_t *fragmentSurface, const kexVec3 &fragmentPos)
 {
-	// light surface will always be fullbright
-	if (surf == surface)
-	{
-		return 1.0f;
-	}
+	if (fragmentSurface == surface)
+		return 1.0f; // light surface will always be fullbright
 
-	kexVec3 lnormal = surface->plane.Normal();
-
-	kexVec3 normal;
-	if (surf)
-	{
-		normal = surf->plane.Normal();
-
-		if (normal.Dot(lnormal) > 0)
-		{
-			// not facing the light surface
-			return 0.0f;
-		}
-	}
-	else
-	{
-		normal = kexVec3::vecUp;
-	}
+	kexVec3 lightSurfaceNormal = surface->plane.Normal();
+	kexVec3 fragmentNormal = fragmentSurface->plane.Normal();
 
 	float gzdoomRadiusScale = 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
 
 	float total = 0.0f;
+	int count = 0;
 	float closestDistance = distance * gzdoomRadiusScale;
 	float maxDistanceSqr = closestDistance * closestDistance;
 	for (size_t i = 0; i < origins.size(); ++i)
 	{
-		kexVec3 center = origins[i];
+		kexVec3 lightPos = origins[i];
+		kexVec3 lightDir = (lightPos - fragmentPos);
 
-		if ((surface->type == ST_CEILING && origin.z > center.z) || (surface->type == ST_FLOOR && origin.z < center.z))
-		{
-			// origin is not going to seen or traced by the light surface
-			// so don't even bother. this also fixes some bizzare light
-			// bleeding issues
-			continue;
-		}
-
-		float dsqr = origin.DistanceSq(center);
-
+		float dsqr = kexVec3::Dot(lightDir, lightDir);
 		if (dsqr > maxDistanceSqr)
 			continue; // out of range
 
-		float d = std::sqrt(dsqr);
-		float id = 1.0f / d;
+		count++;
 
-		kexVec3 dir = (origin - center) * id;
-		float attenuation = dir.Dot(lnormal);
-
+		float attenuation = kexVec3::Dot(lightDir, fragmentNormal);
 		if (attenuation <= 0.0f)
 			continue; // not even facing the light surface
 
+		float d = std::sqrt(dsqr);
+		attenuation /= d;
+
 		if (surface->type != ST_CEILING && surface->type != ST_FLOOR)
 		{
-			if (origin.z >= surface->verts[0].z && origin.z <= surface->verts[2].z)
+			if (fragmentPos.z >= surface->verts[0].z && fragmentPos.z <= surface->verts[2].z)
 			{
 				// since walls are always vertically straight, we can cheat a little by adjusting
 				// the sampling point height. this also allows us to do accurate light emitting
 				// while just using one sample point
-				center.z = origin.z;
+				lightPos.z = fragmentPos.z;
 			}
 		}
 
 		// trace the origin to the center of the light surface. nudge by the normals in
 		// case the start/end points are directly on or inside the surface
-		LevelTraceHit trace = map->Trace(center + lnormal, origin + normal);
+		LevelTraceHit trace = map->Trace(lightPos + lightSurfaceNormal, fragmentPos + fragmentNormal);
 
 		if (trace.fraction < 1.0f)
-		{
-			// something is obstructing it
-			continue;
-		}
+			continue; // something is obstructing it
 
 		if (d < closestDistance)
 			closestDistance = d;
 		total += attenuation;
 	}
 
+	if (count == 0)
+		return 0.0f;
+
 	float attenuation = 1.0f - closestDistance / (distance * gzdoomRadiusScale);
-	return attenuation * total / origins.size();
+	return attenuation * total / count;
 }
