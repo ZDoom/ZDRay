@@ -192,29 +192,74 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 
 void kexLightSurface::Subdivide(const float divide)
 {
-	std::vector<std::unique_ptr<vertexBatch_t>> points;
-	vertexBatch_t surfPoints;
-
-	for (int i = 0; i < surface->numVerts; ++i)
+	if (surface->type == ST_CEILING || surface->type == ST_FLOOR)
 	{
-		surfPoints.push_back(surface->verts[i]);
-	}
+		std::vector<std::unique_ptr<vertexBatch_t>> points;
+		vertexBatch_t surfPoints;
 
-	SubdivideRecursion(surfPoints, divide, points);
-
-	// from each group of vertices caused by the split, begin
-	// creating a origin point based on the center of that group
-	for (size_t i = 0; i < points.size(); ++i)
-	{
-		vertexBatch_t *vb = points[i].get();
-		kexVec3 center;
-
-		for (unsigned int j = 0; j < vb->size(); ++j)
+		for (int i = 0; i < surface->numVerts; ++i)
 		{
-			center += (*vb)[j];
+			surfPoints.push_back(surface->verts[i]);
 		}
 
-		origins.push_back(center / (float)vb->size());
+		SubdivideRecursion(surfPoints, divide, points);
+
+		// from each group of vertices caused by the split, begin
+		// creating a origin point based on the center of that group
+		for (size_t i = 0; i < points.size(); ++i)
+		{
+			vertexBatch_t *vb = points[i].get();
+			kexVec3 center;
+
+			for (unsigned int j = 0; j < vb->size(); ++j)
+			{
+				center += (*vb)[j];
+			}
+
+			origins.push_back(center / (float)vb->size());
+		}
+	}
+	else
+	{
+		float length = surface->verts[0].Distance(surface->verts[1]);
+		if (length < divide)
+		{
+			kexVec3 top = surface->verts[0] * 0.5f + surface->verts[1] * 0.5f;
+			kexVec3 bottom = surface->verts[2] * 0.5f + surface->verts[3] * 0.5f;
+			origins.push_back(top * 0.5f + bottom * 0.5f);
+		}
+		else
+		{
+			float frac = length / divide;
+			frac = frac - std::floor(frac);
+
+			float start = divide * 0.5f + frac * 0.5f * divide;
+			for (float i = start; i < length; i += divide)
+			{
+				float t = i / length;
+
+				kexVec3 top = surface->verts[0] * (1.0f - t) + surface->verts[1] * t;
+				kexVec3 bottom = surface->verts[2] * (1.0f - t) + surface->verts[3] * t;
+
+				float length2 = top.Distance(bottom);
+				if (length2 < divide)
+				{
+					origins.push_back(top * 0.5f + bottom * 0.5f);
+				}
+				else
+				{
+					float frac2 = length2 / divide;
+					frac2 = frac2 - std::floor(frac2);
+
+					float start2 = divide * 0.5f + frac2 * 0.5f * divide;
+					for (float j = start2; j < length2; j += divide)
+					{
+						float t2 = j / length2;
+						origins.push_back(top * (1.0f - t2) + bottom * t2);
+					}
+				}
+			}
+		}
 	}
 }
 
