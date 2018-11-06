@@ -39,7 +39,6 @@ public:
 	~kexLightSurface();
 
 	void Subdivide(const float divide);
-	void CreateCenterOrigin();
 	float TraceSurface(FLevel *doomMap, const surface_t *surface, const kexVec3 &origin);
 
 	const float Distance() const { return distance; }

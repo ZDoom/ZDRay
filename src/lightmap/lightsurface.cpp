@@ -48,28 +48,6 @@ kexLightSurface::~kexLightSurface()
 {
 }
 
-// Creates a single origin point if we're not intending on subdividing this light surface
-void kexLightSurface::CreateCenterOrigin()
-{
-	if (surface->type == ST_CEILING || surface->type == ST_FLOOR)
-	{
-		kexVec3 center;
-
-		for (int i = 0; i < surface->numVerts; ++i)
-		{
-			center += surface->verts[i];
-		}
-
-		origins.push_back(center / (float)surface->numVerts);
-	}
-	else
-	{
-		origins.push_back(kexVec3((surface->verts[1].x + surface->verts[0].x) * 0.5f,
-			(surface->verts[1].y + surface->verts[0].y) * 0.5f,
-			(surface->verts[2].z + surface->verts[0].z) * 0.5f));
-	}
-}
-
 // Splits surface vertices into two groups while adding new ones caused by the split
 void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
 {

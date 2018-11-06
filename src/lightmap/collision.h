@@ -82,10 +82,12 @@ class TriangleMeshShape
 public:
 	TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements, const int *surfaces);
 
-	int get_min_depth();
-	int get_max_depth();
-	float get_average_depth();
-	float get_balanced_depth();
+	int get_min_depth() const;
+	int get_max_depth() const;
+	float get_average_depth() const;
+	float get_balanced_depth() const;
+
+	const CollisionBBox &get_bbox() const { return nodes[root].aabb; }
 
 	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, const kexVec3 &target);
 

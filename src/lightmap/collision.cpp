@@ -583,7 +583,7 @@ float TriangleMeshShape::volume(int node_index)
 	return extents.x * extents.y * extents.z;
 }
 
-int TriangleMeshShape::get_min_depth()
+int TriangleMeshShape::get_min_depth() const
 {
 	std::function<int(int, int)> visit;
 	visit = [&](int level, int node_index) -> int {
@@ -596,7 +596,7 @@ int TriangleMeshShape::get_min_depth()
 	return visit(1, root);
 }
 
-int TriangleMeshShape::get_max_depth()
+int TriangleMeshShape::get_max_depth() const
 {
 	std::function<int(int, int)> visit;
 	visit = [&](int level, int node_index) -> int {
@@ -609,7 +609,7 @@ int TriangleMeshShape::get_max_depth()
 	return visit(1, root);
 }
 
-float TriangleMeshShape::get_average_depth()
+float TriangleMeshShape::get_average_depth() const
 {
 	std::function<float(int, int)> visit;
 	visit = [&](int level, int node_index) -> float {
@@ -624,7 +624,7 @@ float TriangleMeshShape::get_average_depth()
 	return depth_sum / leaf_count;
 }
 
-float TriangleMeshShape::get_balanced_depth()
+float TriangleMeshShape::get_balanced_depth() const
 {
 	return std::log2((float)(num_elements / 3));
 }
