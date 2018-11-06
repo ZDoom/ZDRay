@@ -36,13 +36,12 @@
 #include "level/level.h"
 #include "lightsurface.h"
 
-kexLightSurface::kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall)
+kexLightSurface::kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface)
 {
 	this->intensity = lightSurfaceDef.intensity;
 	this->distance = lightSurfaceDef.distance;
 	this->rgb = lightSurfaceDef.rgb;
 	this->surface = surface;
-	this->bWall = bWall;
 }
 
 kexLightSurface::~kexLightSurface()
@@ -52,7 +51,7 @@ kexLightSurface::~kexLightSurface()
 // Creates a single origin point if we're not intending on subdividing this light surface
 void kexLightSurface::CreateCenterOrigin()
 {
-	if (!bWall)
+	if (surface->type == ST_CEILING || surface->type == ST_FLOOR)
 	{
 		kexVec3 center;
 
@@ -254,7 +253,7 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const ke
 	{
 		kexVec3 center = origins[i];
 
-		if (!bWall && origin.z > center.z)
+		if ((surface->type == ST_CEILING && origin.z > center.z) || (surface->type == ST_FLOOR && origin.z < center.z))
 		{
 			// origin is not going to seen or traced by the light surface
 			// so don't even bother. this also fixes some bizzare light
@@ -276,7 +275,7 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *surf, const ke
 		if (attenuation <= 0.0f)
 			continue; // not even facing the light surface
 
-		if (bWall)
+		if (surface->type != ST_CEILING && surface->type != ST_FLOOR)
 		{
 			if (origin.z >= surface->verts[0].z && origin.z <= surface->verts[2].z)
 			{

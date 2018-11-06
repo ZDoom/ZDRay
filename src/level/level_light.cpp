@@ -275,7 +275,7 @@ void FLevel::CreateLights()
 					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
-					auto lightSurface = std::make_unique<kexLightSurface>(desc, surface, true);
+					auto lightSurface = std::make_unique<kexLightSurface>(desc, surface);
 					lightSurface->Subdivide(16);
 					//lightSurface->CreateCenterOrigin();
 					lightSurfaces.push_back(std::move(lightSurface));
@@ -338,7 +338,7 @@ void FLevel::CreateLights()
 					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 
-					auto lightSurface = std::make_unique<kexLightSurface>(desc, surface, false);
+					auto lightSurface = std::make_unique<kexLightSurface>(desc, surface);
 					lightSurface->Subdivide(16);
 					lightSurfaces.push_back(std::move(lightSurface));
 					numSurfLights++;

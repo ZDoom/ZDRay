@@ -35,7 +35,7 @@ struct surfaceLightDef;
 class kexLightSurface
 {
 public:
-	kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface, const bool bWall);
+	kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface);
 	~kexLightSurface();
 
 	void Subdivide(const float divide);
@@ -45,7 +45,6 @@ public:
 	const float Distance() const { return distance; }
 	const float Intensity() const { return intensity; }
 	const kexVec3 GetRGB() const { return rgb; }
-	const bool IsAWall() const { return bWall; }
 	const surface_t *Surface() const { return surface; }
 
 private:
@@ -57,7 +56,6 @@ private:
 	float distance;
 	float intensity;
 	kexVec3 rgb;
-	bool bWall;
 	vertexBatch_t origins;
 	surface_t *surface;
 };
