@@ -247,7 +247,7 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *fragmentSurfac
 		return 1.0f; // light surface will always be fullbright
 
 	kexVec3 lightSurfaceNormal = surface->plane.Normal();
-	kexVec3 fragmentNormal = fragmentSurface ? fragmentSurface->plane.Normal() : kexVec3::vecUp;
+	kexVec3 fragmentNormal = fragmentSurface ? fragmentSurface->plane.Normal() : kexVec3(0.0f, 0.0f, 0.0f);
 
 	float gzdoomRadiusScale = 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
 

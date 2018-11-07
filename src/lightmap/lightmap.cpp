@@ -706,12 +706,17 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 			numSurfaces++;
 		}
 	}
+	int numCells = 0;
+	for (size_t i = 0; i < grid.blocks.size(); i++)
+		numCells += grid.blocks[i].cells.Size();
 	int version = 0;
-	int headerSize = 3 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
+	int headerSize = 4 * sizeof(uint32_t) + 6 * sizeof(uint16_t);
+	int cellBlocksSize = grid.blocks.size() * 2 * sizeof(uint16_t);
+	int cellsSize = numCells * sizeof(float) * 3;
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
 	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
-	int lumpSize = headerSize + surfacesSize + texCoordsSize + texDataSize;
+	int lumpSize = headerSize + cellBlocksSize + cellsSize + surfacesSize + texCoordsSize + texDataSize;
 
 	// Setup buffer
 	std::vector<uint8_t> buffer(lumpSize);
@@ -724,6 +729,30 @@ void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	lumpFile.Write16(textures.size());
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
+	lumpFile.Write16(grid.x);
+	lumpFile.Write16(grid.y);
+	lumpFile.Write16(grid.width);
+	lumpFile.Write16(grid.height);
+	lumpFile.Write32(numCells);
+
+	// Write cell blocks
+	for (size_t i = 0; i < grid.blocks.size(); i++)
+	{
+		lumpFile.Write16(grid.blocks[i].z);
+		lumpFile.Write16(grid.blocks[i].layers);
+	}
+
+	// Write cells
+	for (size_t i = 0; i < grid.blocks.size(); i++)
+	{
+		const auto &cells = grid.blocks[i].cells;
+		for (unsigned int j = 0; j < cells.Size(); j++)
+		{
+			lumpFile.WriteFloat(cells[j].x);
+			lumpFile.WriteFloat(cells[j].y);
+			lumpFile.WriteFloat(cells[j].z);
+		}
+	}
 
 	// Write surfaces
 	int coordOffsets = 0;
