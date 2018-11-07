@@ -51,8 +51,6 @@
 extern int Multisample;
 extern thread_local kexVec3 *colorSamples;
 
-const kexVec3 kexLightmapBuilder::gridSize(64, 64, 128);
-
 kexLightmapBuilder::kexLightmapBuilder()
 {
 }
@@ -165,7 +163,7 @@ kexBBox kexLightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 // Traces to the ceiling surface. Will emit light if the surface that was traced is a sky
 bool kexLightmapBuilder::EmitFromCeiling(const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color)
 {
-	float attenuation = normal.Dot(map->GetSunDirection());
+	float attenuation = surface ? normal.Dot(map->GetSunDirection()) : 1.0f;
 
 	if (attenuation <= 0)
 	{
@@ -211,7 +209,10 @@ static float radians(float degrees)
 // Traces a line from the texel's origin to the sunlight direction and against all nearby thing lights
 kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *surface)
 {
-	kexPlane plane = surface->plane;
+	kexPlane plane;
+	if (surface)
+		plane = surface->plane;
+
 	kexVec3 color(0.0f, 0.0f, 0.0f);
 
 	// check all thing lights
@@ -227,7 +228,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 
 		kexVec3 lightOrigin(tl->origin.x, tl->origin.y, originZ);
 
-		if (plane.Distance(lightOrigin) - plane.d < 0)
+		if (surface && plane.Distance(lightOrigin) - plane.d < 0)
 		{
 			// completely behind the plane
 			continue;
@@ -274,7 +275,8 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 
 		float attenuation = 1.0f - (dist / radius);
 		attenuation *= spotAttenuation;
-		attenuation *= plane.Normal().Dot(dir);
+		if (surface)
+			attenuation *= plane.Normal().Dot(dir);
 		attenuation *= intensity;
 
 		// accumulate results
@@ -283,10 +285,10 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 		tracedTexels++;
 	}
 
-	if (surface->type != ST_CEILING)
+	if (!surface || surface->type != ST_CEILING)
 	{
 		// see if it's exposed to sunlight
-		if (EmitFromCeiling(surface, origin, plane.Normal(), color))
+		if (EmitFromCeiling(surface, origin, surface ? plane.Normal() : kexVec3::vecUp, color))
 			tracedTexels++;
 	}
 
@@ -534,26 +536,18 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 
 void kexLightmapBuilder::LightSurface(const int surfid)
 {
-	float remaining;
-	int numsurfs = surfaces.size();
-
-	// TODO: this should NOT happen, but apparently, it can randomly occur
-	if (surfaces.size() == 0)
-	{
-		return;
-	}
-
 	BuildSurfaceParams(surfaces[surfid].get());
 	TraceSurface(surfaces[surfid].get());
 
 	std::unique_lock<std::mutex> lock(mutex);
 
+	int numsurfs = surfaces.size();
 	int lastproc = processed * 100 / numsurfs;
 	processed++;
 	int curproc = processed * 100 / numsurfs;
 	if (lastproc != curproc || processed == 1)
 	{
-		remaining = (float)processed / (float)numsurfs;
+		float remaining = (float)processed / (float)numsurfs;
 		printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
 	}
 }
@@ -562,14 +556,141 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 {
 	map = &doomMap;
 
+	printf("-------------- Tracing cells ---------------\n");
+
+	SetupLightCellGrid();
+
+	processed = 0;
+	tracedTexels = 0;
+	kexWorker::RunJob(grid.blocks.size(), [=](int id) {
+		LightBlock(id);
+	});
+
+	printf("Cells traced: %i \n\n", tracedTexels);
+
 	printf("------------- Tracing surfaces -------------\n");
 
+	tracedTexels = 0;
 	processed = 0;
 	kexWorker::RunJob(surfaces.size(), [=](int id) {
 		LightSurface(id);
 	});
 
 	printf("Texels traced: %i \n\n", tracedTexels);
+}
+
+void kexLightmapBuilder::SetupLightCellGrid()
+{
+	kexBBox worldBBox = map->CollisionMesh->get_bbox();
+	float blockWorldSize = LIGHTCELL_BLOCK_SIZE * LIGHTCELL_SIZE;
+	grid.x = static_cast<int>(std::floor(worldBBox.min.x / blockWorldSize));
+	grid.y = static_cast<int>(std::floor(worldBBox.min.y / blockWorldSize));
+	grid.width = static_cast<int>(std::ceil(worldBBox.max.x / blockWorldSize + 1.0f) - 1.0f) - grid.x;
+	grid.height = static_cast<int>(std::ceil(worldBBox.max.y / blockWorldSize + 1.0f) - 1.0f) - grid.y;
+	grid.blocks.resize(grid.width * grid.height);
+}
+
+void kexLightmapBuilder::LightBlock(int id)
+{
+	float blockWorldSize = LIGHTCELL_BLOCK_SIZE * LIGHTCELL_SIZE;
+
+	// Locate block in world
+	LightCellBlock &block = grid.blocks[id];
+	int x = grid.x + id % grid.width;
+	int y = grid.y + id / grid.height;
+	float worldX = blockWorldSize * x + 0.5f * LIGHTCELL_SIZE;
+	float worldY = blockWorldSize * y + 0.5f * LIGHTCELL_SIZE;
+
+	// Analyze for cells
+	IntSector *sectors[LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE];
+	float ceilings[LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE];
+	float floors[LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE];
+	float maxCeiling = -M_INFINITY;
+	float minFloor = M_INFINITY;
+	for (int yy = 0; yy < LIGHTCELL_BLOCK_SIZE; yy++)
+	{
+		for (int xx = 0; xx < LIGHTCELL_BLOCK_SIZE; xx++)
+		{
+			int idx = xx + yy * LIGHTCELL_BLOCK_SIZE;
+			float cellWorldX = worldX + xx * LIGHTCELL_SIZE;
+			float cellWorldY = worldY + yy * LIGHTCELL_SIZE;
+			MapSubsectorEx *subsector = map->PointInSubSector(cellWorldX, cellWorldY);
+			if (subsector)
+			{
+				IntSector *sector = map->GetSectorFromSubSector(subsector);
+
+				float ceiling = sector->ceilingplane.zAt(cellWorldX, cellWorldY);
+				float floor = sector->floorplane.zAt(cellWorldX, cellWorldY);
+
+				sectors[idx] = sector;
+				ceilings[idx] = ceiling;
+				floors[idx] = floor;
+				maxCeiling = std::max(maxCeiling, ceiling);
+				minFloor = std::min(minFloor, floor);
+			}
+			else
+			{
+				sectors[idx] = nullptr;
+				ceilings[idx] = -M_INFINITY;
+				floors[idx] = M_INFINITY;
+			}
+		}
+	}
+
+	if (minFloor != M_INFINITY)
+	{
+		// Allocate space for the cells
+		block.z = static_cast<int>(std::floor(minFloor / LIGHTCELL_SIZE));
+		block.layers = static_cast<int>(std::ceil(maxCeiling / LIGHTCELL_SIZE + 1.0f) - 1.0f) - block.z;
+		block.cells.Resize(LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE * block.layers);
+
+		// Ray trace the cells
+		for (int yy = 0; yy < LIGHTCELL_BLOCK_SIZE; yy++)
+		{
+			for (int xx = 0; xx < LIGHTCELL_BLOCK_SIZE; xx++)
+			{
+				int idx = xx + yy * LIGHTCELL_BLOCK_SIZE;
+				float cellWorldX = worldX + xx * LIGHTCELL_SIZE;
+				float cellWorldY = worldY + yy * LIGHTCELL_SIZE;
+
+				for (int zz = 0; zz < block.layers; zz++)
+				{
+					float cellWorldZ = (block.z + zz + 0.5f) * LIGHTCELL_SIZE;
+
+					kexVec3 color;
+					if (cellWorldZ > floors[idx] && cellWorldZ < ceilings[idx])
+					{
+						color = LightTexelSample({ cellWorldX, cellWorldY, cellWorldZ }, nullptr);
+					}
+					else
+					{
+						color = { 0.0f, 0.0f, 0.0f };
+					}
+
+					block.cells[idx + zz * LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE] = color;
+				}
+			}
+		}
+	}
+	else
+	{
+		// Entire block is outside the map
+		block.z = 0;
+		block.layers = 0;
+	}
+
+	std::unique_lock<std::mutex> lock(mutex);
+
+	int numblocks = grid.blocks.size();
+	int lastproc = processed * 100 / numblocks;
+	processed++;
+	int curproc = processed * 100 / numblocks;
+	if (lastproc != curproc || processed == 1)
+	{
+		float remaining = (float)processed / (float)numblocks;
+		printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
+	}
+
 }
 
 void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)

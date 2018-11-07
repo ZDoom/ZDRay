@@ -28,11 +28,31 @@
 #pragma once
 
 #include "surfaces.h"
+#include "framework/tarray.h"
 #include <mutex>
 
 #define LIGHTMAP_MAX_SIZE  1024
 
+#define LIGHTCELL_SIZE 64
+#define LIGHTCELL_BLOCK_SIZE 16
+
 class FWadWriter;
+
+class LightCellBlock
+{
+public:
+	int z;
+	int layers;
+	TArray<kexVec3> cells;
+};
+
+class LightCellGrid
+{
+public:
+	int x, y;
+	int width, height;
+	std::vector<LightCellBlock> blocks;
+};
 
 class kexLightmapBuilder
 {
@@ -40,10 +60,7 @@ public:
 	kexLightmapBuilder();
 	~kexLightmapBuilder();
 
-	void BuildSurfaceParams(surface_t *surface);
-	void TraceSurface(surface_t *surface);
 	void CreateLightmaps(FLevel &doomMap);
-	void LightSurface(const int surfid);
 	//void WriteTexturesToTGA();
 	void WriteMeshToOBJ();
 	void AddLightmapLump(FWadWriter &wadFile);
@@ -53,8 +70,6 @@ public:
 	int textureWidth = 128;
 	int textureHeight = 128;
 
-	static const kexVec3 gridSize;
-
 private:
 	void NewTexture();
 	bool MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
@@ -62,12 +77,20 @@ private:
 	kexVec3 LightTexelSample(const kexVec3 &origin, surface_t *surface);
 	bool EmitFromCeiling(const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
 
+	void BuildSurfaceParams(surface_t *surface);
+	void TraceSurface(surface_t *surface);
+	void SetupLightCellGrid();
+	void LightBlock(int blockid);
+	void LightSurface(const int surfid);
+
 	FLevel *map;
 	std::vector<std::vector<uint16_t>> textures;
 	std::vector<std::vector<int>> allocBlocks;
 	int numTextures = 0;
 	int extraSamples = 2;
 	int tracedTexels = 0;
+
+	LightCellGrid grid;
 
 	std::mutex mutex;
 	int processed = 0;
