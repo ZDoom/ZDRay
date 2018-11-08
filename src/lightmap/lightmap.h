@@ -79,12 +79,15 @@ private:
 
 	void BuildSurfaceParams(surface_t *surface);
 	void TraceSurface(surface_t *surface);
+	void TraceIndirectLight(surface_t *surface);
 	void SetupLightCellGrid();
 	void LightBlock(int blockid);
 	void LightSurface(const int surfid);
+	void LightIndirect(const int surfid);
 
 	FLevel *map;
 	std::vector<std::vector<uint16_t>> textures;
+	std::vector<uint16_t> indirectoutput;
 	std::vector<std::vector<int>> allocBlocks;
 	int numTextures = 0;
 	int extraSamples = 2;

@@ -39,7 +39,9 @@ public:
 struct TraceHit
 {
 	float fraction = 1.0f;
-	int surface = -1;
+	int triangle = -1;
+	float b = 0.0f;
+	float c = 0.0f;
 };
 
 class CollisionBBox : public kexBBox
@@ -80,7 +82,7 @@ public:
 class TriangleMeshShape
 {
 public:
-	TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements, const int *surfaces);
+	TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements);
 
 	int get_min_depth() const;
 	int get_max_depth() const;
@@ -113,7 +115,6 @@ public:
 	const int num_vertices = 0;
 	const unsigned int *elements = nullptr;
 	int num_elements = 0;
-	const int *surfaces = nullptr;
 
 	std::vector<Node> nodes;
 	int root = -1;
@@ -128,7 +129,7 @@ private:
 	static void find_first_hit(TriangleMeshShape *shape1, const RayBBox &ray, int a, TraceHit *hit);
 
 	inline static bool overlap_bv_ray(TriangleMeshShape *shape, const RayBBox &ray, int a);
-	inline static float intersect_triangle_ray(TriangleMeshShape *shape, const RayBBox &ray, int a);
+	inline static float intersect_triangle_ray(TriangleMeshShape *shape, const RayBBox &ray, int a, float &barycentricB, float &barycentricC);
 
 	inline static bool sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
 	inline static float sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);

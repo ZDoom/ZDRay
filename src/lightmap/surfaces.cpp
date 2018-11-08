@@ -397,7 +397,10 @@ void CreateSurfaces(FLevel &doomMap)
 		unsigned int pos = doomMap.MeshVertices.Size();
 
 		for (int j = 0; j < numVerts; j++)
+		{
 			doomMap.MeshVertices.Push(s->verts[j]);
+			doomMap.MeshUVIndex.Push(j);
+		}
 
 		if (s->type == ST_FLOOR || s->type == ST_CEILING)
 		{
@@ -431,5 +434,5 @@ void CreateSurfaces(FLevel &doomMap)
 		}
 	}
 
-	doomMap.CollisionMesh = std::make_unique<TriangleMeshShape>(&doomMap.MeshVertices[0], doomMap.MeshVertices.Size(), &doomMap.MeshElements[0], doomMap.MeshElements.Size(), &doomMap.MeshSurfaces[0]);
+	doomMap.CollisionMesh = std::make_unique<TriangleMeshShape>(&doomMap.MeshVertices[0], doomMap.MeshVertices.Size(), &doomMap.MeshElements[0], doomMap.MeshElements.Size());
 }

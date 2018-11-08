@@ -464,19 +464,18 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 				bShouldLookupTexture = true;
 			}
 
-			kexMath::Clamp(c, 0, 1);
 			colorSamples[i * LIGHTMAP_MAX_SIZE + j] = c;
 		}
 	}
 
 	// SVE redraws the scene for lightmaps, so for optimizations,
 	// tell the engine to ignore this surface if completely black
-	if (bShouldLookupTexture == false)
+	/*if (bShouldLookupTexture == false)
 	{
 		surface->lightmapNum = -1;
 		return;
 	}
-	else
+	else*/
 	{
 		int x = 0, y = 0;
 		int width = surface->lightmapDims[0];
@@ -534,12 +533,147 @@ void kexLightmapBuilder::TraceSurface(surface_t *surface)
 	}
 }
 
+static float RadicalInverse_VdC(uint32_t bits)
+{
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
+}
+
+static kexVec2 Hammersley(uint32_t i, uint32_t N)
+{
+	return kexVec2(float(i) / float(N), RadicalInverse_VdC(i));
+}
+
+static kexVec3 ImportanceSampleGGX(kexVec2 Xi, kexVec3 N, float roughness)
+{
+	float a = roughness * roughness;
+
+	float phi = 2.0f * M_PI * Xi.x;
+	float cosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a*a - 1.0f) * Xi.y));
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	// from spherical coordinates to cartesian coordinates
+	kexVec3 H(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta, cosTheta);
+
+	// from tangent-space vector to world-space sample vector
+	kexVec3 up = std::abs(N.z) < 0.999f ? kexVec3(0.0f, 0.0f, 1.0f) : kexVec3(1.0f, 0.0f, 0.0f);
+	kexVec3 tangent = kexVec3::Normalize(kexVec3::Cross(up, N));
+	kexVec3 bitangent = kexVec3::Cross(N, tangent);
+
+	kexVec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+	return kexVec3::Normalize(sampleVec);
+}
+
+void kexLightmapBuilder::TraceIndirectLight(surface_t *surface)
+{
+	if (surface->lightmapNum == -1)
+		return;
+
+	int sampleWidth = surface->lightmapDims[0];
+	int sampleHeight = surface->lightmapDims[1];
+
+	kexVec3 normal = surface->plane.Normal();
+
+	uint16_t *currentTexture = &indirectoutput[surface->lightmapNum * textureWidth * textureHeight * 3];
+
+	for (int i = 0; i < sampleHeight; i++)
+	{
+		for (int j = 0; j < sampleWidth; j++)
+		{
+			kexVec3 pos = surface->lightmapOrigin + normal +
+				(surface->lightmapSteps[0] * (float)j) +
+				(surface->lightmapSteps[1] * (float)i);
+
+			const int SAMPLE_COUNT = 128;// 1024;
+
+			float totalWeight = 0.0f;
+			kexVec3 c(0.0f, 0.0f, 0.0f);
+
+			for (int i = 0; i < SAMPLE_COUNT; i++)
+			{
+				kexVec2 Xi = Hammersley(i, SAMPLE_COUNT);
+				kexVec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
+				kexVec3 L = kexVec3::Normalize(H * (2.0f * kexVec3::Dot(normal, H)) - normal);
+
+				float NdotL = std::max(kexVec3::Dot(normal, L), 0.0f);
+				if (NdotL > 0.0f)
+				{
+					tracedTexels++;
+					LevelTraceHit hit = map->Trace(pos, pos + L * 1000.0f);
+					if (hit.fraction < 1.0f)
+					{
+						kexVec3 surfaceLight;
+						if (hit.hitSurface->bSky)
+						{
+							surfaceLight = { 0.5f, 0.5f, 0.5f };
+						}
+						else
+						{
+							float u =
+								hit.hitSurface->lightmapCoords[hit.indices[0] * 2] * (1.0f - hit.b - hit.c) +
+								hit.hitSurface->lightmapCoords[hit.indices[1] * 2] * hit.b +
+								hit.hitSurface->lightmapCoords[hit.indices[2] * 2] * hit.c;
+
+							float v =
+								hit.hitSurface->lightmapCoords[hit.indices[0] * 2 + 1] * (1.0f - hit.b - hit.c) +
+								hit.hitSurface->lightmapCoords[hit.indices[1] * 2 + 1] * hit.b +
+								hit.hitSurface->lightmapCoords[hit.indices[2] * 2 + 1] * hit.c;
+
+							int hitTexelX = clamp((int)(u * textureWidth + 0.5f), 0, textureWidth - 1);
+							int hitTexelY = clamp((int)(v * textureHeight + 0.5f), 0, textureHeight - 1);
+
+							uint16_t *hitTexture = textures[hit.hitSurface->lightmapNum].data();
+							uint16_t *hitPixel = hitTexture + (hitTexelX + hitTexelY * textureWidth) * 3;
+
+							float attenuation = (1.0f - hit.fraction);
+							surfaceLight.x = halfToFloat(hitPixel[0]) * attenuation;
+							surfaceLight.y = halfToFloat(hitPixel[1]) * attenuation;
+							surfaceLight.z = halfToFloat(hitPixel[2]) * attenuation;
+						}
+						c += surfaceLight * NdotL;
+					}
+					totalWeight += NdotL;
+				}
+			}
+
+			c = c / totalWeight;
+
+			// convert RGB to bytes
+			int tx = j + surface->lightmapOffs[0];
+			int ty = i + surface->lightmapOffs[1];
+			uint16_t *pixel = currentTexture + (tx + ty * textureWidth) * 3;
+			pixel[0] = floatToHalf(c.x);
+			pixel[1] = floatToHalf(c.y);
+			pixel[2] = floatToHalf(c.z);
+		}
+	}
+}
+
 void kexLightmapBuilder::LightSurface(const int surfid)
 {
 	BuildSurfaceParams(surfaces[surfid].get());
 	TraceSurface(surfaces[surfid].get());
 
 	std::unique_lock<std::mutex> lock(mutex);
+
+	int numsurfs = surfaces.size();
+	int lastproc = processed * 100 / numsurfs;
+	processed++;
+	int curproc = processed * 100 / numsurfs;
+	if (lastproc != curproc || processed == 1)
+	{
+		float remaining = (float)processed / (float)numsurfs;
+		printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
+	}
+}
+
+void kexLightmapBuilder::LightIndirect(const int surfid)
+{
+	TraceIndirectLight(surfaces[surfid].get());
 
 	int numsurfs = surfaces.size();
 	int lastproc = processed * 100 / numsurfs;
@@ -577,6 +711,29 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 	});
 
 	printf("Texels traced: %i \n\n", tracedTexels);
+
+	printf("------------- Tracing indirect -------------\n");
+
+	indirectoutput.resize(textures.size() * textureWidth * textureHeight * 3);
+
+	tracedTexels = 0;
+	processed = 0;
+	kexWorker::RunJob(surfaces.size(), [=](int id) {
+		LightIndirect(id);
+	});
+
+	for (size_t i = 0; i < textures.size(); i++)
+	{
+		uint16_t *tex = textures[i].data();
+		uint16_t *indirect = &indirectoutput[i * textureWidth * textureHeight * 3];
+		int count = textureWidth * textureHeight * 3;
+		for (int j = 0; j < count; j++)
+		{
+			tex[j] = floatToHalf(halfToFloat(tex[j]) + halfToFloat(indirect[j]));
+		}
+	}
+
+	printf("Texels traced: %i \n\n", tracedTexels);
 }
 
 void kexLightmapBuilder::SetupLightCellGrid()
@@ -585,8 +742,8 @@ void kexLightmapBuilder::SetupLightCellGrid()
 	float blockWorldSize = LIGHTCELL_BLOCK_SIZE * LIGHTCELL_SIZE;
 	grid.x = static_cast<int>(std::floor(worldBBox.min.x / blockWorldSize));
 	grid.y = static_cast<int>(std::floor(worldBBox.min.y / blockWorldSize));
-	grid.width = static_cast<int>(std::ceil(worldBBox.max.x / blockWorldSize + 1.0f) - 1.0f) - grid.x;
-	grid.height = static_cast<int>(std::ceil(worldBBox.max.y / blockWorldSize + 1.0f) - 1.0f) - grid.y;
+	grid.width = static_cast<int>(std::ceil(worldBBox.max.x / blockWorldSize)) - grid.x;
+	grid.height = static_cast<int>(std::ceil(worldBBox.max.y / blockWorldSize)) - grid.y;
 	grid.blocks.resize(grid.width * grid.height);
 }
 
@@ -641,7 +798,7 @@ void kexLightmapBuilder::LightBlock(int id)
 	{
 		// Allocate space for the cells
 		block.z = static_cast<int>(std::floor(minFloor / LIGHTCELL_SIZE));
-		block.layers = static_cast<int>(std::ceil(maxCeiling / LIGHTCELL_SIZE + 1.0f) - 1.0f) - block.z;
+		block.layers = static_cast<int>(std::ceil(maxCeiling / LIGHTCELL_SIZE)) - block.z;
 		block.cells.Resize(LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE * block.layers);
 
 		// Ray trace the cells

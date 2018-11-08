@@ -358,6 +358,24 @@ LevelTraceHit FLevel::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
 	trace.start = startVec;
 	trace.end = endVec;
 	trace.fraction = hit.fraction;
-	trace.hitSurface = (trace.fraction < 1.0f) ? surfaces[hit.surface].get() : nullptr;
+	if (trace.fraction < 1.0f)
+	{
+		int elementIdx = hit.triangle * 3;
+		trace.hitSurface = surfaces[MeshSurfaces[hit.triangle]].get();
+		trace.indices[0] = MeshUVIndex[MeshElements[elementIdx]];
+		trace.indices[1] = MeshUVIndex[MeshElements[elementIdx + 1]];
+		trace.indices[2] = MeshUVIndex[MeshElements[elementIdx + 2]];
+		trace.b = hit.b;
+		trace.c = hit.c;
+	}
+	else
+	{
+		trace.hitSurface = nullptr;
+		trace.indices[0] = 0;
+		trace.indices[1] = 0;
+		trace.indices[2] = 0;
+		trace.b = 0.0f;
+		trace.c = 0.0f;
+	}
 	return trace;
 }

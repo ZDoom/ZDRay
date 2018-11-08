@@ -309,8 +309,11 @@ struct LevelTraceHit
 {
 	kexVec3 start;
 	kexVec3 end;
-	surface_t *hitSurface;
 	float fraction;
+
+	surface_t *hitSurface;
+	int indices[3];
+	float b, c;
 };
 
 struct FLevel
@@ -357,6 +360,7 @@ struct FLevel
 	// Dlight helpers
 
 	TArray<kexVec3> MeshVertices;
+	TArray<int> MeshUVIndex;
 	TArray<unsigned int> MeshElements;
 	TArray<int> MeshSurfaces;
 	std::unique_ptr<TriangleMeshShape> CollisionMesh;
