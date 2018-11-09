@@ -82,20 +82,6 @@ public:
 		const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec);
 };
 
-class kexRand
-{
-public:
-	static void             SetSeed(const int randSeed);
-	static int              SysRand();
-	static int              Int();
-	static int              Max(const int max);
-	static float            Float();
-	static float            CFloat();
-
-private:
-	static int              seed;
-};
-
 class Quat
 {
 public:
@@ -360,20 +346,6 @@ public:
 	float &operator[](size_t i) { return vectors[i >> 2][i & 3]; }
 
 	Vec4                 vectors[4];
-};
-
-class kexPluecker
-{
-public:
-	kexPluecker();
-	kexPluecker(const Vec3 &start, const Vec3 &end, bool bRay = false);
-
-	void                    Clear();
-	void                    SetLine(const Vec3 &start, const Vec3 &end);
-	void                    SetRay(const Vec3 &start, const Vec3 &dir);
-	float                   InnerProduct(const kexPluecker &pluecker) const;
-
-	float                   p[6];
 };
 
 class Plane

@@ -159,9 +159,7 @@ set( SOURCES
 	src/math/mathlib.cpp
 	src/math/matrix.cpp
 	src/math/plane.cpp
-	src/math/pluecker.cpp
 	src/math/quaternion.cpp
-	src/math/random.cpp
 	src/math/vector.cpp
 )
 
