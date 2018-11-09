@@ -719,9 +719,13 @@ void LightmapBuilder::CreateSurfaceLights()
 	}
 }
 
-void LightmapBuilder::CreateLightmaps(FLevel &doomMap)
+void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int textureSize)
 {
 	map = &doomMap;
+	samples = sampleDistance;
+	textureWidth = textureSize;
+	textureHeight = textureSize;
+
 	mesh = std::make_unique<LevelMesh>(doomMap);
 
 	CreateSurfaceLights();

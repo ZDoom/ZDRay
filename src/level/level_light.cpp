@@ -41,7 +41,7 @@
 static const Vec3 defaultSunColor(1, 1, 1);
 static const Vec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
 
-void FLevel::SetupDlight()
+void FLevel::SetupLights()
 {
 	CheckSkySectors();
 
@@ -79,6 +79,8 @@ void FLevel::SetupDlight()
 			}
 		}
 	}
+
+	CreateLights();
 }
 
 void FLevel::CheckSkySectors()

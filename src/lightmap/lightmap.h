@@ -61,14 +61,8 @@ public:
 	LightmapBuilder();
 	~LightmapBuilder();
 
-	void CreateLightmaps(FLevel &doomMap);
-	//void WriteTexturesToTGA();
+	void CreateLightmaps(FLevel &doomMap, int sampleDistance, int textureSize);
 	void AddLightmapLump(FWadWriter &wadFile);
-
-	int samples = 16;
-	float ambience = 0.0f;
-	int textureWidth = 128;
-	int textureHeight = 128;
 
 private:
 	void NewTexture();
@@ -87,8 +81,12 @@ private:
 
 	void CreateSurfaceLights();
 
-	std::unique_ptr<LevelMesh> mesh;
 	FLevel *map;
+	int samples = 16;
+	int textureWidth = 128;
+	int textureHeight = 128;
+
+	std::unique_ptr<LevelMesh> mesh;
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::vector<uint16_t>> textures;
 	std::vector<uint16_t> indirectoutput;

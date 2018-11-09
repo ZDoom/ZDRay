@@ -615,19 +615,8 @@ void FProcessor::BuildNodes()
 
 void FProcessor::BuildLightmaps()
 {
-	LMBuilder.ambience = 0.0f;
-	LMBuilder.samples = Samples;
-	LMBuilder.textureWidth = LMDims;
-	LMBuilder.textureHeight = LMDims;
-
-	Level.SetupDlight();
-	Level.CreateLights();
-
-	LMBuilder.CreateLightmaps(Level);
-
-	//LMBuilder.WriteTexturesToTGA();
-	//LMBuilder.WriteMeshToOBJ();
-
+	Level.SetupLights();
+	LMBuilder.CreateLightmaps(Level, Samples, LMDims);
 	LightmapsBuilt = true;
 }
 

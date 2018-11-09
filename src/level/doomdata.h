@@ -320,23 +320,19 @@ struct FLevel
 
 	TArray<UDMFKey> props;
 
+	TArray<ThingLight> ThingLights;
+	TArray<SurfaceLightDef> SurfaceLights;
+
 	void FindMapBounds ();
 	void RemoveExtraLines ();
 	void RemoveExtraSides ();
 	void RemoveExtraSectors ();
+	void SetupLights();
 
 	int NumSides() const { return Sides.Size(); }
 	int NumLines() const { return Lines.Size(); }
 	int NumSectors() const { return Sectors.Size(); }
 	int NumThings() const { return Things.Size(); }
-
-	// Dlight helpers
-
-	TArray<ThingLight> ThingLights;
-	TArray<SurfaceLightDef> SurfaceLights;
-
-	void SetupDlight();
-	void CreateLights();
 
 	const Vec3 &GetSunColor() const;
 	const Vec3 &GetSunDirection() const;
@@ -348,6 +344,7 @@ struct FLevel
 
 private:
 	void CheckSkySectors();
+	void CreateLights();
 };
 
 const int BLOCKSIZE = 128;
