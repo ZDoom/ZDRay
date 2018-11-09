@@ -37,7 +37,7 @@
 #define LIGHTCELL_BLOCK_SIZE 16
 
 class FWadWriter;
-class LightSurface;
+class SurfaceLight;
 
 class LightCellBlock
 {
@@ -82,14 +82,14 @@ private:
 	void TraceIndirectLight(Surface *surface);
 	void SetupLightCellGrid();
 	void LightBlock(int blockid);
-	void LightSurfacex(const int surfid);
+	void LightSurface(const int surfid);
 	void LightIndirect(const int surfid);
 
-	void CreateLightSurfaces();
+	void CreateSurfaceLights();
 
 	std::unique_ptr<LevelMesh> mesh;
 	FLevel *map;
-	std::vector<std::unique_ptr<LightSurface>> lightSurfaces;
+	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::vector<uint16_t>> textures;
 	std::vector<uint16_t> indirectoutput;
 	std::vector<std::vector<int>> allocBlocks;

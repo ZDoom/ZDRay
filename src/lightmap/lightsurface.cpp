@@ -29,20 +29,20 @@
 #include "level/level.h"
 #include "lightsurface.h"
 
-LightSurface::LightSurface(const surfaceLightDef &lightSurfaceDef, Surface *surface)
+SurfaceLight::SurfaceLight(const SurfaceLightDef &surfaceLightDef, Surface *surface)
 {
-	this->intensity = lightSurfaceDef.intensity;
-	this->distance = lightSurfaceDef.distance;
-	this->rgb = lightSurfaceDef.rgb;
+	this->intensity = surfaceLightDef.intensity;
+	this->distance = surfaceLightDef.distance;
+	this->rgb = surfaceLightDef.rgb;
 	this->surface = surface;
 }
 
-LightSurface::~LightSurface()
+SurfaceLight::~SurfaceLight()
 {
 }
 
 // Splits surface vertices into two groups while adding new ones caused by the split
-void LightSurface::Clip(VertexBatch &points, const Vec3 &normal, float dist, VertexBatch *frontPoints, VertexBatch *backPoints)
+void SurfaceLight::Clip(VertexBatch &points, const Vec3 &normal, float dist, VertexBatch *frontPoints, VertexBatch *backPoints)
 {
 	std::vector<float> dists;
 	std::vector<char> sides;
@@ -116,7 +116,7 @@ void LightSurface::Clip(VertexBatch &points, const Vec3 &normal, float dist, Ver
 }
 
 // Recursively divides the surface
-bool LightSurface::SubdivideRecursion(VertexBatch &surfPoints, float divide, std::vector<std::unique_ptr<VertexBatch>> &points)
+bool SurfaceLight::SubdivideRecursion(VertexBatch &surfPoints, float divide, std::vector<std::unique_ptr<VertexBatch>> &points)
 {
 	BBox bounds;
 	Vec3 splitNormal;
@@ -161,7 +161,7 @@ bool LightSurface::SubdivideRecursion(VertexBatch &surfPoints, float divide, std
 	return false;
 }
 
-void LightSurface::Subdivide(const float divide)
+void SurfaceLight::Subdivide(const float divide)
 {
 	if (surface->type == ST_CEILING || surface->type == ST_FLOOR)
 	{
@@ -234,7 +234,7 @@ void LightSurface::Subdivide(const float divide)
 	}
 }
 
-float LightSurface::TraceSurface(LevelMesh *mesh, const Surface *fragmentSurface, const Vec3 &fragmentPos)
+float SurfaceLight::TraceSurface(LevelMesh *mesh, const Surface *fragmentSurface, const Vec3 &fragmentPos)
 {
 	if (fragmentSurface == surface)
 		return 1.0f; // light surface will always be fullbright

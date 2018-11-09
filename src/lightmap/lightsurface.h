@@ -30,13 +30,13 @@
 #include "surfaces.h"
 
 struct FLevel;
-struct surfaceLightDef;
+struct SurfaceLightDef;
 
-class LightSurface
+class SurfaceLight
 {
 public:
-	LightSurface(const surfaceLightDef &lightSurfaceDef, Surface *surface);
-	~LightSurface();
+	SurfaceLight(const SurfaceLightDef &surfaceLightDef, Surface *surface);
+	~SurfaceLight();
 
 	void Subdivide(const float divide);
 	float TraceSurface(LevelMesh *map, const Surface *surface, const Vec3 &origin);

@@ -247,7 +247,7 @@ class Vec3;
 class Vec2;
 struct vertex_t;
 struct Surface;
-struct thingLight_t;
+struct ThingLight;
 
 struct FloatVertex
 {
@@ -255,30 +255,11 @@ struct FloatVertex
 	float y;
 };
 
-struct lightDef_t
-{
-	int             doomednum;
-	float           height;
-	float           radius;
-	float           intensity;
-	float           falloff;
-	bool            bCeiling;
-	Vec3         rgb;
-};
-
-struct mapDef_t
-{
-	int             map;
-	int             sunIgnoreTag;
-	Vec3         sunDir;
-	Vec3         sunColor;
-};
-
-struct thingLight_t
+struct ThingLight
 {
 	IntThing        *mapThing;
-	Vec2         origin;
-	Vec3         rgb;
+	Vec2            origin;
+	Vec3            rgb;
 	float           intensity;
 	float           innerAngleCos;
 	float           outerAngleCos;
@@ -289,11 +270,11 @@ struct thingLight_t
 	MapSubsectorEx  *ssect;
 };
 
-struct surfaceLightDef
+struct SurfaceLightDef
 {
 	float           distance;
 	float           intensity;
-	Vec3         rgb;
+	Vec3            rgb;
 };
 
 enum mapFlags_t
@@ -351,8 +332,8 @@ struct FLevel
 
 	// Dlight helpers
 
-	TArray<thingLight_t> ThingLights;
-	TArray<surfaceLightDef> SurfaceLights;
+	TArray<ThingLight> ThingLights;
+	TArray<SurfaceLightDef> SurfaceLights;
 
 	void SetupDlight();
 	void CreateLights();

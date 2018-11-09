@@ -247,7 +247,7 @@ void FLevel::CreateLights()
 			int x = thing->x >> FRACBITS;
 			int y = thing->y >> FRACBITS;
 
-			thingLight_t thingLight;
+			ThingLight thingLight;
 			thingLight.mapThing = thing;
 			thingLight.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
 			thingLight.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
@@ -300,7 +300,7 @@ void FLevel::CreateLights()
 
 			if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 			{
-				surfaceLightDef desc;
+				SurfaceLightDef desc;
 				desc.intensity = lightintensity;
 				desc.distance = lightdistance;
 				desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
@@ -341,7 +341,7 @@ void FLevel::CreateLights()
 
 		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 		{
-			surfaceLightDef desc;
+			SurfaceLightDef desc;
 			desc.intensity = lightintensity;
 			desc.distance = lightdistance;
 			desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
@@ -373,7 +373,7 @@ void FLevel::CreateLights()
 
 		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 		{
-			surfaceLightDef desc;
+			SurfaceLightDef desc;
 			desc.intensity = lightintensity;
 			desc.distance = lightdistance;
 			desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;

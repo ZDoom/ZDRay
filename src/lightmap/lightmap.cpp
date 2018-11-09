@@ -213,7 +213,7 @@ Vec3 LightmapBuilder::LightTexelSample(const Vec3 &origin, Surface *surface)
 	// check all thing lights
 	for (unsigned int i = 0; i < map->ThingLights.Size(); i++)
 	{
-		thingLight_t *tl = &map->ThingLights[i];
+		ThingLight *tl = &map->ThingLights[i];
 
 		float originZ;
 		if (!tl->bCeiling)
@@ -286,9 +286,9 @@ Vec3 LightmapBuilder::LightTexelSample(const Vec3 &origin, Surface *surface)
 	}
 
 	// trace against surface lights
-	for (size_t i = 0; i < lightSurfaces.size(); ++i)
+	for (size_t i = 0; i < surfaceLights.size(); ++i)
 	{
-		LightSurface *surfaceLight = lightSurfaces[i].get();
+		SurfaceLight *surfaceLight = surfaceLights[i].get();
 
 		float attenuation = surfaceLight->TraceSurface(mesh.get(), surface, origin);
 		if (attenuation > 0.0f)
@@ -646,7 +646,7 @@ void LightmapBuilder::TraceIndirectLight(Surface *surface)
 	}
 }
 
-void LightmapBuilder::LightSurfacex(const int surfid)
+void LightmapBuilder::LightSurface(const int surfid)
 {
 	BuildSurfaceParams(mesh->surfaces[surfid].get());
 	TraceSurface(mesh->surfaces[surfid].get());
@@ -679,7 +679,7 @@ void LightmapBuilder::LightIndirect(const int surfid)
 	}
 }
 
-void LightmapBuilder::CreateLightSurfaces()
+void LightmapBuilder::CreateSurfaceLights()
 {
 	for (size_t j = 0; j < mesh->surfaces.size(); ++j)
 	{
@@ -690,9 +690,9 @@ void LightmapBuilder::CreateLightSurfaces()
 			int lightdefidx = map->Sides[surface->typeIndex].lightdef;
 			if (lightdefidx != -1)
 			{
-				auto lightSurface = std::make_unique<LightSurface>(map->SurfaceLights[lightdefidx], surface);
-				lightSurface->Subdivide(16);
-				lightSurfaces.push_back(std::move(lightSurface));
+				auto surfaceLight = std::make_unique<SurfaceLight>(map->SurfaceLights[lightdefidx], surface);
+				surfaceLight->Subdivide(16);
+				surfaceLights.push_back(std::move(surfaceLight));
 			}
 		}
 		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
@@ -704,15 +704,15 @@ void LightmapBuilder::CreateLightSurfaces()
 			{
 				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
 				{
-					auto lightSurface = std::make_unique<LightSurface>(map->SurfaceLights[sector->floorlightdef], surface);
-					lightSurface->Subdivide(16);
-					lightSurfaces.push_back(std::move(lightSurface));
+					auto surfaceLight = std::make_unique<SurfaceLight>(map->SurfaceLights[sector->floorlightdef], surface);
+					surfaceLight->Subdivide(16);
+					surfaceLights.push_back(std::move(surfaceLight));
 				}
 				else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
 				{
-					auto lightSurface = std::make_unique<LightSurface>(map->SurfaceLights[sector->ceilinglightdef], surface);
-					lightSurface->Subdivide(16);
-					lightSurfaces.push_back(std::move(lightSurface));
+					auto surfaceLight = std::make_unique<SurfaceLight>(map->SurfaceLights[sector->ceilinglightdef], surface);
+					surfaceLight->Subdivide(16);
+					surfaceLights.push_back(std::move(surfaceLight));
 				}
 			}
 		}
@@ -724,7 +724,7 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap)
 	map = &doomMap;
 	mesh = std::make_unique<LevelMesh>(doomMap);
 
-	CreateLightSurfaces();
+	CreateSurfaceLights();
 
 	printf("-------------- Tracing cells ---------------\n");
 
@@ -743,7 +743,7 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap)
 	tracedTexels = 0;
 	processed = 0;
 	Worker::RunJob(mesh->surfaces.size(), [=](int id) {
-		LightSurfacex(id);
+		LightSurface(id);
 	});
 
 	printf("Texels traced: %i \n\n", tracedTexels);
