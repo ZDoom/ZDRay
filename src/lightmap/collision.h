@@ -99,6 +99,7 @@ public:
 
 	static TraceHit find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end);
 
+private:
 	struct Node
 	{
 		Node() = default;
@@ -119,7 +120,6 @@ public:
 	std::vector<Node> nodes;
 	int root = -1;
 
-private:
 	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
 
 	static bool find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);

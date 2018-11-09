@@ -158,7 +158,7 @@ static option long_opts[] =
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5c";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:Q:S:M:";
 
 // CODE --------------------------------------------------------------------
 
