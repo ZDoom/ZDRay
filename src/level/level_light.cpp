@@ -27,7 +27,6 @@
 
 #include "math/mathlib.h"
 #include "level/level.h"
-#include "lightmap/lightsurface.h"
 #include <algorithm>
 #include <memory>
 

@@ -27,7 +27,7 @@
 
 #include "math/mathlib.h"
 #include "level/level.h"
-#include "lightsurface.h"
+#include "surfacelight.h"
 
 SurfaceLight::SurfaceLight(const SurfaceLightDef &surfaceLightDef, Surface *surface)
 {

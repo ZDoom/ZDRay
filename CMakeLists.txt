@@ -150,7 +150,7 @@ set( SOURCES
 	src/nodebuilder/nodebuild_utility.cpp
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
 	src/lightmap/lightmap.cpp
-	src/lightmap/lightsurface.cpp
+	src/lightmap/surfacelight.cpp
 	src/lightmap/surfaces.cpp
 	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
@@ -180,7 +180,7 @@ set( HEADERS
 	src/framework/halffloat.h
 	src/framework/binfile.h
 	src/lightmap/lightmap.h
-	src/lightmap/lightsurface.h
+	src/lightmap/surfacelight.h
 	src/lightmap/surfaces.h
 	src/lightmap/worker.h
 	src/lightmap/collision.h

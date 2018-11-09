@@ -29,7 +29,7 @@
 #include "surfaces.h"
 #include "level/level.h"
 #include "lightmap.h"
-#include "lightsurface.h"
+#include "surfacelight.h"
 #include "worker.h"
 #include "framework/binfile.h"
 #include "framework/templates.h"

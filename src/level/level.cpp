@@ -19,7 +19,6 @@
 */
 
 #include "level/level.h"
-#include "lightmap/lightsurface.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
