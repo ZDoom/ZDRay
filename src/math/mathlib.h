@@ -35,15 +35,15 @@
 #undef M_PI
 #endif
 
-#define M_PI        3.1415926535897932384626433832795f
-#define M_RAD       (M_PI / 180.0f)
-#define M_DEG       (180.0f / M_PI)
-#define M_INFINITY  1e30f
+#define M_PI 3.1415926535897932384626433832795f
+#define M_RAD (M_PI / 180.0f)
+#define M_DEG (180.0f / M_PI)
+#define M_INFINITY 1e30f
 
 #define DEG2RAD(x) ((x) * M_RAD)
 #define RAD2DEG(x) ((x) * M_DEG)
 
-#define FLOATSIGNBIT(f)  (reinterpret_cast<const unsigned int&>(f) >> 31)
+#define FLOATSIGNBIT(f) (reinterpret_cast<const unsigned int&>(f) >> 31)
 
 class Vec2;
 class Vec3;
@@ -54,32 +54,30 @@ class Angle;
 class Math
 {
 public:
-	static float            Sin(float x);
-	static float            Cos(float x);
-	static float            Tan(float x);
-	static float            ATan2(float x, float y);
-	static float            ACos(float x);
-	static float            Sqrt(float x);
-	static float            Pow(float x, float y);
-	static float            Log(float x);
-	static float            Floor(float x);
-	static float            Ceil(float x);
-	static float            Deg2Rad(float x);
-	static float            Rad2Deg(float x);
+	static float Sin(float x);
+	static float Cos(float x);
+	static float Tan(float x);
+	static float ATan2(float x, float y);
+	static float ACos(float x);
+	static float Sqrt(float x);
+	static float Pow(float x, float y);
+	static float Log(float x);
+	static float Floor(float x);
+	static float Ceil(float x);
+	static float Deg2Rad(float x);
+	static float Rad2Deg(float x);
 
-	static int              Abs(int x);
-	static float            Fabs(float x);
-	static int              RoundPowerOfTwo(int x);
-	static float            InvSqrt(float x);
-	static void             Clamp(float &f, const float min, const float max);
-	static void             Clamp(int &i, const int min, const int max);
-	static void             Clamp(uint8_t &b, const uint8_t min, const uint8_t max);
-	static void             Clamp(Vec3 &f, const float min, const float max);
+	static int Abs(int x);
+	static float Fabs(float x);
+	static int RoundPowerOfTwo(int x);
+	static float InvSqrt(float x);
+	static void Clamp(float &f, const float min, const float max);
+	static void Clamp(int &i, const int min, const int max);
+	static void Clamp(uint8_t &b, const uint8_t min, const uint8_t max);
+	static void Clamp(Vec3 &f, const float min, const float max);
 
-	static void             CubicCurve(const Vec3 &start, const Vec3 &end, const float time,
-		const Vec3 &point, Vec3 *vec);
-	static void             QuadraticCurve(const Vec3 &start, const Vec3 &end, const float time,
-		const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec);
+	static void CubicCurve(const Vec3 &start, const Vec3 &end, const float time, const Vec3 &point, Vec3 *vec);
+	static void QuadraticCurve(const Vec3 &start, const Vec3 &end, const float time, const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec);
 };
 
 class Quat
@@ -91,36 +89,36 @@ public:
 	Quat(const float angle, Vec3 &vector);
 	Quat(const float angle, const Vec3 &vector);
 
-	void                    Set(const float x, const float y, const float z, const float w);
-	void                    Clear();
-	float                   Dot(const Quat &quat) const;
-	float                   UnitSq() const;
-	float                   Unit() const;
-	Quat                 &Normalize();
-	Quat                 Slerp(const Quat &quat, float movement) const;
-	Quat                 RotateFrom(const Vec3 &location, const Vec3 &target, float maxAngle);
-	Quat                 Inverse() const;
+	void Set(const float x, const float y, const float z, const float w);
+	void Clear();
+	float Dot(const Quat &quat) const;
+	float UnitSq() const;
+	float Unit() const;
+	Quat &Normalize();
+	Quat Slerp(const Quat &quat, float movement) const;
+	Quat RotateFrom(const Vec3 &location, const Vec3 &target, float maxAngle);
+	Quat Inverse() const;
 
-	Quat                 operator+(const Quat &quat);
-	Quat                 &operator+=(const Quat &quat);
-	Quat                 operator-(const Quat &quat);
-	Quat                 &operator-=(const Quat &quat);
-	Quat                 operator*(const Quat &quat);
-	Quat                 operator*(const float val) const;
-	Quat                 &operator*=(const Quat &quat);
-	Quat                 &operator*=(const float val);
-	Quat                 &operator=(const Quat &quat);
-	Quat                 &operator=(const Vec4 &vec);
-	Quat                 &operator=(const float *vecs);
-	Vec3                 operator|(const Vec3 &vector);
+	Quat operator+(const Quat &quat);
+	Quat &operator+=(const Quat &quat);
+	Quat operator-(const Quat &quat);
+	Quat &operator-=(const Quat &quat);
+	Quat operator*(const Quat &quat);
+	Quat operator*(const float val) const;
+	Quat &operator*=(const Quat &quat);
+	Quat &operator*=(const float val);
+	Quat &operator=(const Quat &quat);
+	Quat &operator=(const Vec4 &vec);
+	Quat &operator=(const float *vecs);
+	Vec3 operator|(const Vec3 &vector);
 
-	const Vec3           &ToVec3() const;
-	Vec3                 &ToVec3();
+	const Vec3 &ToVec3() const;
+	Vec3 &ToVec3();
 
-	float                   x;
-	float                   y;
-	float                   z;
-	float                   w;
+	float x;
+	float y;
+	float z;
+	float w;
 };
 
 class Vec2
@@ -129,64 +127,64 @@ public:
 	Vec2();
 	Vec2(const float x, const float y);
 
-	void                    Set(const float x, const float y);
-	void                    Clear();
-	float                   Dot(const Vec2 &vec) const;
-	static float            Dot(const Vec2 &vec1, const Vec2 &vec2);
-	float                   CrossScalar(const Vec2 &vec) const;
-	Vec2                 Cross(const Vec2 &vec) const;
-	Vec2                 &Cross(const Vec2 &vec1, const Vec2 &vec2);
-	float                   Dot(const Vec3 &vec) const;
-	static float            Dot(const Vec3 &vec1, const Vec3 &vec2);
-	Vec2                 Cross(const Vec3 &vec) const;
-	Vec2                 &Cross(const Vec3 &vec1, const Vec3 &vec2);
-	float                   UnitSq() const;
-	float                   Unit() const;
-	float                   DistanceSq(const Vec2 &vec) const;
-	float                   Distance(const Vec2 &vec) const;
-	Vec2                 &Normalize();
-	Vec2                 Lerp(const Vec2 &next, float movement) const;
-	Vec2                 &Lerp(const Vec2 &next, const float movement);
-	Vec2                 &Lerp(const Vec2 &start, const Vec2 &next, float movement);
-	float                   ToYaw() const;
-	float                   *ToFloatPtr();
-	Vec3                 ToVec3();
+	void Set(const float x, const float y);
+	void Clear();
+	float Dot(const Vec2 &vec) const;
+	static float Dot(const Vec2 &vec1, const Vec2 &vec2);
+	float CrossScalar(const Vec2 &vec) const;
+	Vec2 Cross(const Vec2 &vec) const;
+	Vec2 &Cross(const Vec2 &vec1, const Vec2 &vec2);
+	float Dot(const Vec3 &vec) const;
+	static float Dot(const Vec3 &vec1, const Vec3 &vec2);
+	Vec2 Cross(const Vec3 &vec) const;
+	Vec2 &Cross(const Vec3 &vec1, const Vec3 &vec2);
+	float UnitSq() const;
+	float Unit() const;
+	float DistanceSq(const Vec2 &vec) const;
+	float Distance(const Vec2 &vec) const;
+	Vec2 &Normalize();
+	Vec2 Lerp(const Vec2 &next, float movement) const;
+	Vec2 &Lerp(const Vec2 &next, const float movement);
+	Vec2 &Lerp(const Vec2 &start, const Vec2 &next, float movement);
+	float ToYaw() const;
+	float *ToFloatPtr();
+	Vec3 ToVec3();
 
-	Vec2                 operator+(const Vec2 &vec);
-	Vec2                 operator+(const Vec2 &vec) const;
-	Vec2                 operator+(Vec2 &vec);
-	Vec2                 operator-() const;
-	Vec2                 operator-(const Vec2 &vec) const;
-	Vec2                 operator*(const Vec2 &vec);
-	Vec2                 operator*(const float val);
-	Vec2                 operator*(const float val) const;
-	Vec2                 operator/(const Vec2 &vec);
-	Vec2                 operator/(const float val);
-	Vec2                 &operator=(Vec3 &vec);
-	Vec2                 &operator=(const Vec2 &vec);
-	Vec2                 &operator=(const Vec3 &vec);
-	Vec2                 &operator=(const float *vecs);
-	Vec2                 &operator+=(const Vec2 &vec);
-	Vec2                 &operator-=(const Vec2 &vec);
-	Vec2                 &operator*=(const Vec2 &vec);
-	Vec2                 &operator*=(const float val);
-	Vec2                 &operator/=(const Vec2 &vec);
-	Vec2                 &operator/=(const float val);
-	Vec2                 operator*(const Mat4 &mtx);
-	Vec2                 operator*(const Mat4 &mtx) const;
-	Vec2                 &operator*=(const Mat4 &mtx);
-	float                   operator[](int index) const;
-	float                   &operator[](int index);
-	bool                    operator==(const Vec2 &vec);
+	Vec2 operator+(const Vec2 &vec);
+	Vec2 operator+(const Vec2 &vec) const;
+	Vec2 operator+(Vec2 &vec);
+	Vec2 operator-() const;
+	Vec2 operator-(const Vec2 &vec) const;
+	Vec2 operator*(const Vec2 &vec);
+	Vec2 operator*(const float val);
+	Vec2 operator*(const float val) const;
+	Vec2 operator/(const Vec2 &vec);
+	Vec2 operator/(const float val);
+	Vec2 &operator=(Vec3 &vec);
+	Vec2 &operator=(const Vec2 &vec);
+	Vec2 &operator=(const Vec3 &vec);
+	Vec2 &operator=(const float *vecs);
+	Vec2 &operator+=(const Vec2 &vec);
+	Vec2 &operator-=(const Vec2 &vec);
+	Vec2 &operator*=(const Vec2 &vec);
+	Vec2 &operator*=(const float val);
+	Vec2 &operator/=(const Vec2 &vec);
+	Vec2 &operator/=(const float val);
+	Vec2 operator*(const Mat4 &mtx);
+	Vec2 operator*(const Mat4 &mtx) const;
+	Vec2 &operator*=(const Mat4 &mtx);
+	float operator[](int index) const;
+	float &operator[](int index);
+	bool operator==(const Vec2 &vec);
 
 	operator float *() { return reinterpret_cast<float*>(&x); }
 
-	static Vec2          vecZero;
-	static const Vec2    vecRight;
-	static const Vec2    vecUp;
+	static Vec2 vecZero;
+	static const Vec2 vecRight;
+	static const Vec2 vecUp;
 
-	float                   x;
-	float                   y;
+	float x;
+	float y;
 };
 
 class Vec3
@@ -195,72 +193,70 @@ public:
 	Vec3();
 	Vec3(const float x, const float y, const float z);
 
-	void                    Set(const float x, const float y, const float z);
-	void                    Clear();
-	float                   Dot(const Vec3 &vec) const;
-	static float            Dot(const Vec3 &vec1, const Vec3 &vec2);
-	Vec3                 Cross(const Vec3 &vec) const;
-	static Vec3          Cross(const Vec3 &vec1, const Vec3 &vec2);
-	float                   UnitSq() const;
-	float                   Unit() const;
-	float                   LengthSq() const { return UnitSq(); }
-	float                   Length() const { return Unit(); }
-	float                   DistanceSq(const Vec3 &vec) const;
-	float                   Distance(const Vec3 &vec) const;
-	Vec3                 &Normalize();
-	static Vec3          Normalize(Vec3 a);
-	Angle                PointAt(Vec3 &location) const;
-	Vec3                 Lerp(const Vec3 &next, float movement) const;
-	Vec3                 &Lerp(const Vec3 &start, const Vec3 &next, float movement);
-	Quat                 ToQuat();
-	float                   ToYaw() const;
-	float                   ToPitch() const;
-	float                   *ToFloatPtr();
-	Vec2                 ToVec2();
-	Vec2                 ToVec2() const;
-	Vec3                 ScreenProject(Mat4 &proj, Mat4 &model,
-		const int width, const int height,
-		const int wx, const int wy);
+	void Set(const float x, const float y, const float z);
+	void Clear();
+	float Dot(const Vec3 &vec) const;
+	static float Dot(const Vec3 &vec1, const Vec3 &vec2);
+	Vec3 Cross(const Vec3 &vec) const;
+	static Vec3 Cross(const Vec3 &vec1, const Vec3 &vec2);
+	float UnitSq() const;
+	float Unit() const;
+	float LengthSq() const { return UnitSq(); }
+	float Length() const { return Unit(); }
+	float DistanceSq(const Vec3 &vec) const;
+	float Distance(const Vec3 &vec) const;
+	Vec3 &Normalize();
+	static Vec3 Normalize(Vec3 a);
+	Angle PointAt(Vec3 &location) const;
+	Vec3 Lerp(const Vec3 &next, float movement) const;
+	Vec3 &Lerp(const Vec3 &start, const Vec3 &next, float movement);
+	Quat ToQuat();
+	float ToYaw() const;
+	float ToPitch() const;
+	float *ToFloatPtr();
+	Vec2 ToVec2();
+	Vec2 ToVec2() const;
+	Vec3 ScreenProject(Mat4 &proj, Mat4 &model, const int width, const int height, const int wx, const int wy);
 
-	Vec3                 operator+(const Vec3 &vec);
-	Vec3                 operator+(const Vec3 &vec) const;
-	Vec3                 operator+(Vec3 &vec);
-	Vec3                 operator+(const float val) const;
-	Vec3                 operator-() const;
-	Vec3                 operator-(const float val) const;
-	Vec3                 operator-(const Vec3 &vec) const;
-	Vec3                 operator*(const Vec3 &vec);
-	Vec3                 operator*(const float val);
-	Vec3                 operator*(const float val) const;
-	Vec3                 operator/(const Vec3 &vec);
-	Vec3                 operator/(const float val);
-	Vec3                 operator*(const Quat &quat);
-	Vec3                 operator*(const Mat4 &mtx);
-	Vec3                 operator*(const Mat4 &mtx) const;
-	Vec3                 &operator=(const Vec3 &vec);
-	Vec3                 &operator=(const float *vecs);
-	Vec3                 &operator+=(const Vec3 &vec);
-	Vec3                 &operator+=(const float val);
-	Vec3                 &operator-=(const Vec3 &vec);
-	Vec3                 &operator-=(const float val);
-	Vec3                 &operator*=(const Vec3 &vec);
-	Vec3                 &operator*=(const float val);
-	Vec3                 &operator/=(const Vec3 &vec);
-	Vec3                 &operator/=(const float val);
-	Vec3                 &operator*=(const Quat &quat);
-	Vec3                 &operator*=(const Mat4 &mtx);
-	float                   operator[](int index) const;
-	float                   &operator[](int index);
+	Vec3 operator+(const Vec3 &vec);
+	Vec3 operator+(const Vec3 &vec) const;
+	Vec3 operator+(Vec3 &vec);
+	Vec3 operator+(const float val) const;
+	Vec3 operator-() const;
+	Vec3 operator-(const float val) const;
+	Vec3 operator-(const Vec3 &vec) const;
+	Vec3 operator*(const Vec3 &vec);
+	Vec3 operator*(const float val);
+	Vec3 operator*(const float val) const;
+	Vec3 operator/(const Vec3 &vec);
+	Vec3 operator/(const float val);
+	Vec3 operator*(const Quat &quat);
+	Vec3 operator*(const Mat4 &mtx);
+	Vec3 operator*(const Mat4 &mtx) const;
+	Vec3 &operator=(const Vec3 &vec);
+	Vec3 &operator=(const float *vecs);
+	Vec3 &operator+=(const Vec3 &vec);
+	Vec3 &operator+=(const float val);
+	Vec3 &operator-=(const Vec3 &vec);
+	Vec3 &operator-=(const float val);
+	Vec3 &operator*=(const Vec3 &vec);
+	Vec3 &operator*=(const float val);
+	Vec3 &operator/=(const Vec3 &vec);
+	Vec3 &operator/=(const float val);
+	Vec3 &operator*=(const Quat &quat);
+	Vec3 &operator*=(const Mat4 &mtx);
+	float operator[](int index) const;
+	float &operator[](int index);
 
 	operator float *() { return reinterpret_cast<float*>(&x); }
 
-	static const Vec3    vecForward;
-	static const Vec3    vecUp;
-	static const Vec3    vecRight;
+	static const Vec3 vecForward;
+	static const Vec3 vecUp;
+	static const Vec3 vecRight;
 
-	float                   x;
-	float                   y;
-	float                   z;
+	float x;
+	float y;
+	float z;
 };
 
 class Vec4
@@ -270,39 +266,39 @@ public:
 	Vec4(const float x, const float y, const float z, const float w);
 	Vec4(const Vec3 &v, const float w);
 
-	void                    Set(const float x, const float y, const float z, const float w);
-	void                    Clear();
-	float                   *ToFloatPtr();
+	void Set(const float x, const float y, const float z, const float w);
+	void Clear();
+	float *ToFloatPtr();
 
 	static float Dot(const Vec4 &a, const Vec4 &b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
 
-	const Vec3           &ToVec3() const;
-	Vec3                 &ToVec3();
-	Vec4                 operator|(const Mat4 &mtx);
-	Vec4                 &operator|=(const Mat4 &mtx);
-	Vec4                 operator+(const Vec4 &vec) const;
-	Vec4                 operator+(const float val) const;
-	Vec4                 operator-(const Vec4 &vec) const;
-	Vec4                 operator-(const float val) const;
-	Vec4                 operator*(const Vec4 &vec) const;
-	Vec4                 operator*(const float val) const;
-	Vec4                 operator/(const Vec4 &vec) const;
-	Vec4                 operator/(const float val) const;
-	Vec4                 &operator+=(const Vec4 &vec);
-	Vec4                 &operator+=(const float val);
-	Vec4                 &operator-=(const Vec4 &vec);
-	Vec4                 &operator-=(const float val);
-	Vec4                 &operator*=(const Vec4 &vec);
-	Vec4                 &operator*=(const float val);
-	Vec4                 &operator/=(const Vec4 &vec);
-	Vec4                 &operator/=(const float val);
-	float                   operator[](int index) const;
-	float                   &operator[](int index);
+	const Vec3 &ToVec3() const;
+	Vec3 &ToVec3();
+	Vec4 operator|(const Mat4 &mtx);
+	Vec4 &operator|=(const Mat4 &mtx);
+	Vec4 operator+(const Vec4 &vec) const;
+	Vec4 operator+(const float val) const;
+	Vec4 operator-(const Vec4 &vec) const;
+	Vec4 operator-(const float val) const;
+	Vec4 operator*(const Vec4 &vec) const;
+	Vec4 operator*(const float val) const;
+	Vec4 operator/(const Vec4 &vec) const;
+	Vec4 operator/(const float val) const;
+	Vec4 &operator+=(const Vec4 &vec);
+	Vec4 &operator+=(const float val);
+	Vec4 &operator-=(const Vec4 &vec);
+	Vec4 &operator-=(const float val);
+	Vec4 &operator*=(const Vec4 &vec);
+	Vec4 &operator*=(const float val);
+	Vec4 &operator/=(const Vec4 &vec);
+	Vec4 &operator/=(const float val);
+	float operator[](int index) const;
+	float &operator[](int index);
 
-	float                   x;
-	float                   y;
-	float                   z;
-	float                   w;
+	float x;
+	float y;
+	float z;
+	float w;
 };
 
 class Mat4
@@ -314,38 +310,36 @@ public:
 	Mat4(const Quat &quat);
 	Mat4(const float angle, const int axis);
 
-	Mat4               &Identity();
-	Mat4               &Identity(const float x, const float y, const float z);
-	Mat4               &SetTranslation(const float x, const float y, const float z);
-	Mat4               &SetTranslation(const Vec3 &vector);
-	Mat4               &AddTranslation(const float x, const float y, const float z);
-	Mat4               &AddTranslation(const Vec3 &vector);
-	Mat4               &Scale(const float x, const float y, const float z);
-	Mat4               &Scale(const Vec3 &vector);
-	static Mat4        Scale(const Mat4 &mtx, const float x, const float y, const float z);
-	Mat4               &Transpose();
-	static Mat4        Transpose(const Mat4 &mtx);
-	static Mat4        Invert(Mat4 &mtx);
-	Quat                 ToQuat();
-	float                   *ToFloatPtr();
-	void                    SetViewProjection(float aspect, float fov, float zNear, float zFar);
-	void                    SetOrtho(float left, float right,
-		float bottom, float top,
-		float zNear, float zFar);
+	Mat4 &Identity();
+	Mat4 &Identity(const float x, const float y, const float z);
+	Mat4 &SetTranslation(const float x, const float y, const float z);
+	Mat4 &SetTranslation(const Vec3 &vector);
+	Mat4 &AddTranslation(const float x, const float y, const float z);
+	Mat4 &AddTranslation(const Vec3 &vector);
+	Mat4 &Scale(const float x, const float y, const float z);
+	Mat4 &Scale(const Vec3 &vector);
+	static Mat4 Scale(const Mat4 &mtx, const float x, const float y, const float z);
+	Mat4 &Transpose();
+	static Mat4 Transpose(const Mat4 &mtx);
+	static Mat4 Invert(Mat4 &mtx);
+	Quat ToQuat();
+	float *ToFloatPtr();
+	void SetViewProjection(float aspect, float fov, float zNear, float zFar);
+	void SetOrtho(float left, float right, float bottom, float top, float zNear, float zFar);
 
-	Mat4               operator*(const Vec3 &vector);
-	Mat4               &operator*=(const Vec3 &vector);
-	Mat4               operator*(const Mat4 &matrix);
-	Mat4               &operator*=(const Mat4 &matrix);
-	friend Mat4        operator*(const Mat4 &m1, const Mat4 &m2);
-	Mat4               &operator=(const Mat4 &matrix);
-	Mat4               &operator=(const float *m);
-	Mat4               operator|(const Mat4 &matrix);
+	Mat4 operator*(const Vec3 &vector);
+	Mat4 &operator*=(const Vec3 &vector);
+	Mat4 operator*(const Mat4 &matrix);
+	Mat4 &operator*=(const Mat4 &matrix);
+	friend Mat4 operator*(const Mat4 &m1, const Mat4 &m2);
+	Mat4 &operator=(const Mat4 &matrix);
+	Mat4 &operator=(const float *m);
+	Mat4 operator|(const Mat4 &matrix);
 
 	float operator[](size_t i) const { return vectors[i >> 2][i & 3]; }
 	float &operator[](size_t i) { return vectors[i >> 2][i & 3]; }
 
-	Vec4                 vectors[4];
+	Vec4 vectors[4];
 };
 
 class Plane
@@ -364,34 +358,29 @@ public:
 		AXIS_XY
 	};
 
-	const Vec3           &Normal() const;
-	Vec3                 &Normal();
-	Plane                &SetNormal(const Vec3 &normal);
-	Plane                &SetNormal(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3);
-	float                   Distance(const Vec3 &point);
-	Plane                &SetDistance(const Vec3 &point);
-	bool                    IsFacing(const float yaw);
-	float                   ToYaw();
-	float                   ToPitch();
-	Quat                 ToQuat();
-	const Vec4           &ToVec4() const;
-	Vec4                 &ToVec4();
-	const planeAxis_t       BestAxis() const;
-	Vec3                 GetInclination();
+	const Vec3 &Normal() const;
+	Vec3 &Normal();
+	Plane &SetNormal(const Vec3 &normal);
+	Plane &SetNormal(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3);
+	float Distance(const Vec3 &point);
+	Plane &SetDistance(const Vec3 &point);
+	bool IsFacing(const float yaw);
+	float ToYaw();
+	float ToPitch();
+	Quat ToQuat();
+	const Vec4 &ToVec4() const;
+	Vec4 &ToVec4();
+	const planeAxis_t BestAxis() const;
+	Vec3 GetInclination();
 
 	static Plane Inverse(const Plane &p) { return Plane(-p.a, -p.b, -p.c, -p.d); }
 
 	float zAt(float x, float y) const { return (d - a * x - b * y) / c; }
 
-	Plane                &operator|(const Quat &quat);
-	Plane                &operator|=(const Quat &quat);
-	Plane                &operator|(const Mat4 &mtx);
-	Plane                &operator|=(const Mat4 &mtx);
-
-	float                   a;
-	float                   b;
-	float                   c;
-	float                   d;
+	float a;
+	float b;
+	float c;
+	float d;
 };
 
 class Angle
@@ -402,33 +391,33 @@ public:
 	Angle(const Vec3 &vector);
 	Angle(const Angle &an);
 
-	Angle                &Round();
-	Angle                &Clamp180();
-	Angle                &Clamp180Invert();
-	Angle                &Clamp180InvertSum(const Angle &angle);
-	Angle                Diff(Angle &angle);
-	void                    ToAxis(Vec3 *forward, Vec3 *up, Vec3 *right);
-	Vec3                 ToForwardAxis();
-	Vec3                 ToUpAxis();
-	Vec3                 ToRightAxis();
-	const Vec3           &ToVec3() const;
-	Vec3                 &ToVec3();
-	Quat                 ToQuat();
+	Angle &Round();
+	Angle &Clamp180();
+	Angle &Clamp180Invert();
+	Angle &Clamp180InvertSum(const Angle &angle);
+	Angle Diff(Angle &angle);
+	void ToAxis(Vec3 *forward, Vec3 *up, Vec3 *right);
+	Vec3 ToForwardAxis();
+	Vec3 ToUpAxis();
+	Vec3 ToRightAxis();
+	const Vec3 &ToVec3() const;
+	Vec3 &ToVec3();
+	Quat ToQuat();
 
-	Angle                operator+(const Angle &angle);
-	Angle                operator-(const Angle &angle);
-	Angle                &operator+=(const Angle &angle);
-	Angle                &operator-=(const Angle &angle);
-	Angle                &operator=(const Angle &angle);
-	Angle                &operator=(const Vec3 &vector);
-	Angle                &operator=(const float *vecs);
-	Angle                operator-();
-	float                   operator[](int index) const;
-	float                   &operator[](int index);
+	Angle operator+(const Angle &angle);
+	Angle operator-(const Angle &angle);
+	Angle &operator+=(const Angle &angle);
+	Angle &operator-=(const Angle &angle);
+	Angle &operator=(const Angle &angle);
+	Angle &operator=(const Vec3 &vector);
+	Angle &operator=(const float *vecs);
+	Angle operator-();
+	float operator[](int index) const;
+	float &operator[](int index);
 
-	float                   yaw;
-	float                   pitch;
-	float                   roll;
+	float yaw;
+	float pitch;
+	float roll;
 };
 
 class BBox
@@ -437,35 +426,35 @@ public:
 	BBox();
 	BBox(const Vec3 &vMin, const Vec3 &vMax);
 
-	void                    Clear();
-	Vec3                 Center() const;
-	Vec3                 Extents() const;
-	float                   Radius() const;
-	void                    AddPoint(const Vec3 &vec);
-	bool                    PointInside(const Vec3 &vec) const;
-	bool                    IntersectingBox(const BBox &box) const;
-	bool                    IntersectingBox2D(const BBox &box) const;
-	float                   DistanceToPlane(Plane &plane);
-	bool                    LineIntersect(const Vec3 &start, const Vec3 &end);
-	void                    ToPoints(float *points) const;
-	void                    ToVectors(Vec3 *vectors) const;
+	void Clear();
+	Vec3 Center() const;
+	Vec3 Extents() const;
+	float Radius() const;
+	void AddPoint(const Vec3 &vec);
+	bool PointInside(const Vec3 &vec) const;
+	bool IntersectingBox(const BBox &box) const;
+	bool IntersectingBox2D(const BBox &box) const;
+	float DistanceToPlane(Plane &plane);
+	bool LineIntersect(const Vec3 &start, const Vec3 &end);
+	void ToPoints(float *points) const;
+	void ToVectors(Vec3 *vectors) const;
 
-	BBox                 operator+(const float radius) const;
-	BBox                 &operator+=(const float radius);
-	BBox                 operator+(const Vec3 &vec) const;
-	BBox                 operator-(const float radius) const;
-	BBox                 operator-(const Vec3 &vec) const;
-	BBox                 &operator-=(const float radius);
-	BBox                 operator*(const Mat4 &matrix) const;
-	BBox                 &operator*=(const Mat4 &matrix);
-	BBox                 operator*(const Vec3 &vec) const;
-	BBox                 &operator*=(const Vec3 &vec);
-	BBox                 &operator=(const BBox &bbox);
-	Vec3                 operator[](int index) const;
-	Vec3                 &operator[](int index);
+	BBox operator+(const float radius) const;
+	BBox &operator+=(const float radius);
+	BBox operator+(const Vec3 &vec) const;
+	BBox operator-(const float radius) const;
+	BBox operator-(const Vec3 &vec) const;
+	BBox &operator-=(const float radius);
+	BBox operator*(const Mat4 &matrix) const;
+	BBox &operator*=(const Mat4 &matrix);
+	BBox operator*(const Vec3 &vec) const;
+	BBox &operator*=(const Vec3 &vec);
+	BBox &operator=(const BBox &bbox);
+	Vec3 operator[](int index) const;
+	Vec3 &operator[](int index);
 
-	Vec3                 min;
-	Vec3                 max;
+	Vec3 min;
+	Vec3 max;
 };
 
 /////////////////////////////////////////////////////////////////////////////

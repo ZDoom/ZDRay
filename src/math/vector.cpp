@@ -24,11 +24,6 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Vector operations
-//
-//-----------------------------------------------------------------------------
 
 #include <math.h>
 #include "mathlib.h"

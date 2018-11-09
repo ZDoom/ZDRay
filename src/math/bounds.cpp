@@ -24,28 +24,15 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Bounding box operations
-//
-//-----------------------------------------------------------------------------
 
 #include <math.h>
 #include "mathlib.h"
 #include <assert.h>
 
-//
-// BBox::BBox
-//
-
 BBox::BBox()
 {
 	Clear();
 }
-
-//
-// BBox::BBox
-//
 
 BBox::BBox(const Vec3 &vMin, const Vec3 &vMax)
 {
@@ -53,19 +40,11 @@ BBox::BBox(const Vec3 &vMin, const Vec3 &vMax)
 	this->max = vMax;
 }
 
-//
-// BBox::Clear
-//
-
 void BBox::Clear()
 {
 	min.Set(M_INFINITY, M_INFINITY, M_INFINITY);
 	max.Set(-M_INFINITY, -M_INFINITY, -M_INFINITY);
 }
-
-//
-// BBox::AddPoint
-//
 
 void BBox::AddPoint(const Vec3 &vec)
 {
@@ -86,10 +65,6 @@ void BBox::AddPoint(const Vec3 &vec)
 	min.Set(lowx, lowy, lowz);
 	max.Set(hix, hiy, hiz);
 }
-
-//
-// BBox::Radius
-//
 
 float BBox::Radius() const
 {
@@ -116,19 +91,11 @@ float BBox::Radius() const
 	return Math::Sqrt(r);
 }
 
-//
-// BBox::PointInside
-//
-
 bool BBox::PointInside(const Vec3 &vec) const
 {
 	return !(vec[0] < min[0] || vec[1] < min[1] || vec[2] < min[2] ||
 		vec[0] > max[0] || vec[1] > max[1] || vec[2] > max[2]);
 }
-
-//
-// BBox::IntersectingBox
-//
 
 bool BBox::IntersectingBox(const BBox &box) const
 {
@@ -136,19 +103,11 @@ bool BBox::IntersectingBox(const BBox &box) const
 		box.min[0] > max[0] || box.min[1] > max[1] || box.min[2] > max[2]);
 }
 
-//
-// BBox::IntersectingBox2D
-//
-
 bool BBox::IntersectingBox2D(const BBox &box) const
 {
 	return !(box.max[0] < min[0] || box.max[2] < min[2] ||
 		box.min[0] > max[0] || box.min[2] > max[2]);
 }
-
-//
-// BBox::DistanceToPlane
-//
 
 float BBox::DistanceToPlane(Plane &plane)
 {
@@ -183,10 +142,6 @@ float BBox::DistanceToPlane(Plane &plane)
 	return 0;
 }
 
-//
-// BBox::operator+
-//
-
 BBox BBox::operator+(const float radius) const
 {
 	Vec3 vmin = min;
@@ -203,10 +158,6 @@ BBox BBox::operator+(const float radius) const
 	return BBox(vmin, vmax);
 }
 
-//
-// BBox::operator+=
-//
-
 BBox &BBox::operator+=(const float radius)
 {
 	min.x -= radius;
@@ -217,10 +168,6 @@ BBox &BBox::operator+=(const float radius)
 	max.z += radius;
 	return *this;
 }
-
-//
-// BBox::operator+
-//
 
 BBox BBox::operator+(const Vec3 &vec) const
 {
@@ -238,10 +185,6 @@ BBox BBox::operator+(const Vec3 &vec) const
 	return BBox(vmin, vmax);
 }
 
-//
-// BBox::operator-
-//
-
 BBox BBox::operator-(const float radius) const
 {
 	Vec3 vmin = min;
@@ -257,10 +200,6 @@ BBox BBox::operator-(const float radius) const
 
 	return BBox(vmin, vmax);
 }
-
-//
-// BBox::operator-
-//
 
 BBox BBox::operator-(const Vec3 &vec) const
 {
@@ -278,10 +217,6 @@ BBox BBox::operator-(const Vec3 &vec) const
 	return BBox(vmin, vmax);
 }
 
-//
-// BBox::operator-=
-//
-
 BBox &BBox::operator-=(const float radius)
 {
 	min.x += radius;
@@ -292,10 +227,6 @@ BBox &BBox::operator-=(const float radius)
 	max.z -= radius;
 	return *this;
 }
-
-//
-// BBox::operator*
-//
 
 BBox BBox::operator*(const Mat4 &matrix) const
 {
@@ -319,10 +250,6 @@ BBox BBox::operator*(const Mat4 &matrix) const
 	return box;
 }
 
-//
-// BBox::operator*=
-//
-
 BBox &BBox::operator*=(const Mat4 &matrix)
 {
 	Vec3 c = Center();
@@ -345,10 +272,6 @@ BBox &BBox::operator*=(const Mat4 &matrix)
 	return *this;
 }
 
-//
-// BBox::operator*
-//
-
 BBox BBox::operator*(const Vec3 &vec) const
 {
 	BBox box = *this;
@@ -363,10 +286,6 @@ BBox BBox::operator*(const Vec3 &vec) const
 	return box;
 }
 
-//
-// BBox::operator*=
-//
-
 BBox &BBox::operator*=(const Vec3 &vec)
 {
 	if (vec.x < 0) { min.x += (vec.x - 1); }
@@ -379,10 +298,6 @@ BBox &BBox::operator*=(const Vec3 &vec)
 	return *this;
 }
 
-//
-// BBox::operator=
-//
-
 BBox &BBox::operator=(const BBox &bbox)
 {
 	min = bbox.min;
@@ -391,29 +306,17 @@ BBox &BBox::operator=(const BBox &bbox)
 	return *this;
 }
 
-//
-// BBox::operator[]
-//
-
 Vec3 BBox::operator[](int index) const
 {
 	assert(index >= 0 && index < 2);
 	return index == 0 ? min : max;
 }
 
-//
-// BBox::operator[]
-//
-
 Vec3 &BBox::operator[](int index)
 {
 	assert(index >= 0 && index < 2);
 	return index == 0 ? min : max;
 }
-
-//
-// BBox:LineIntersect
-//
 
 bool BBox::LineIntersect(const Vec3 &start, const Vec3 &end)
 {
@@ -440,12 +343,7 @@ bool BBox::LineIntersect(const Vec3 &start, const Vec3 &end)
 	return true;
 }
 
-//
-// BBox::ToPoints
-//
 // Assumes points is an array of 24
-//
-
 void BBox::ToPoints(float *points) const
 {
 	points[0 * 3 + 0] = max[0];
@@ -474,12 +372,7 @@ void BBox::ToPoints(float *points) const
 	points[7 * 3 + 2] = min[2];
 }
 
-//
-// BBox::ToVectors
-//
 // Assumes vectors is an array of 8
-//
-
 void BBox::ToVectors(Vec3 *vectors) const
 {
 	vectors[0][0] = max[0];

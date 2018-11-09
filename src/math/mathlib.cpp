@@ -24,17 +24,8 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Math functions
-//
-//-----------------------------------------------------------------------------
 
 #include "mathlib.h"
-
-//
-// Math::RoundPowerOfTwo
-//
 
 int Math::RoundPowerOfTwo(int x)
 {
@@ -53,12 +44,7 @@ int Math::RoundPowerOfTwo(int x)
 	return x;
 }
 
-//
-// Math::CubicCurve
-//
-
-void Math::CubicCurve(const Vec3 &start, const Vec3 &end, const float time,
-	const Vec3 &point, Vec3 *vec)
+void Math::CubicCurve(const Vec3 &start, const Vec3 &end, const float time, const Vec3 &point, Vec3 *vec)
 {
 	int i;
 	float xyz[3];
@@ -74,12 +60,7 @@ void Math::CubicCurve(const Vec3 &start, const Vec3 &end, const float time,
 	vec->z = xyz[2];
 }
 
-//
-// Math::QuadraticCurve
-//
-
-void Math::QuadraticCurve(const Vec3 &start, const Vec3 &end, const float time,
-	const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec)
+void Math::QuadraticCurve(const Vec3 &start, const Vec3 &end, const float time, const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec)
 {
 	int i;
 	float xyz[3];

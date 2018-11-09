@@ -24,13 +24,6 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Special surfaces that contains origin points used for
-//              emitting light. Surfaces can be subdivided for more
-//              accurate light casting
-//
-//-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
 #include "level/level.h"

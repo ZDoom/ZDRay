@@ -24,18 +24,9 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Plane operations
-//
-//-----------------------------------------------------------------------------
 
 #include <math.h>
 #include "mathlib.h"
-
-//
-// Plane::Plane
-//
 
 Plane::Plane()
 {
@@ -45,10 +36,6 @@ Plane::Plane()
 	this->d = 0;
 }
 
-//
-// Plane::Plane
-//
-
 Plane::Plane(const float a, const float b, const float c, const float d)
 {
 	this->a = a;
@@ -57,19 +44,11 @@ Plane::Plane(const float a, const float b, const float c, const float d)
 	this->d = d;
 }
 
-//
-// Plane::Plane
-//
-
 Plane::Plane(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3)
 {
 	SetNormal(pt1, pt2, pt3);
 	this->d = Vec3::Dot(pt1, Normal());
 }
-
-//
-// Plane::Plane
-//
 
 Plane::Plane(const Vec3 &normal, const Vec3 &point)
 {
@@ -79,10 +58,6 @@ Plane::Plane(const Vec3 &normal, const Vec3 &point)
 	this->d = point.Dot(normal);
 }
 
-//
-// Plane::Plane
-//
-
 Plane::Plane(const Plane &plane)
 {
 	this->a = plane.a;
@@ -91,19 +66,11 @@ Plane::Plane(const Plane &plane)
 	this->d = plane.d;
 }
 
-//
-// Plane::SetNormal
-//
-
 Plane &Plane::SetNormal(const Vec3 &normal)
 {
 	Normal() = normal;
 	return *this;
 }
-
-//
-// Plane::SetNormal
-//
 
 Plane &Plane::SetNormal(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3)
 {
@@ -111,36 +78,20 @@ Plane &Plane::SetNormal(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3)
 	return *this;
 }
 
-//
-// Plane::Normal
-//
-
 Vec3 const &Plane::Normal() const
 {
 	return *reinterpret_cast<const Vec3*>(&a);
 }
-
-//
-// Plane::Normal
-//
 
 Vec3 &Plane::Normal()
 {
 	return *reinterpret_cast<Vec3*>(&a);
 }
 
-//
-// Plane::Distance
-//
-
 float Plane::Distance(const Vec3 &point)
 {
 	return point.Dot(Normal());
 }
-
-//
-// Plane::SetDistance
-//
 
 Plane &Plane::SetDistance(const Vec3 &point)
 {
@@ -148,18 +99,10 @@ Plane &Plane::SetDistance(const Vec3 &point)
 	return *this;
 }
 
-//
-// Plane::IsFacing
-//
-
 bool Plane::IsFacing(const float yaw)
 {
 	return -Math::Sin(yaw) * a + -Math::Cos(yaw) * b < 0;
 }
-
-//
-// Plane::ToYaw
-//
 
 float Plane::ToYaw()
 {
@@ -180,18 +123,10 @@ float Plane::ToYaw()
 	return 0;
 }
 
-//
-// Plane::ToPitch
-//
-
 float Plane::ToPitch()
 {
 	return Math::ACos(Vec3::vecUp.Dot(Normal()));
 }
-
-//
-// Plane::ToQuat
-//
 
 Quat Plane::ToQuat()
 {
@@ -199,27 +134,15 @@ Quat Plane::ToQuat()
 	return Quat(Math::ACos(Vec3::vecUp.Dot(Normal())), cross);
 }
 
-//
-// Plane::ToVec4
-//
-
 Vec4 const &Plane::ToVec4() const
 {
 	return *reinterpret_cast<const Vec4*>(&a);
 }
 
-//
-// Plane::ToVec4
-//
-
 Vec4 &Plane::ToVec4()
 {
 	return *reinterpret_cast<Vec4*>(&a);
 }
-
-//
-// Plane::BestAxis
-//
 
 const Plane::planeAxis_t Plane::BestAxis() const
 {
@@ -239,10 +162,6 @@ const Plane::planeAxis_t Plane::BestAxis() const
 
 	return AXIS_XY;
 }
-
-//
-// Plane::GetInclination
-//
 
 Vec3 Plane::GetInclination()
 {

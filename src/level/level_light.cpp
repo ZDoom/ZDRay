@@ -24,11 +24,6 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: General doom map utilities and data preperation
-//
-//-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
 #include "level/level.h"

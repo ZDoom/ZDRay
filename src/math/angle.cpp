@@ -24,21 +24,12 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Angle operations
-//
-//-----------------------------------------------------------------------------
 
 #include <math.h>
 #include "mathlib.h"
 #include <assert.h>
 
 #define FULLCIRCLE  (M_PI * 2)
-
-//
-// Angle::Angle
-//
 
 Angle::Angle()
 {
@@ -47,20 +38,12 @@ Angle::Angle()
 	this->roll = 0;
 }
 
-//
-// Angle::Angle
-//
-
 Angle::Angle(const float yaw, const float pitch, const float roll)
 {
 	this->yaw = yaw;
 	this->pitch = pitch;
 	this->roll = roll;
 }
-
-//
-// Angle::Angle
-//
 
 Angle::Angle(const Vec3 &vector)
 {
@@ -71,20 +54,12 @@ Angle::Angle(const Vec3 &vector)
 	Clamp180();
 }
 
-//
-// Angle::Angle
-//
-
 Angle::Angle(const Angle &an)
 {
 	this->yaw = an.yaw;
 	this->pitch = an.pitch;
 	this->roll = an.roll;
 }
-
-//
-// Angle::Clamp180
-//
 
 Angle &Angle::Clamp180()
 {
@@ -98,10 +73,6 @@ Angle &Angle::Clamp180()
 
 	return *this;
 }
-
-//
-// Angle::Clamp180Invert
-//
 
 Angle &Angle::Clamp180Invert()
 {
@@ -119,10 +90,6 @@ Angle &Angle::Clamp180Invert()
 
 	return *this;
 }
-
-//
-// Angle::Clamp180InvertSum
-//
 
 Angle &Angle::Clamp180InvertSum(const Angle &angle)
 {
@@ -143,10 +110,6 @@ Angle &Angle::Clamp180InvertSum(const Angle &angle)
 	return *this;
 }
 
-//
-// Angle::Round
-//
-
 Angle &Angle::Round()
 {
 #define ROUND(x)                                        \
@@ -159,10 +122,6 @@ Angle &Angle::Round()
 
 	return Clamp180();
 }
-
-//
-// Angle::Diff
-//
 
 Angle Angle::Diff(Angle &angle)
 {
@@ -199,10 +158,6 @@ Angle Angle::Diff(Angle &angle)
 	return out;
 }
 
-//
-// Angle::ToAxis
-//
-
 void Angle::ToAxis(Vec3 *forward, Vec3 *up, Vec3 *right)
 {
 	float sy = Math::Sin(yaw);
@@ -232,10 +187,6 @@ void Angle::ToAxis(Vec3 *forward, Vec3 *up, Vec3 *right)
 	}
 }
 
-//
-// Angle::ToForwardAxis
-//
-
 Vec3 Angle::ToForwardAxis()
 {
 	Vec3 vec;
@@ -243,10 +194,6 @@ Vec3 Angle::ToForwardAxis()
 	ToAxis(&vec, nullptr, nullptr);
 	return vec;
 }
-
-//
-// Angle::ToUpAxis
-//
 
 Vec3 Angle::ToUpAxis()
 {
@@ -256,10 +203,6 @@ Vec3 Angle::ToUpAxis()
 	return vec;
 }
 
-//
-// Angle::ToRightAxis
-//
-
 Vec3 Angle::ToRightAxis()
 {
 	Vec3 vec;
@@ -268,27 +211,15 @@ Vec3 Angle::ToRightAxis()
 	return vec;
 }
 
-//
-// Angle::ToVec3
-//
-
 const Vec3 &Angle::ToVec3() const
 {
 	return *reinterpret_cast<const Vec3*>(&yaw);
 }
 
-//
-// Angle::ToVec3
-//
-
 Vec3 &Angle::ToVec3()
 {
 	return *reinterpret_cast<Vec3*>(&yaw);
 }
-
-//
-// Angle::ToQuat
-//
 
 Quat Angle::ToQuat()
 {
@@ -298,36 +229,20 @@ Quat Angle::ToQuat()
 			Quat(roll, Vec3::vecForward)));
 }
 
-//
-// Angle::operator+
-//
-
 Angle Angle::operator+(const Angle &angle)
 {
 	return Angle(yaw + angle.yaw, pitch + angle.pitch, roll + angle.roll);
 }
-
-//
-// Angle::operator-
-//
 
 Angle Angle::operator-(const Angle &angle)
 {
 	return Angle(yaw - angle.yaw, pitch - angle.pitch, roll - angle.roll);
 }
 
-//
-// Angle::operator-
-//
-
 Angle Angle::operator-()
 {
 	return Angle(-yaw, -pitch, -roll);
 }
-
-//
-// Angle::operator+=
-//
 
 Angle &Angle::operator+=(const Angle &angle)
 {
@@ -337,10 +252,6 @@ Angle &Angle::operator+=(const Angle &angle)
 	return *this;
 }
 
-//
-// Angle::operator-=
-//
-
 Angle &Angle::operator-=(const Angle &angle)
 {
 	yaw -= angle.yaw;
@@ -348,10 +259,6 @@ Angle &Angle::operator-=(const Angle &angle)
 	roll -= angle.roll;
 	return *this;
 }
-
-//
-// Angle::operator=
-//
 
 Angle &Angle::operator=(const Angle &angle)
 {
@@ -361,10 +268,6 @@ Angle &Angle::operator=(const Angle &angle)
 	return *this;
 }
 
-//
-// Angle::operator=
-//
-
 Angle &Angle::operator=(const Vec3 &vector)
 {
 	yaw = vector.x;
@@ -372,10 +275,6 @@ Angle &Angle::operator=(const Vec3 &vector)
 	roll = vector.z;
 	return *this;
 }
-
-//
-// Angle::operator=
-//
 
 Angle &Angle::operator=(const float *vecs)
 {
@@ -385,19 +284,11 @@ Angle &Angle::operator=(const float *vecs)
 	return *this;
 }
 
-//
-// Angle::operator[]
-//
-
 float Angle::operator[](int index) const
 {
 	assert(index >= 0 && index < 3);
 	return (&yaw)[index];
 }
-
-//
-// Angle::operator[]
-//
 
 float &Angle::operator[](int index)
 {

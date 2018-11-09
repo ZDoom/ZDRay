@@ -24,27 +24,14 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Quaternion operations
-//
-//-----------------------------------------------------------------------------
 
 #include <math.h>
 #include "mathlib.h"
-
-//
-// Quat::Quat
-//
 
 Quat::Quat()
 {
 	Clear();
 }
-
-//
-// Quat::Quat
-//
 
 Quat::Quat(const float angle, const float x, const float y, const float z)
 {
@@ -57,10 +44,6 @@ Quat::Quat(const float angle, const float x, const float y, const float z)
 	this->w = c;
 }
 
-//
-// Quat::Quat
-//
-
 Quat::Quat(const float angle, Vec3 &vector)
 {
 	float s = Math::Sin(angle * 0.5f);
@@ -71,10 +54,6 @@ Quat::Quat(const float angle, Vec3 &vector)
 	this->z = vector.z * s;
 	this->w = c;
 }
-
-//
-// Quat::Quat
-//
 
 Quat::Quat(const float angle, const Vec3 &vector)
 {
@@ -87,10 +66,6 @@ Quat::Quat(const float angle, const Vec3 &vector)
 	this->w = c;
 }
 
-//
-// Quat::Set
-//
-
 void Quat::Set(const float x, const float y, const float z, const float w)
 {
 	this->x = x;
@@ -99,37 +74,21 @@ void Quat::Set(const float x, const float y, const float z, const float w)
 	this->w = w;
 }
 
-//
-// Quat::Clear
-//
-
 void Quat::Clear()
 {
 	x = y = z = 0.0f;
 	w = 1.0f;
 }
 
-//
-// Vec3::UnitSq
-//
-
 float Quat::UnitSq() const
 {
 	return x * x + y * y + z * z + w * w;
 }
 
-//
-// Vec3::Unit
-//
-
 float Quat::Unit() const
 {
 	return Math::Sqrt(UnitSq());
 }
-
-//
-// Quat::Normalize
-//
 
 Quat &Quat::Normalize()
 {
@@ -142,20 +101,12 @@ Quat &Quat::Normalize()
 	return *this;
 }
 
-//
-// Quat::Inverse
-//
-
 Quat Quat::Inverse() const
 {
 	Quat out;
 	out.Set(-x, -y, -z, -w);
 	return out;
 }
-
-//
-// Quat::operator+
-//
 
 Quat Quat::operator+(const Quat &quat)
 {
@@ -167,10 +118,6 @@ Quat Quat::operator+(const Quat &quat)
 	return out;
 }
 
-//
-// Quat::operator+=
-//
-
 Quat &Quat::operator+=(const Quat &quat)
 {
 	x += quat.x;
@@ -179,10 +126,6 @@ Quat &Quat::operator+=(const Quat &quat)
 	w += quat.w;
 	return *this;
 }
-
-//
-// Quat::operator-
-//
 
 Quat Quat::operator-(const Quat &quat)
 {
@@ -194,10 +137,6 @@ Quat Quat::operator-(const Quat &quat)
 	return out;
 }
 
-//
-// Quat::operator-=
-//
-
 Quat &Quat::operator-=(const Quat &quat)
 {
 	x -= quat.x;
@@ -206,10 +145,6 @@ Quat &Quat::operator-=(const Quat &quat)
 	w -= quat.w;
 	return *this;
 }
-
-//
-// Quat::operator*
-//
 
 Quat Quat::operator*(const Quat &quat)
 {
@@ -222,10 +157,6 @@ Quat Quat::operator*(const Quat &quat)
 
 	return out;
 }
-
-//
-// Quat::operator*=
-//
 
 Quat &Quat::operator*=(const Quat &quat)
 {
@@ -242,10 +173,6 @@ Quat &Quat::operator*=(const Quat &quat)
 	return *this;
 }
 
-//
-// Quat::operator*
-//
-
 Quat Quat::operator*(const float val) const
 {
 	Quat out;
@@ -256,10 +183,6 @@ Quat Quat::operator*(const float val) const
 	return out;
 }
 
-//
-// Quat::operator*=
-//
-
 Quat &Quat::operator*=(const float val)
 {
 	x *= val;
@@ -269,10 +192,6 @@ Quat &Quat::operator*=(const float val)
 
 	return *this;
 }
-
-//
-// Quat::operator|
-//
 
 Vec3 Quat::operator|(const Vec3 &vector)
 {
@@ -300,18 +219,10 @@ Vec3 Quat::operator|(const Vec3 &vector)
 	);
 }
 
-//
-// Quat::Dot
-//
-
 float Quat::Dot(const Quat &quat) const
 {
 	return (x * quat.x + y * quat.y + z * quat.z + w * quat.w);
 }
-
-//
-// Quat::Slerp
-//
 
 Quat Quat::Slerp(const Quat &quat, float movement) const
 {
@@ -362,10 +273,6 @@ Quat Quat::Slerp(const Quat &quat, float movement) const
 	}
 }
 
-//
-// Quat::RotateFrom
-//
-
 Quat Quat::RotateFrom(const Vec3 &location, const Vec3 &target, float maxAngle)
 {
 	Vec3 axis;
@@ -388,10 +295,6 @@ Quat Quat::RotateFrom(const Vec3 &location, const Vec3 &target, float maxAngle)
 	return (*this * Quat(an, cp));
 }
 
-//
-// Quat::operator=
-//
-
 Quat &Quat::operator=(const Quat &quat)
 {
 	x = quat.x;
@@ -400,10 +303,6 @@ Quat &Quat::operator=(const Quat &quat)
 	w = quat.w;
 	return *this;
 }
-
-//
-// Quat::operator=
-//
 
 Quat &Quat::operator=(const Vec4 &vec)
 {
@@ -414,10 +313,6 @@ Quat &Quat::operator=(const Vec4 &vec)
 	return *this;
 }
 
-//
-// Quat::operator=
-//
-
 Quat &Quat::operator=(const float *vecs)
 {
 	x = vecs[0];
@@ -427,18 +322,10 @@ Quat &Quat::operator=(const float *vecs)
 	return *this;
 }
 
-//
-// Quat::ToVec3
-//
-
 Vec3 const &Quat::ToVec3() const
 {
 	return *reinterpret_cast<const Vec3*>(this);
 }
-
-//
-// Quat::ToVec3
-//
 
 Vec3 &Quat::ToVec3()
 {

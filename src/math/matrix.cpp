@@ -73,18 +73,10 @@
 #include <math.h>
 #include "mathlib.h"
 
-//
-// Mat4::Mat4
-//
-
 Mat4::Mat4()
 {
 	Identity();
 }
-
-//
-// Mat4::Mat4
-//
 
 Mat4::Mat4(const Mat4 &mtx)
 {
@@ -97,18 +89,10 @@ Mat4::Mat4(const Mat4 &mtx)
 	}
 }
 
-//
-// Mat4::Mat4
-//
-
 Mat4::Mat4(const float x, const float y, const float z)
 {
 	Identity(x, y, z);
 }
-
-//
-// Mat4::Mat4
-//
 
 Mat4::Mat4(const Quat &quat)
 {
@@ -140,10 +124,6 @@ Mat4::Mat4(const Quat &quat)
 		0);
 	vectors[3].Set(0, 0, 0, 1);
 }
-
-//
-// Mat4::Mat4
-//
 
 Mat4::Mat4(const float angle, const int axis)
 {
@@ -178,10 +158,6 @@ Mat4::Mat4(const float angle, const int axis)
 	}
 }
 
-//
-// Mat4::Identity
-//
-
 Mat4 &Mat4::Identity()
 {
 	vectors[0].Set(1, 0, 0, 0);
@@ -191,10 +167,6 @@ Mat4 &Mat4::Identity()
 
 	return *this;
 }
-
-//
-// Mat4::Identity
-//
 
 Mat4 &Mat4::Identity(const float x, const float y, const float z)
 {
@@ -206,29 +178,17 @@ Mat4 &Mat4::Identity(const float x, const float y, const float z)
 	return *this;
 }
 
-//
-// Mat4::SetTranslation
-//
-
 Mat4 &Mat4::SetTranslation(const float x, const float y, const float z)
 {
 	vectors[3].ToVec3().Set(x, y, z);
 	return *this;
 }
 
-//
-// Mat4::SetTranslation
-//
-
 Mat4 &Mat4::SetTranslation(const Vec3 &vector)
 {
 	vectors[3].ToVec3() = vector;
 	return *this;
 }
-
-//
-// Mat4::AddTranslation
-//
 
 Mat4 &Mat4::AddTranslation(const float x, const float y, const float z)
 {
@@ -238,19 +198,11 @@ Mat4 &Mat4::AddTranslation(const float x, const float y, const float z)
 	return *this;
 }
 
-//
-// Mat4::AddTranslation
-//
-
 Mat4 &Mat4::AddTranslation(const Vec3 &vector)
 {
 	vectors[3].ToVec3() += vector;
 	return *this;
 }
-
-//
-// Mat4::Scale
-//
 
 Mat4 &Mat4::Scale(const float x, const float y, const float z)
 {
@@ -261,10 +213,6 @@ Mat4 &Mat4::Scale(const float x, const float y, const float z)
 	return *this;
 }
 
-//
-// Mat4::Scale
-//
-
 Mat4 &Mat4::Scale(const Vec3 &vector)
 {
 	vectors[0].ToVec3() *= vector.x;
@@ -273,10 +221,6 @@ Mat4 &Mat4::Scale(const Vec3 &vector)
 
 	return *this;
 }
-
-//
-// Mat4::Scale
-//
 
 Mat4 Mat4::Scale(const Mat4 &mtx, const float x, const float y, const float z)
 {
@@ -289,10 +233,6 @@ Mat4 Mat4::Scale(const Mat4 &mtx, const float x, const float y, const float z)
 	return out;
 }
 
-//
-// Mat4::Transpose
-//
-
 Mat4 &Mat4::Transpose()
 {
 	Vec3 v1 = vectors[1].ToVec3();
@@ -302,10 +242,6 @@ Mat4 &Mat4::Transpose()
 	vectors[2].ToVec3() = v1;
 	return *this;
 }
-
-//
-// Mat4::Transpose
-//
 
 Mat4 Mat4::Transpose(const Mat4 &mtx)
 {
@@ -318,10 +254,6 @@ Mat4 Mat4::Transpose(const Mat4 &mtx)
 
 	return out;
 }
-
-//
-// Mat4::Invert
-//
 
 Mat4 Mat4::Invert(Mat4 &mtx)
 {
@@ -383,10 +315,6 @@ Mat4 Mat4::Invert(Mat4 &mtx)
 	return mtx;
 }
 
-//
-// Mat4::SetViewProjection
-//
-
 void Mat4::SetViewProjection(float aspect, float fov, float zNear, float zFar)
 {
 	float top = zNear * Math::Tan(fov * M_PI / 360.0f);
@@ -414,13 +342,7 @@ void Mat4::SetViewProjection(float aspect, float fov, float zNear, float zFar)
 	vectors[3].w = 0;
 }
 
-//
-// Mat4::SetOrtho
-//
-
-void Mat4::SetOrtho(float left, float right,
-	float bottom, float top,
-	float zNear, float zFar)
+void Mat4::SetOrtho(float left, float right, float bottom, float top, float zNear, float zFar)
 {
 	vectors[0].x = 2 / (right - left);
 	vectors[1].y = 2 / (top - bottom);
@@ -441,10 +363,6 @@ void Mat4::SetOrtho(float left, float right,
 	vectors[2].y = 0;
 	vectors[2].w = 0;
 }
-
-//
-// Mat4::ToQuat
-//
 
 Quat Mat4::ToQuat()
 {
@@ -505,10 +423,6 @@ Quat Mat4::ToQuat()
 	return q;
 }
 
-//
-// Mat4::operator*
-//
-
 Mat4 Mat4::operator*(const Vec3 &vector)
 {
 	Mat4 out(*this);
@@ -520,10 +434,6 @@ Mat4 Mat4::operator*(const Vec3 &vector)
 	return out;
 }
 
-//
-// Mat4::operator*=
-//
-
 Mat4 &Mat4::operator*=(const Vec3 &vector)
 {
 	vectors[3].ToVec3() +=
@@ -533,18 +443,10 @@ Mat4 &Mat4::operator*=(const Vec3 &vector)
 	return *this;
 }
 
-//
-// Mat4::ToFloatPtr
-//
-
 float *Mat4::ToFloatPtr()
 {
 	return reinterpret_cast<float*>(vectors);
 }
-
-//
-// Mat4::operator*
-//
 
 Mat4 Mat4::operator*(const Mat4 &matrix)
 {
@@ -577,10 +479,6 @@ Mat4 Mat4::operator*(const Mat4 &matrix)
 	return out;
 }
 
-//
-// Mat4::operator*=
-//
-
 Mat4 &Mat4::operator*=(const Mat4 &matrix)
 {
 	for (int i = 0; i < 4; i++)
@@ -609,10 +507,6 @@ Mat4 &Mat4::operator*=(const Mat4 &matrix)
 
 	return *this;
 }
-
-//
-// Mat4::operator*
-//
 
 Mat4 operator*(const Mat4 &m1, const Mat4 &m2)
 {
@@ -644,10 +538,6 @@ Mat4 operator*(const Mat4 &m1, const Mat4 &m2)
 
 	return out;
 }
-
-//
-// Mat4::operator|
-//
 
 Mat4 Mat4::operator|(const Mat4 &matrix)
 {
@@ -685,10 +575,6 @@ Mat4 Mat4::operator|(const Mat4 &matrix)
 	return out;
 }
 
-//
-// Mat4::operator=
-//
-
 Mat4 &Mat4::operator=(const Mat4 &matrix)
 {
 	vectors[0] = matrix.vectors[0];
@@ -698,10 +584,6 @@ Mat4 &Mat4::operator=(const Mat4 &matrix)
 
 	return *this;
 }
-
-//
-// Mat4::operator=
-//
 
 Mat4 &Mat4::operator=(const float *m)
 {
