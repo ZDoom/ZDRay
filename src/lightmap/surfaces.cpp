@@ -24,24 +24,83 @@
 //    3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//-----------------------------------------------------------------------------
-//
-// DESCRIPTION: Prepares geometry from map structures
-//
-//-----------------------------------------------------------------------------
 
 #include "math/mathlib.h"
 #include "level/level.h"
 #include "surfaces.h"
+#include <map>
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
-std::vector<std::unique_ptr<surface_t>> surfaces;
+LevelMesh::LevelMesh(FLevel &doomMap)
+{
+	printf("------------- Building side surfaces -------------\n");
 
-static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
+	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
+	{
+		CreateSideSurfaces(doomMap, &doomMap.Sides[i]);
+		printf("sides: %i / %i\r", i + 1, doomMap.Sides.Size());
+	}
+
+	printf("\nSide surfaces: %i\n", (int)surfaces.size());
+
+	CreateSubsectorSurfaces(doomMap);
+
+	printf("Surfaces total: %i\n\n", (int)surfaces.size());
+
+	printf("Building collision mesh..\n\n");
+
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		const auto &s = surfaces[i];
+		int numVerts = s->numVerts;
+		unsigned int pos = MeshVertices.Size();
+
+		for (int j = 0; j < numVerts; j++)
+		{
+			MeshVertices.Push(s->verts[j]);
+			MeshUVIndex.Push(j);
+		}
+
+		if (s->type == ST_FLOOR || s->type == ST_CEILING)
+		{
+			for (int j = 2; j < numVerts; j++)
+			{
+				if (!IsDegenerate(s->verts[0], s->verts[j - 1], s->verts[j]))
+				{
+					MeshElements.Push(pos);
+					MeshElements.Push(pos + j - 1);
+					MeshElements.Push(pos + j);
+					MeshSurfaces.Push(i);
+				}
+			}
+		}
+		else if (s->type == ST_MIDDLESIDE || s->type == ST_UPPERSIDE || s->type == ST_LOWERSIDE)
+		{
+			if (!IsDegenerate(s->verts[0], s->verts[1], s->verts[2]))
+			{
+				MeshElements.Push(pos + 0);
+				MeshElements.Push(pos + 1);
+				MeshElements.Push(pos + 2);
+				MeshSurfaces.Push(i);
+			}
+			if (!IsDegenerate(s->verts[1], s->verts[2], s->verts[3]))
+			{
+				MeshElements.Push(pos + 1);
+				MeshElements.Push(pos + 2);
+				MeshElements.Push(pos + 3);
+				MeshSurfaces.Push(i);
+			}
+		}
+	}
+
+	CollisionMesh = std::make_unique<TriangleMeshShape>(&MeshVertices[0], MeshVertices.Size(), &MeshElements[0], MeshElements.Size());
+}
+
+void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
 	IntSector *front;
 	IntSector *back;
@@ -151,10 +210,8 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		if (v1Top > v1TopBack || v2Top > v2TopBack)
 		{
 			bool bSky = false;
-			int frontidx = front - &doomMap.Sectors[0];
-			int backidx = back - &doomMap.Sectors[0];
 
-			if (doomMap.bSkySectors[frontidx] && doomMap.bSkySectors[backidx])
+			if (front->skySector && back->skySector)
 			{
 				if (front->data.ceilingheight != back->data.ceilingheight && side->toptexture[0] == '-')
 				{
@@ -218,7 +275,7 @@ static void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	}
 }
 
-static void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
+void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
 	auto surf = std::make_unique<surface_t>();
 	surf->numVerts = sub->numlines;
@@ -250,16 +307,12 @@ static void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *
 	surfaces.push_back(std::move(surf));
 }
 
-static void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
+void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
 	auto surf = std::make_unique<surface_t>();
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
-
-	if (doomMap.bSkySectors[sector - &doomMap.Sectors[0]])
-	{
-		surf->bSky = true;
-	}
+	surf->bSky = sector->skySector;
 
 	if (!is3DFloor)
 	{
@@ -287,7 +340,7 @@ static void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector
 	surfaces.push_back(std::move(surf));
 }
 
-static void CreateSubsectorSurfaces(FLevel &doomMap)
+void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 {
 	printf("------------- Building subsector surfaces -------------\n");
 
@@ -319,7 +372,42 @@ static void CreateSubsectorSurfaces(FLevel &doomMap)
 	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
 }
 
-static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2)
+LevelTraceHit LevelMesh::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
+{
+	TraceHit hit = TriangleMeshShape::find_first_hit(CollisionMesh.get(), startVec, endVec);
+
+	LevelTraceHit trace;
+	trace.start = startVec;
+	trace.end = endVec;
+	trace.fraction = hit.fraction;
+	if (trace.fraction < 1.0f)
+	{
+		int elementIdx = hit.triangle * 3;
+		trace.hitSurface = surfaces[MeshSurfaces[hit.triangle]].get();
+		trace.indices[0] = MeshUVIndex[MeshElements[elementIdx]];
+		trace.indices[1] = MeshUVIndex[MeshElements[elementIdx + 1]];
+		trace.indices[2] = MeshUVIndex[MeshElements[elementIdx + 2]];
+		trace.b = hit.b;
+		trace.c = hit.c;
+	}
+	else
+	{
+		trace.hitSurface = nullptr;
+		trace.indices[0] = 0;
+		trace.indices[1] = 0;
+		trace.indices[2] = 0;
+		trace.b = 0.0f;
+		trace.c = 0.0f;
+	}
+	return trace;
+}
+
+bool LevelMesh::TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec)
+{
+	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
+}
+
+bool LevelMesh::IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2)
 {
 	// A degenerate triangle has a zero cross product for two of its sides.
 	float ax = v1.x - v0.x;
@@ -335,104 +423,77 @@ static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2
 	return crosslengthsqr <= 1.e-6f;
 }
 
-void CreateSurfaces(FLevel &doomMap)
+void LevelMesh::WriteMeshToOBJ()
 {
-	surfaces.clear();
+	FILE *f = fopen("mesh.obj", "w");
 
-	for (unsigned int i = 0; i < doomMap.Sectors.Size(); i++)
-		doomMap.Sectors[i].controlsector = false;
+	std::map<int, std::vector<surface_t*>> sortedSurfs;
 
-	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
-		doomMap.Sides[i].line = nullptr;
+	for (unsigned int i = 0; i < surfaces.size(); i++)
+		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i].get());
 
-	for (unsigned int i = 0; i < doomMap.Lines.Size(); i++)
+	for (const auto &it : sortedSurfs)
 	{
-		IntLineDef *line = &doomMap.Lines[i];
-
-		// Link sides to lines
-		if (line->sidenum[0] < doomMap.Sides.Size())
-			doomMap.Sides[line->sidenum[0]].line = line;
-		if (line->sidenum[1] < doomMap.Sides.Size())
-			doomMap.Sides[line->sidenum[1]].line = line;
-
-		if (line->special == 160) // Sector_Set3dFloor
+		for (const auto &s : it.second)
 		{
-			int sectorTag = line->args[0];
-			int type = line->args[1];
-			//int opacity = line.args[3];
-
-			IntSector *controlsector = &doomMap.Sectors[doomMap.Sides[doomMap.Lines[i].sidenum[0]].sector];
-			controlsector->controlsector = true;
-
-			for (unsigned int j = 0; j < doomMap.Sectors.Size(); j++)
+			for (int j = 0; j < s->numVerts; j++)
 			{
-				if (doomMap.Sectors[j].data.tag == sectorTag)
+				fprintf(f, "v %f %f %f\n", s->verts[j].x, s->verts[j].z + 100.0f, s->verts[j].y);
+			}
+		}
+	}
+
+	for (const auto &it : sortedSurfs)
+	{
+		for (const auto &s : it.second)
+		{
+			for (int j = 0; j < s->numVerts; j++)
+			{
+				fprintf(f, "vt %f %f\n", s->lightmapCoords[j * 2], s->lightmapCoords[j * 2 + 1]);
+			}
+		}
+	}
+
+	int voffset = 1;
+	for (const auto &it : sortedSurfs)
+	{
+		int lightmapNum = it.first;
+
+		if (lightmapNum != -1)
+			fprintf(f, "usemtl lightmap_%02d\n", lightmapNum);
+		else
+			fprintf(f, "usemtl black\n");
+
+		for (const auto &s : it.second)
+		{
+			switch (s->type)
+			{
+			case ST_FLOOR:
+				for (int j = 2; j < s->numVerts; j++)
 				{
-					doomMap.Sectors[j].x3dfloors.Push(controlsector);
+					fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j, voffset + j, voffset + j - 1, voffset + j - 1, voffset, voffset);
 				}
-			}
-		}
-	}
-
-	printf("------------- Building side surfaces -------------\n");
-
-	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
-	{
-		CreateSideSurfaces(doomMap, &doomMap.Sides[i]);
-		printf("sides: %i / %i\r", i + 1, doomMap.Sides.Size());
-	}
-
-	printf("\nSide surfaces: %i\n", (int)surfaces.size());
-
-	CreateSubsectorSurfaces(doomMap);
-
-	printf("Surfaces total: %i\n\n", (int)surfaces.size());
-
-	printf("Building collision mesh..\n\n");
-
-	for (size_t i = 0; i < surfaces.size(); i++)
-	{
-		const auto &s = surfaces[i];
-		int numVerts = s->numVerts;
-		unsigned int pos = doomMap.MeshVertices.Size();
-
-		for (int j = 0; j < numVerts; j++)
-		{
-			doomMap.MeshVertices.Push(s->verts[j]);
-			doomMap.MeshUVIndex.Push(j);
-		}
-
-		if (s->type == ST_FLOOR || s->type == ST_CEILING)
-		{
-			for (int j = 2; j < numVerts; j++)
-			{
-				if (!IsDegenerate(s->verts[0], s->verts[j - 1], s->verts[j]))
+				break;
+			case ST_CEILING:
+				for (int j = 2; j < s->numVerts; j++)
 				{
-					doomMap.MeshElements.Push(pos);
-					doomMap.MeshElements.Push(pos + j - 1);
-					doomMap.MeshElements.Push(pos + j);
-					doomMap.MeshSurfaces.Push(i);
+					fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset, voffset, voffset + j - 1, voffset + j - 1, voffset + j, voffset + j);
 				}
+				break;
+			default:
+				for (int j = 2; j < s->numVerts; j++)
+				{
+					if (j % 2 == 0)
+						fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j - 2, voffset + j - 2, voffset + j - 1, voffset + j - 1, voffset + j, voffset + j);
+					else
+						fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j, voffset + j, voffset + j - 1, voffset + j - 1, voffset + j - 2, voffset + j - 2);
+				}
+				break;
 			}
-		}
-		else if (s->type == ST_MIDDLESIDE || s->type == ST_UPPERSIDE || s->type == ST_LOWERSIDE)
-		{
-			if (!IsDegenerate(s->verts[0], s->verts[1], s->verts[2]))
-			{
-				doomMap.MeshElements.Push(pos + 0);
-				doomMap.MeshElements.Push(pos + 1);
-				doomMap.MeshElements.Push(pos + 2);
-				doomMap.MeshSurfaces.Push(i);
-			}
-			if (!IsDegenerate(s->verts[1], s->verts[2], s->verts[3]))
-			{
-				doomMap.MeshElements.Push(pos + 1);
-				doomMap.MeshElements.Push(pos + 2);
-				doomMap.MeshElements.Push(pos + 3);
-				doomMap.MeshSurfaces.Push(i);
-			}
+
+			voffset += s->numVerts;
 		}
 	}
 
-	doomMap.CollisionMesh = std::make_unique<TriangleMeshShape>(&doomMap.MeshVertices[0], doomMap.MeshVertices.Size(), &doomMap.MeshElements[0], doomMap.MeshElements.Size());
+	fclose(f);
 }

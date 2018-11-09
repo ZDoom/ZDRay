@@ -30,7 +30,13 @@
 #include <vector>
 #include <memory>
 
+#include "framework/tarray.h"
+#include "lightmap/collision.h"
+
 struct MapSubsectorEx;
+struct IntSector;
+struct IntSideDef;
+struct FLevel;
 
 enum surfaceType_t
 {
@@ -44,8 +50,6 @@ enum surfaceType_t
 
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
-
-struct IntSector;
 
 struct surface_t
 {
@@ -66,8 +70,41 @@ struct surface_t
 	bool bSky;
 };
 
-extern std::vector<std::unique_ptr<surface_t>> surfaces;
+struct LevelTraceHit
+{
+	kexVec3 start;
+	kexVec3 end;
+	float fraction;
 
-struct FLevel;
+	surface_t *hitSurface;
+	int indices[3];
+	float b, c;
+};
 
-void CreateSurfaces(FLevel &doomMap);
+class LevelMesh
+{
+public:
+	LevelMesh(FLevel &doomMap);
+
+	LevelTraceHit Trace(const kexVec3 &startVec, const kexVec3 &endVec);
+	bool TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec);
+
+	void WriteMeshToOBJ();
+
+	std::vector<std::unique_ptr<surface_t>> surfaces;
+
+	TArray<kexVec3> MeshVertices;
+	TArray<int> MeshUVIndex;
+	TArray<unsigned int> MeshElements;
+	TArray<int> MeshSurfaces;
+	std::unique_ptr<TriangleMeshShape> CollisionMesh;
+
+private:
+	void CreateSubsectorSurfaces(FLevel &doomMap);
+	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
+	void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
+
+	void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side);
+
+	static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2);
+};

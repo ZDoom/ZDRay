@@ -171,7 +171,7 @@ bool kexLightmapBuilder::EmitFromCeiling(const surface_t *surface, const kexVec3
 		return false;
 	}
 
-	LevelTraceHit trace = map->Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
+	LevelTraceHit trace = mesh->Trace(origin, origin + (map->GetSunDirection() * 32768.0f));
 
 	if (trace.fraction == 1.0f)
 	{
@@ -216,9 +216,9 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 	kexVec3 color(0.0f, 0.0f, 0.0f);
 
 	// check all thing lights
-	for (size_t i = 0; i < map->thingLights.size(); i++)
+	for (unsigned int i = 0; i < map->ThingLights.Size(); i++)
 	{
-		thingLight_t *tl = map->thingLights[i].get();
+		thingLight_t *tl = &map->ThingLights[i];
 
 		float originZ;
 		if (!tl->bCeiling)
@@ -265,7 +265,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 			}
 		}
 
-		if (map->TraceAnyHit(lightOrigin, origin))
+		if (mesh->TraceAnyHit(lightOrigin, origin))
 		{
 			// this light is occluded by something
 			continue;
@@ -291,11 +291,11 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 	}
 
 	// trace against surface lights
-	for (size_t i = 0; i < map->lightSurfaces.size(); ++i)
+	for (size_t i = 0; i < lightSurfaces.size(); ++i)
 	{
-		kexLightSurface *surfaceLight = map->lightSurfaces[i].get();
+		kexLightSurface *surfaceLight = lightSurfaces[i].get();
 
-		float attenuation = surfaceLight->TraceSurface(map, surface, origin);
+		float attenuation = surfaceLight->TraceSurface(mesh.get(), surface, origin);
 		if (attenuation > 0.0f)
 		{
 			color += surfaceLight->GetRGB() * surfaceLight->Intensity() * attenuation;
@@ -601,7 +601,7 @@ void kexLightmapBuilder::TraceIndirectLight(surface_t *surface)
 				if (NdotL > 0.0f)
 				{
 					tracedTexels++;
-					LevelTraceHit hit = map->Trace(pos, pos + L * 1000.0f);
+					LevelTraceHit hit = mesh->Trace(pos, pos + L * 1000.0f);
 					if (hit.fraction < 1.0f)
 					{
 						kexVec3 surfaceLight;
@@ -653,12 +653,12 @@ void kexLightmapBuilder::TraceIndirectLight(surface_t *surface)
 
 void kexLightmapBuilder::LightSurface(const int surfid)
 {
-	BuildSurfaceParams(surfaces[surfid].get());
-	TraceSurface(surfaces[surfid].get());
+	BuildSurfaceParams(mesh->surfaces[surfid].get());
+	TraceSurface(mesh->surfaces[surfid].get());
 
 	std::unique_lock<std::mutex> lock(mutex);
 
-	int numsurfs = surfaces.size();
+	int numsurfs = mesh->surfaces.size();
 	int lastproc = processed * 100 / numsurfs;
 	processed++;
 	int curproc = processed * 100 / numsurfs;
@@ -671,9 +671,9 @@ void kexLightmapBuilder::LightSurface(const int surfid)
 
 void kexLightmapBuilder::LightIndirect(const int surfid)
 {
-	TraceIndirectLight(surfaces[surfid].get());
+	TraceIndirectLight(mesh->surfaces[surfid].get());
 
-	int numsurfs = surfaces.size();
+	int numsurfs = mesh->surfaces.size();
 	int lastproc = processed * 100 / numsurfs;
 	processed++;
 	int curproc = processed * 100 / numsurfs;
@@ -684,9 +684,52 @@ void kexLightmapBuilder::LightIndirect(const int surfid)
 	}
 }
 
+void kexLightmapBuilder::CreateLightSurfaces()
+{
+	for (size_t j = 0; j < mesh->surfaces.size(); ++j)
+	{
+		surface_t *surface = mesh->surfaces[j].get();
+
+		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
+		{
+			int lightdefidx = map->Sides[surface->typeIndex].lightdef;
+			if (lightdefidx != -1)
+			{
+				auto lightSurface = std::make_unique<kexLightSurface>(map->SurfaceLights[lightdefidx], surface);
+				lightSurface->Subdivide(16);
+				lightSurfaces.push_back(std::move(lightSurface));
+			}
+		}
+		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+		{
+			MapSubsectorEx *sub = &map->GLSubsectors[surface->typeIndex];
+			IntSector *sector = map->GetSectorFromSubSector(sub);
+
+			if (sector && surface->numVerts > 0)
+			{
+				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
+				{
+					auto lightSurface = std::make_unique<kexLightSurface>(map->SurfaceLights[sector->floorlightdef], surface);
+					lightSurface->Subdivide(16);
+					lightSurfaces.push_back(std::move(lightSurface));
+				}
+				else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
+				{
+					auto lightSurface = std::make_unique<kexLightSurface>(map->SurfaceLights[sector->ceilinglightdef], surface);
+					lightSurface->Subdivide(16);
+					lightSurfaces.push_back(std::move(lightSurface));
+				}
+			}
+		}
+	}
+}
+
 void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 {
 	map = &doomMap;
+	mesh = std::make_unique<LevelMesh>(doomMap);
+
+	CreateLightSurfaces();
 
 	printf("-------------- Tracing cells ---------------\n");
 
@@ -704,7 +747,7 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 
 	tracedTexels = 0;
 	processed = 0;
-	kexWorker::RunJob(surfaces.size(), [=](int id) {
+	kexWorker::RunJob(mesh->surfaces.size(), [=](int id) {
 		LightSurface(id);
 	});
 
@@ -716,7 +759,7 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 
 	tracedTexels = 0;
 	processed = 0;
-	kexWorker::RunJob(surfaces.size(), [=](int id) {
+	kexWorker::RunJob(mesh->surfaces.size(), [=](int id) {
 		LightIndirect(id);
 	});
 
@@ -736,7 +779,7 @@ void kexLightmapBuilder::CreateLightmaps(FLevel &doomMap)
 
 void kexLightmapBuilder::SetupLightCellGrid()
 {
-	kexBBox worldBBox = map->CollisionMesh->get_bbox();
+	kexBBox worldBBox = mesh->CollisionMesh->get_bbox();
 	float blockWorldSize = LIGHTCELL_BLOCK_SIZE * LIGHTCELL_SIZE;
 	grid.x = static_cast<int>(std::floor(worldBBox.min.x / blockWorldSize));
 	grid.y = static_cast<int>(std::floor(worldBBox.min.y / blockWorldSize));
@@ -845,15 +888,16 @@ void kexLightmapBuilder::LightBlock(int id)
 		float remaining = (float)processed / (float)numblocks;
 		printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
 	}
-
 }
 
 void kexLightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 {
+	const auto &surfaces = mesh->surfaces;
+
 	// Calculate size of lump
 	int numTexCoords = 0;
 	int numSurfaces = 0;
-	for (size_t i = 0; i < surfaces.size(); i++)
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		if (surfaces[i]->lightmapNum != -1)
 		{
@@ -1018,78 +1062,3 @@ void kexLightmapBuilder::WriteTexturesToTGA()
 	}
 }
 */
-
-void kexLightmapBuilder::WriteMeshToOBJ()
-{
-	FILE *f = fopen("mesh.obj", "w");
-
-	std::map<int, std::vector<surface_t*>> sortedSurfs;
-
-	for (unsigned int i = 0; i < surfaces.size(); i++)
-		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i].get());
-
-	for (const auto &it : sortedSurfs)
-	{
-		for (const auto &s : it.second)
-		{
-			for (int j = 0; j < s->numVerts; j++)
-			{
-				fprintf(f, "v %f %f %f\n", s->verts[j].x, s->verts[j].z + 100.0f, s->verts[j].y);
-			}
-		}
-	}
-
-	for (const auto &it : sortedSurfs)
-	{
-		for (const auto &s : it.second)
-		{
-			for (int j = 0; j < s->numVerts; j++)
-			{
-				fprintf(f, "vt %f %f\n", s->lightmapCoords[j * 2], s->lightmapCoords[j * 2 + 1]);
-			}
-		}
-	}
-
-	int voffset = 1;
-	for (const auto &it : sortedSurfs)
-	{
-		int lightmapNum = it.first;
-
-		if (lightmapNum != -1)
-			fprintf(f, "usemtl lightmap_%02d\n", lightmapNum);
-		else
-			fprintf(f, "usemtl black\n");
-
-		for (const auto &s : it.second)
-		{
-			switch (s->type)
-			{
-			case ST_FLOOR:
-				for (int j = 2; j < s->numVerts; j++)
-				{
-					fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j, voffset + j, voffset + j - 1, voffset + j - 1, voffset, voffset);
-				}
-				break;
-			case ST_CEILING:
-				for (int j = 2; j < s->numVerts; j++)
-				{
-					fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset, voffset, voffset + j - 1, voffset + j - 1, voffset + j, voffset + j);
-				}
-				break;
-			default:
-				for (int j = 2; j < s->numVerts; j++)
-				{
-					if (j % 2 == 0)
-						fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j - 2, voffset + j - 2, voffset + j - 1, voffset + j - 1, voffset + j, voffset + j);
-					else
-						fprintf(f, "f %d/%d %d/%d %d/%d\n", voffset + j, voffset + j, voffset + j - 1, voffset + j - 1, voffset + j - 2, voffset + j - 2);
-				}
-				break;
-			}
-
-			voffset += s->numVerts;
-		}
-	}
-
-	fclose(f);
-}

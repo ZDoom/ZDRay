@@ -622,7 +622,6 @@ void FProcessor::BuildLightmaps()
 	LMBuilder.textureHeight = LMDims;
 
 	Level.SetupDlight();
-	CreateSurfaces(Level);
 	Level.CreateLights();
 
 	LMBuilder.CreateLightmaps(Level);

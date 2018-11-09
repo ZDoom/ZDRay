@@ -3,7 +3,6 @@
 
 #include "framework/tarray.h"
 #include "math/mathlib.h"
-#include "lightmap/collision.h"
 #include <memory>
 #undef MIN
 #undef MAX
@@ -52,6 +51,7 @@ struct IntSideDef
 	char	midtexture[8];
 
 	int sector;
+	int lightdef;
 
 	IntLineDef *line;
 
@@ -112,8 +112,12 @@ struct IntSector
 	kexPlane ceilingplane;
 	kexPlane floorplane;
 
+	int floorlightdef;
+	int ceilinglightdef;
+
 	bool controlsector;
 	TArray<IntSector*> x3dfloors;
+	bool skySector;
 
 	TArray<UDMFKey> props;
 };
@@ -305,17 +309,6 @@ enum mapFlags_t
 #define NO_SIDE_INDEX           -1
 #define NO_LINE_INDEX           0xffffffff
 
-struct LevelTraceHit
-{
-	kexVec3 start;
-	kexVec3 end;
-	float fraction;
-
-	surface_t *hitSurface;
-	int indices[3];
-	float b, c;
-};
-
 struct FLevel
 {
 	FLevel ();
@@ -359,22 +352,11 @@ struct FLevel
 
 	// Dlight helpers
 
-	TArray<kexVec3> MeshVertices;
-	TArray<int> MeshUVIndex;
-	TArray<unsigned int> MeshElements;
-	TArray<int> MeshSurfaces;
-	std::unique_ptr<TriangleMeshShape> CollisionMesh;
-
-	std::vector<bool> bSkySectors;
-
-	std::vector<std::unique_ptr<thingLight_t>> thingLights;
-	std::vector<std::unique_ptr<kexLightSurface>> lightSurfaces;
+	TArray<thingLight_t> ThingLights;
+	TArray<surfaceLightDef> SurfaceLights;
 
 	void SetupDlight();
 	void CreateLights();
-
-	LevelTraceHit Trace(const kexVec3 &startVec, const kexVec3 &endVec);
-	bool TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec);
 
 	const kexVec3 &GetSunColor() const;
 	const kexVec3 &GetSunDirection() const;

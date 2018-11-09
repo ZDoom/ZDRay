@@ -39,7 +39,7 @@ public:
 	~kexLightSurface();
 
 	void Subdivide(const float divide);
-	float TraceSurface(FLevel *doomMap, const surface_t *surface, const kexVec3 &origin);
+	float TraceSurface(LevelMesh *map, const surface_t *surface, const kexVec3 &origin);
 
 	const float Distance() const { return distance; }
 	const float Intensity() const { return intensity; }

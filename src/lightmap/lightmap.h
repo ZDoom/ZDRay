@@ -37,6 +37,7 @@
 #define LIGHTCELL_BLOCK_SIZE 16
 
 class FWadWriter;
+class kexLightSurface;
 
 class LightCellBlock
 {
@@ -62,7 +63,6 @@ public:
 
 	void CreateLightmaps(FLevel &doomMap);
 	//void WriteTexturesToTGA();
-	void WriteMeshToOBJ();
 	void AddLightmapLump(FWadWriter &wadFile);
 
 	int samples = 16;
@@ -85,7 +85,11 @@ private:
 	void LightSurface(const int surfid);
 	void LightIndirect(const int surfid);
 
+	void CreateLightSurfaces();
+
+	std::unique_ptr<LevelMesh> mesh;
 	FLevel *map;
+	std::vector<std::unique_ptr<kexLightSurface>> lightSurfaces;
 	std::vector<std::vector<uint16_t>> textures;
 	std::vector<uint16_t> indirectoutput;
 	std::vector<std::vector<int>> allocBlocks;

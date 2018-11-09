@@ -241,7 +241,7 @@ void kexLightSurface::Subdivide(const float divide)
 	}
 }
 
-float kexLightSurface::TraceSurface(FLevel *map, const surface_t *fragmentSurface, const kexVec3 &fragmentPos)
+float kexLightSurface::TraceSurface(LevelMesh *mesh, const surface_t *fragmentSurface, const kexVec3 &fragmentPos)
 {
 	if (fragmentSurface == surface)
 		return 1.0f; // light surface will always be fullbright
@@ -286,7 +286,7 @@ float kexLightSurface::TraceSurface(FLevel *map, const surface_t *fragmentSurfac
 
 		// trace the origin to the center of the light surface. nudge by the normals in
 		// case the start/end points are directly on or inside the surface
-		if (map->TraceAnyHit(lightPos + lightSurfaceNormal, fragmentPos + fragmentNormal))
+		if (mesh->TraceAnyHit(lightPos + lightSurfaceNormal, fragmentPos + fragmentNormal))
 			continue; // something is obstructing it
 
 		if (d < closestDistance)

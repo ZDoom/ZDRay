@@ -47,13 +47,46 @@ static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
 void FLevel::SetupDlight()
 {
 	CheckSkySectors();
+
+	for (unsigned int i = 0; i < Sectors.Size(); i++)
+		Sectors[i].controlsector = false;
+
+	for (unsigned int i = 0; i < Sides.Size(); i++)
+		Sides[i].line = nullptr;
+
+	for (unsigned int i = 0; i < Lines.Size(); i++)
+	{
+		IntLineDef *line = &Lines[i];
+
+		// Link sides to lines
+		if (line->sidenum[0] < Sides.Size())
+			Sides[line->sidenum[0]].line = line;
+		if (line->sidenum[1] < Sides.Size())
+			Sides[line->sidenum[1]].line = line;
+
+		if (line->special == 160) // Sector_Set3dFloor
+		{
+			int sectorTag = line->args[0];
+			int type = line->args[1];
+			//int opacity = line.args[3];
+
+			IntSector *controlsector = &Sectors[Sides[Lines[i].sidenum[0]].sector];
+			controlsector->controlsector = true;
+
+			for (unsigned int j = 0; j < Sectors.Size(); j++)
+			{
+				if (Sectors[j].data.tag == sectorTag)
+				{
+					Sectors[j].x3dfloors.Push(controlsector);
+				}
+			}
+		}
+	}
 }
 
 void FLevel::CheckSkySectors()
 {
 	char name[9];
-
-	bSkySectors = std::vector<bool>(Sectors.Size()); // Most retarded way to resize ever, but Microsoft apparently broke std::vector<bool> in the latest update..
 
 	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{
@@ -65,7 +98,11 @@ void FLevel::CheckSkySectors()
 
 		if (!strncmp(name, "F_SKY001", 8) || !strncmp(name, "F_SKY1", 8) || !strncmp(name, "F_SKY", 8))
 		{
-			bSkySectors[i] = true;
+			Sectors[i].skySector = true;
+		}
+		else
+		{
+			Sectors[i].skySector = false;
 		}
 	}
 }
@@ -212,175 +249,141 @@ void FLevel::CreateLights()
 			int x = thing->x >> FRACBITS;
 			int y = thing->y >> FRACBITS;
 
-			auto thingLight = std::make_unique<thingLight_t>();
+			thingLight_t thingLight;
+			thingLight.mapThing = thing;
+			thingLight.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+			thingLight.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+			thingLight.rgb.z = (lightcolor & 0xff) / 255.0f;
+			thingLight.intensity = lightintensity;
+			thingLight.innerAngleCos = std::max(innerAngleCos, outerAngleCos);
+			thingLight.outerAngleCos = outerAngleCos;
+			thingLight.radius = lightdistance;
+			thingLight.height = thing->height;
+			thingLight.bCeiling = false;
+			thingLight.ssect = PointInSubSector(x, y);
+			thingLight.sector = GetSectorFromSubSector(thingLight.ssect);
+			thingLight.origin.Set(x, y);
 
-			thingLight->mapThing = thing;
-			thingLight->rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
-			thingLight->rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
-			thingLight->rgb.z = (lightcolor & 0xff) / 255.0f;
-			thingLight->intensity = lightintensity;
-			thingLight->innerAngleCos = std::max(innerAngleCos, outerAngleCos);
-			thingLight->outerAngleCos = outerAngleCos;
-			thingLight->radius = lightdistance;
-			thingLight->height = thing->height;
-			thingLight->bCeiling = false;
-			thingLight->ssect = PointInSubSector(x, y);
-			thingLight->sector = GetSectorFromSubSector(thingLight->ssect);
-
-			thingLight->origin.Set(x, y);
-			thingLights.push_back(std::move(thingLight));
+			ThingLights.Push(thingLight);
 		}
 	}
 
-	printf("Thing lights: %i\n", (int)thingLights.size());
+	printf("Thing lights: %i\n", (int)ThingLights.Size());
 
 	// add surface lights
-	int numSurfLights = 0;
-	for (size_t j = 0; j < surfaces.size(); ++j)
+	for (unsigned int i = 0; i < Sides.Size(); i++)
 	{
-		surface_t *surface = surfaces[j].get();
+		IntSideDef *side = &Sides[i];
+		side->lightdef = -1;
 
-		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
+		IntLineDef *line = side->line;
+		if (line)
 		{
-			IntLineDef *line = Sides[surface->typeIndex].line;
-			if (line)
+			uint32_t lightcolor = 0xffffff;
+			float lightintensity = 1.0f;
+			float lightdistance = 0.0f;
+
+			for (unsigned int propIndex = 0; propIndex < line->props.Size(); propIndex++)
 			{
-				uint32_t lightcolor = 0xffffff;
-				float lightintensity = 1.0f;
-				float lightdistance = 0.0f;
-
-				for (unsigned int propIndex = 0; propIndex < line->props.Size(); propIndex++)
+				const UDMFKey &key = line->props[propIndex];
+				if (!stricmp(key.key, "lightcolor"))
 				{
-					const UDMFKey &key = line->props[propIndex];
-					if (!stricmp(key.key, "lightcolor"))
-					{
-						lightcolor = atoi(key.value);
-					}
-					else if (!stricmp(key.key, "lightintensity"))
-					{
-						lightintensity = atof(key.value);
-					}
-					else if (!stricmp(key.key, "lightdistance"))
-					{
-						lightdistance = atof(key.value);
-					}
+					lightcolor = atoi(key.value);
 				}
-
-				if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
+				else if (!stricmp(key.key, "lightintensity"))
 				{
-					surfaceLightDef desc;
-					desc.intensity = lightintensity;
-					desc.distance = lightdistance;
-					desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
-					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
-					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
-
-					auto lightSurface = std::make_unique<kexLightSurface>(desc, surface);
-					lightSurface->Subdivide(16);
-					//lightSurface->CreateCenterOrigin();
-					lightSurfaces.push_back(std::move(lightSurface));
-					numSurfLights++;
+					lightintensity = atof(key.value);
+				}
+				else if (!stricmp(key.key, "lightdistance"))
+				{
+					lightdistance = atof(key.value);
 				}
 			}
-		}
-		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
-		{
-			MapSubsectorEx *sub = &GLSubsectors[surface->typeIndex];
-			IntSector *sector = GetSectorFromSubSector(sub);
 
-			if (sector && surface->numVerts > 0)
+			if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 			{
-				uint32_t lightcolor = 0xffffff;
-				float lightintensity = 1.0f;
-				float lightdistance = 0.0f;
-
-				for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
-				{
-					const UDMFKey &key = sector->props[propIndex];
-					if (surface->type == ST_FLOOR)
-					{
-						if (!stricmp(key.key, "lightcolorfloor"))
-						{
-							lightcolor = atoi(key.value);
-						}
-						else if (!stricmp(key.key, "lightintensityfloor"))
-						{
-							lightintensity = atof(key.value);
-						}
-						else if (!stricmp(key.key, "lightdistancefloor"))
-						{
-							lightdistance = atof(key.value);
-						}
-					}
-					else
-					{
-						if (!stricmp(key.key, "lightcolorceiling"))
-						{
-							lightcolor = atoi(key.value);
-						}
-						else if (!stricmp(key.key, "lightintensityceiling"))
-						{
-							lightintensity = atof(key.value);
-						}
-						else if (!stricmp(key.key, "lightdistanceceiling"))
-						{
-							lightdistance = atof(key.value);
-						}
-					}
-				}
-
-				if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
-				{
-					surfaceLightDef desc;
-					desc.intensity = lightintensity;
-					desc.distance = lightdistance;
-					desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
-					desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
-					desc.rgb.z = (lightcolor & 0xff) / 255.0f;
-
-					auto lightSurface = std::make_unique<kexLightSurface>(desc, surface);
-					lightSurface->Subdivide(16);
-					lightSurfaces.push_back(std::move(lightSurface));
-					numSurfLights++;
-				}
+				surfaceLightDef desc;
+				desc.intensity = lightintensity;
+				desc.distance = lightdistance;
+				desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+				desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+				desc.rgb.z = (lightcolor & 0xff) / 255.0f;
+				side->lightdef = SurfaceLights.Push(desc);
 			}
 		}
 	}
 
-	printf("Surface lights: %i\n", numSurfLights);
-}
-
-LevelTraceHit FLevel::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
-{
-	TraceHit hit = TriangleMeshShape::find_first_hit(CollisionMesh.get(), startVec, endVec);
-
-	LevelTraceHit trace;
-	trace.start = startVec;
-	trace.end = endVec;
-	trace.fraction = hit.fraction;
-	if (trace.fraction < 1.0f)
+	for (unsigned int i = 0; i < Sectors.Size(); i++)
 	{
-		int elementIdx = hit.triangle * 3;
-		trace.hitSurface = surfaces[MeshSurfaces[hit.triangle]].get();
-		trace.indices[0] = MeshUVIndex[MeshElements[elementIdx]];
-		trace.indices[1] = MeshUVIndex[MeshElements[elementIdx + 1]];
-		trace.indices[2] = MeshUVIndex[MeshElements[elementIdx + 2]];
-		trace.b = hit.b;
-		trace.c = hit.c;
-	}
-	else
-	{
-		trace.hitSurface = nullptr;
-		trace.indices[0] = 0;
-		trace.indices[1] = 0;
-		trace.indices[2] = 0;
-		trace.b = 0.0f;
-		trace.c = 0.0f;
-	}
-	return trace;
-}
+		IntSector *sector = &Sectors[i];
 
-bool FLevel::TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec)
-{
-	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
+		sector->floorlightdef = -1;
+		sector->ceilinglightdef = -1;
+
+		uint32_t lightcolor = 0xffffff;
+		float lightintensity = 1.0f;
+		float lightdistance = 0.0f;
+
+		for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
+		{
+			const UDMFKey &key = sector->props[propIndex];
+			if (!stricmp(key.key, "lightcolorfloor"))
+			{
+				lightcolor = atoi(key.value);
+			}
+			else if (!stricmp(key.key, "lightintensityfloor"))
+			{
+				lightintensity = atof(key.value);
+			}
+			else if (!stricmp(key.key, "lightdistancefloor"))
+			{
+				lightdistance = atof(key.value);
+			}
+		}
+
+		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
+		{
+			surfaceLightDef desc;
+			desc.intensity = lightintensity;
+			desc.distance = lightdistance;
+			desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+			desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+			desc.rgb.z = (lightcolor & 0xff) / 255.0f;
+			sector->floorlightdef = SurfaceLights.Push(desc);
+		}
+
+		lightcolor = 0xffffff;
+		lightintensity = 1.0f;
+		lightdistance = 0.0f;
+
+		for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
+		{
+			const UDMFKey &key = sector->props[propIndex];
+			if (!stricmp(key.key, "lightcolorceiling"))
+			{
+				lightcolor = atoi(key.value);
+			}
+			else if (!stricmp(key.key, "lightintensityceiling"))
+			{
+				lightintensity = atof(key.value);
+			}
+			else if (!stricmp(key.key, "lightdistanceceiling"))
+			{
+				lightdistance = atof(key.value);
+			}
+		}
+
+		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
+		{
+			surfaceLightDef desc;
+			desc.intensity = lightintensity;
+			desc.distance = lightdistance;
+			desc.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+			desc.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+			desc.rgb.z = (lightcolor & 0xff) / 255.0f;
+			sector->ceilinglightdef = SurfaceLights.Push(desc);
+		}
+	}
+
+	printf("Surface lights: %i\n", (int)SurfaceLights.Size());
 }
