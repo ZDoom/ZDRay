@@ -379,3 +379,8 @@ LevelTraceHit FLevel::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
 	}
 	return trace;
 }
+
+bool FLevel::TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec)
+{
+	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
+}

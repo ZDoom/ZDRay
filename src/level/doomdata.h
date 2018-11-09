@@ -374,6 +374,7 @@ struct FLevel
 	void CreateLights();
 
 	LevelTraceHit Trace(const kexVec3 &startVec, const kexVec3 &endVec);
+	bool TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec);
 
 	const kexVec3 &GetSunColor() const;
 	const kexVec3 &GetSunDirection() const;

@@ -265,9 +265,7 @@ kexVec3 kexLightmapBuilder::LightTexelSample(const kexVec3 &origin, surface_t *s
 			}
 		}
 
-		LevelTraceHit trace = map->Trace(lightOrigin, origin);
-
-		if (trace.fraction != 1)
+		if (map->TraceAnyHit(lightOrigin, origin))
 		{
 			// this light is occluded by something
 			continue;
