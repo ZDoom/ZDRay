@@ -73,13 +73,13 @@ public:
 private:
 	void NewTexture();
 	bool MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
-	BBox GetBoundsFromSurface(const surface_t *surface);
-	Vec3 LightTexelSample(const Vec3 &origin, surface_t *surface);
-	bool EmitFromCeiling(const surface_t *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color);
+	BBox GetBoundsFromSurface(const Surface *surface);
+	Vec3 LightTexelSample(const Vec3 &origin, Surface *surface);
+	bool EmitFromCeiling(const Surface *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color);
 
-	void BuildSurfaceParams(surface_t *surface);
-	void TraceSurface(surface_t *surface);
-	void TraceIndirectLight(surface_t *surface);
+	void BuildSurfaceParams(Surface *surface);
+	void TraceSurface(Surface *surface);
+	void TraceIndirectLight(Surface *surface);
 	void SetupLightCellGrid();
 	void LightBlock(int blockid);
 	void LightSurfacex(const int surfid);

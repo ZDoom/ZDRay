@@ -36,6 +36,9 @@
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
+// convert from fixed point(FRACUNIT) to floating point
+#define F(x)  (((float)(x))/65536.0f)
+
 static const Vec3 defaultSunColor(1, 1, 1);
 static const Vec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
 

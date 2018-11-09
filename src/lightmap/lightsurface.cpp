@@ -29,7 +29,7 @@
 #include "level/level.h"
 #include "lightsurface.h"
 
-LightSurface::LightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface)
+LightSurface::LightSurface(const surfaceLightDef &lightSurfaceDef, Surface *surface)
 {
 	this->intensity = lightSurfaceDef.intensity;
 	this->distance = lightSurfaceDef.distance;
@@ -42,7 +42,7 @@ LightSurface::~LightSurface()
 }
 
 // Splits surface vertices into two groups while adding new ones caused by the split
-void LightSurface::Clip(vertexBatch_t &points, const Vec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
+void LightSurface::Clip(VertexBatch &points, const Vec3 &normal, float dist, VertexBatch *frontPoints, VertexBatch *backPoints)
 {
 	std::vector<float> dists;
 	std::vector<char> sides;
@@ -116,7 +116,7 @@ void LightSurface::Clip(vertexBatch_t &points, const Vec3 &normal, float dist, v
 }
 
 // Recursively divides the surface
-bool LightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points)
+bool LightSurface::SubdivideRecursion(VertexBatch &surfPoints, float divide, std::vector<std::unique_ptr<VertexBatch>> &points)
 {
 	BBox bounds;
 	Vec3 splitNormal;
@@ -138,8 +138,8 @@ bool LightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, s
 
 			dist = (bounds.max[i] + bounds.min[i]) * 0.5f;
 
-			auto frontPoints = std::make_unique<vertexBatch_t>();
-			auto backPoints = std::make_unique<vertexBatch_t>();
+			auto frontPoints = std::make_unique<VertexBatch>();
+			auto backPoints = std::make_unique<VertexBatch>();
 
 			// start clipping
 			Clip(surfPoints, splitNormal, dist, frontPoints.get(), backPoints.get());
@@ -165,8 +165,8 @@ void LightSurface::Subdivide(const float divide)
 {
 	if (surface->type == ST_CEILING || surface->type == ST_FLOOR)
 	{
-		std::vector<std::unique_ptr<vertexBatch_t>> points;
-		vertexBatch_t surfPoints;
+		std::vector<std::unique_ptr<VertexBatch>> points;
+		VertexBatch surfPoints;
 
 		for (int i = 0; i < surface->numVerts; ++i)
 		{
@@ -179,7 +179,7 @@ void LightSurface::Subdivide(const float divide)
 		// creating a origin point based on the center of that group
 		for (size_t i = 0; i < points.size(); ++i)
 		{
-			vertexBatch_t *vb = points[i].get();
+			VertexBatch *vb = points[i].get();
 			Vec3 center;
 
 			for (unsigned int j = 0; j < vb->size(); ++j)
@@ -234,7 +234,7 @@ void LightSurface::Subdivide(const float divide)
 	}
 }
 
-float LightSurface::TraceSurface(LevelMesh *mesh, const surface_t *fragmentSurface, const Vec3 &fragmentPos)
+float LightSurface::TraceSurface(LevelMesh *mesh, const Surface *fragmentSurface, const Vec3 &fragmentPos)
 {
 	if (fragmentSurface == surface)
 		return 1.0f; // light surface will always be fullbright

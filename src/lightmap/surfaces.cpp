@@ -145,7 +145,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			if (bothSides)
 				continue;
 
-			auto surf = std::make_unique<surface_t>();
+			auto surf = std::make_unique<Surface>();
 			surf->type = ST_MIDDLESIDE;
 			surf->typeIndex = typeIndex;
 			surf->controlSector = xfloor;
@@ -180,7 +180,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		{
 			if (side->bottomtexture[0] != '-')
 			{
-				auto surf = std::make_unique<surface_t>();
+				auto surf = std::make_unique<Surface>();
 				surf->numVerts = 4;
 				surf->verts.resize(4);
 
@@ -221,7 +221,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			if (side->toptexture[0] != '-' || bSky)
 			{
-				auto surf = std::make_unique<surface_t>();
+				auto surf = std::make_unique<Surface>();
 				surf->numVerts = 4;
 				surf->verts.resize(4);
 
@@ -252,7 +252,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	// middle seg
 	if (back == nullptr)
 	{
-		auto surf = std::make_unique<surface_t>();
+		auto surf = std::make_unique<Surface>();
 		surf->numVerts = 4;
 		surf->verts.resize(4);
 
@@ -277,7 +277,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
-	auto surf = std::make_unique<surface_t>();
+	auto surf = std::make_unique<Surface>();
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
 
@@ -309,7 +309,7 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 
 void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
-	auto surf = std::make_unique<surface_t>();
+	auto surf = std::make_unique<Surface>();
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
 	surf->bSky = sector->skySector;
@@ -427,7 +427,7 @@ void LevelMesh::WriteMeshToOBJ()
 {
 	FILE *f = fopen("mesh.obj", "w");
 
-	std::map<int, std::vector<surface_t*>> sortedSurfs;
+	std::map<int, std::vector<Surface*>> sortedSurfs;
 
 	for (unsigned int i = 0; i < surfaces.size(); i++)
 		sortedSurfs[surfaces[i]->lightmapNum].push_back(surfaces[i].get());

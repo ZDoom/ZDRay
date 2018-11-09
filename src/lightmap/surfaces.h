@@ -38,7 +38,7 @@ struct IntSector;
 struct IntSideDef;
 struct FLevel;
 
-enum surfaceType_t
+enum SurfaceType
 {
 	ST_UNKNOWN,
 	ST_MIDDLESIDE,
@@ -48,10 +48,7 @@ enum surfaceType_t
 	ST_FLOOR
 };
 
-// convert from fixed point(FRACUNIT) to floating point
-#define F(x)  (((float)(x))/65536.0f)
-
-struct surface_t
+struct Surface
 {
 	Plane plane;
 	int lightmapNum;
@@ -64,7 +61,7 @@ struct surface_t
 	int numVerts;
 	std::vector<Vec3> verts;
 	std::vector<float> lightmapCoords;
-	surfaceType_t type;
+	SurfaceType type;
 	int typeIndex;
 	IntSector *controlSector;
 	bool bSky;
@@ -76,7 +73,7 @@ struct LevelTraceHit
 	Vec3 end;
 	float fraction;
 
-	surface_t *hitSurface;
+	Surface *hitSurface;
 	int indices[3];
 	float b, c;
 };
@@ -91,7 +88,7 @@ public:
 
 	void WriteMeshToOBJ();
 
-	std::vector<std::unique_ptr<surface_t>> surfaces;
+	std::vector<std::unique_ptr<Surface>> surfaces;
 
 	TArray<Vec3> MeshVertices;
 	TArray<int> MeshUVIndex;

@@ -35,26 +35,26 @@ struct surfaceLightDef;
 class LightSurface
 {
 public:
-	LightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface);
+	LightSurface(const surfaceLightDef &lightSurfaceDef, Surface *surface);
 	~LightSurface();
 
 	void Subdivide(const float divide);
-	float TraceSurface(LevelMesh *map, const surface_t *surface, const Vec3 &origin);
+	float TraceSurface(LevelMesh *map, const Surface *surface, const Vec3 &origin);
 
 	const float Distance() const { return distance; }
 	const float Intensity() const { return intensity; }
 	const Vec3 GetRGB() const { return rgb; }
-	const surface_t *Surface() const { return surface; }
+	const Surface *GetSurface() const { return surface; }
 
 private:
-	typedef std::vector<Vec3> vertexBatch_t;
+	typedef std::vector<Vec3> VertexBatch;
 
-	bool SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points);
-	void Clip(vertexBatch_t &points, const Vec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
+	bool SubdivideRecursion(VertexBatch &surfPoints, float divide, std::vector<std::unique_ptr<VertexBatch>> &points);
+	void Clip(VertexBatch &points, const Vec3 &normal, float dist, VertexBatch *frontPoints, VertexBatch *backPoints);
 
 	float distance;
 	float intensity;
 	Vec3 rgb;
-	vertexBatch_t origins;
-	surface_t *surface;
+	VertexBatch origins;
+	Surface *surface;
 };

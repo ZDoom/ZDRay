@@ -246,7 +246,7 @@ class BBox;
 class Vec3;
 class Vec2;
 struct vertex_t;
-struct surface_t;
+struct Surface;
 struct thingLight_t;
 
 struct FloatVertex

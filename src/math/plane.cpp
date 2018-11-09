@@ -144,7 +144,7 @@ Vec4 &Plane::ToVec4()
 	return *reinterpret_cast<Vec4*>(&a);
 }
 
-const Plane::planeAxis_t Plane::BestAxis() const
+const Plane::PlaneAxis Plane::BestAxis() const
 {
 	float na = Math::Fabs(a);
 	float nb = Math::Fabs(b);

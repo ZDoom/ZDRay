@@ -351,7 +351,7 @@ public:
 	Plane(const Vec3 &normal, const Vec3 &point);
 	Plane(const Plane &plane);
 
-	enum planeAxis_t
+	enum PlaneAxis
 	{
 		AXIS_YZ = 0,
 		AXIS_XZ,
@@ -370,7 +370,7 @@ public:
 	Quat ToQuat();
 	const Vec4 &ToVec4() const;
 	Vec4 &ToVec4();
-	const planeAxis_t BestAxis() const;
+	const PlaneAxis BestAxis() const;
 	Vec3 GetInclination();
 
 	static Plane Inverse(const Plane &p) { return Plane(-p.a, -p.b, -p.c, -p.d); }

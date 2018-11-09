@@ -126,7 +126,7 @@ bool LightmapBuilder::MakeRoomForBlock(const int width, const int height, int *x
 	return false;
 }
 
-BBox LightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
+BBox LightmapBuilder::GetBoundsFromSurface(const Surface *surface)
 {
 	Vec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
 	Vec3 hi(-M_INFINITY, -M_INFINITY, -M_INFINITY);
@@ -156,7 +156,7 @@ BBox LightmapBuilder::GetBoundsFromSurface(const surface_t *surface)
 }
 
 // Traces to the ceiling surface. Will emit light if the surface that was traced is a sky
-bool LightmapBuilder::EmitFromCeiling(const surface_t *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color)
+bool LightmapBuilder::EmitFromCeiling(const Surface *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color)
 {
 	float attenuation = surface ? normal.Dot(map->GetSunDirection()) : 1.0f;
 
@@ -202,7 +202,7 @@ static float radians(float degrees)
 }
 
 // Traces a line from the texel's origin to the sunlight direction and against all nearby thing lights
-Vec3 LightmapBuilder::LightTexelSample(const Vec3 &origin, surface_t *surface)
+Vec3 LightmapBuilder::LightTexelSample(const Vec3 &origin, Surface *surface)
 {
 	Plane plane;
 	if (surface)
@@ -303,13 +303,13 @@ Vec3 LightmapBuilder::LightTexelSample(const Vec3 &origin, surface_t *surface)
 
 // Determines a lightmap block in which to map to the lightmap texture.
 // Width and height of the block is calcuated and steps are computed to determine where each texel will be positioned on the surface
-void LightmapBuilder::BuildSurfaceParams(surface_t *surface)
+void LightmapBuilder::BuildSurfaceParams(Surface *surface)
 {
 	Plane *plane;
 	BBox bounds;
 	Vec3 roundedSize;
 	int i;
-	Plane::planeAxis_t axis;
+	Plane::PlaneAxis axis;
 	Vec3 tCoords[2];
 	Vec3 tOrigin;
 	int width;
@@ -399,7 +399,7 @@ void LightmapBuilder::BuildSurfaceParams(surface_t *surface)
 
 // Steps through each texel and traces a line to the world.
 // For each non-occluded trace, color is accumulated and saved off into the lightmap texture based on what block is mapped to
-void LightmapBuilder::TraceSurface(surface_t *surface)
+void LightmapBuilder::TraceSurface(Surface *surface)
 {
 	int sampleWidth;
 	int sampleHeight;
@@ -561,7 +561,7 @@ static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness)
 	return Vec3::Normalize(sampleVec);
 }
 
-void LightmapBuilder::TraceIndirectLight(surface_t *surface)
+void LightmapBuilder::TraceIndirectLight(Surface *surface)
 {
 	if (surface->lightmapNum == -1)
 		return;
@@ -683,7 +683,7 @@ void LightmapBuilder::CreateLightSurfaces()
 {
 	for (size_t j = 0; j < mesh->surfaces.size(); ++j)
 	{
-		surface_t *surface = mesh->surfaces[j].get();
+		Surface *surface = mesh->surfaces[j].get();
 
 		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
 		{
