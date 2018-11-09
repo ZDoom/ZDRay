@@ -41,8 +41,8 @@
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
-static const kexVec3 defaultSunColor(1, 1, 1);
-static const kexVec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
+static const Vec3 defaultSunColor(1, 1, 1);
+static const Vec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
 
 void FLevel::SetupDlight()
 {
@@ -107,12 +107,12 @@ void FLevel::CheckSkySectors()
 	}
 }
 
-const kexVec3 &FLevel::GetSunColor() const
+const Vec3 &FLevel::GetSunColor() const
 {
 	return defaultSunColor;
 }
 
-const kexVec3 &FLevel::GetSunDirection() const
+const Vec3 &FLevel::GetSunDirection() const
 {
 	return defaultSunDirection;
 }
@@ -159,8 +159,8 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	MapNodeEx   *node;
 	int         side;
 	int         nodenum;
-	kexVec3     dp1;
-	kexVec3     dp2;
+	Vec3     dp1;
+	Vec3     dp2;
 	float       d;
 
 	// single subsector is a special case
@@ -175,11 +175,11 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	{
 		node = &GLNodes[nodenum];
 
-		kexVec3 pt1(F(node->x), F(node->y), 0);
-		kexVec3 pt2(F(node->dx), F(node->dy), 0);
-		//kexVec3 pt1(F(node->x << 16), F(node->y << 16), 0);
-		//kexVec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
-		kexVec3 pos(F(x << 16), F(y << 16), 0);
+		Vec3 pt1(F(node->x), F(node->y), 0);
+		Vec3 pt2(F(node->dx), F(node->dy), 0);
+		//Vec3 pt1(F(node->x << 16), F(node->y << 16), 0);
+		//Vec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
+		Vec3 pos(F(x << 16), F(y << 16), 0);
 
 		dp1 = pt1 - pos;
 		dp2 = (pt2 + pt1) - pos;

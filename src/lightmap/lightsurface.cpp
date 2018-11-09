@@ -36,7 +36,7 @@
 #include "level/level.h"
 #include "lightsurface.h"
 
-kexLightSurface::kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface)
+LightSurface::LightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface)
 {
 	this->intensity = lightSurfaceDef.intensity;
 	this->distance = lightSurfaceDef.distance;
@@ -44,12 +44,12 @@ kexLightSurface::kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface
 	this->surface = surface;
 }
 
-kexLightSurface::~kexLightSurface()
+LightSurface::~LightSurface()
 {
 }
 
 // Splits surface vertices into two groups while adding new ones caused by the split
-void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
+void LightSurface::Clip(vertexBatch_t &points, const Vec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints)
 {
 	std::vector<float> dists;
 	std::vector<char> sides;
@@ -80,7 +80,7 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
 	{
 		int next;
 		float frac;
-		kexVec3 pt1, pt2, pt3;
+		Vec3 pt1, pt2, pt3;
 
 		switch (sides[i])
 		{
@@ -123,10 +123,10 @@ void kexLightSurface::Clip(vertexBatch_t &points, const kexVec3 &normal, float d
 }
 
 // Recursively divides the surface
-bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points)
+bool LightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points)
 {
-	kexBBox bounds;
-	kexVec3 splitNormal;
+	BBox bounds;
+	Vec3 splitNormal;
 	float dist;
 
 	// get bounds from current set of points
@@ -168,7 +168,7 @@ bool kexLightSurface::SubdivideRecursion(vertexBatch_t &surfPoints, float divide
 	return false;
 }
 
-void kexLightSurface::Subdivide(const float divide)
+void LightSurface::Subdivide(const float divide)
 {
 	if (surface->type == ST_CEILING || surface->type == ST_FLOOR)
 	{
@@ -187,7 +187,7 @@ void kexLightSurface::Subdivide(const float divide)
 		for (size_t i = 0; i < points.size(); ++i)
 		{
 			vertexBatch_t *vb = points[i].get();
-			kexVec3 center;
+			Vec3 center;
 
 			for (unsigned int j = 0; j < vb->size(); ++j)
 			{
@@ -202,8 +202,8 @@ void kexLightSurface::Subdivide(const float divide)
 		float length = surface->verts[0].Distance(surface->verts[1]);
 		if (length < divide)
 		{
-			kexVec3 top = surface->verts[0] * 0.5f + surface->verts[1] * 0.5f;
-			kexVec3 bottom = surface->verts[2] * 0.5f + surface->verts[3] * 0.5f;
+			Vec3 top = surface->verts[0] * 0.5f + surface->verts[1] * 0.5f;
+			Vec3 bottom = surface->verts[2] * 0.5f + surface->verts[3] * 0.5f;
 			origins.push_back(top * 0.5f + bottom * 0.5f);
 		}
 		else
@@ -216,8 +216,8 @@ void kexLightSurface::Subdivide(const float divide)
 			{
 				float t = i / length;
 
-				kexVec3 top = surface->verts[0] * (1.0f - t) + surface->verts[1] * t;
-				kexVec3 bottom = surface->verts[2] * (1.0f - t) + surface->verts[3] * t;
+				Vec3 top = surface->verts[0] * (1.0f - t) + surface->verts[1] * t;
+				Vec3 bottom = surface->verts[2] * (1.0f - t) + surface->verts[3] * t;
 
 				float length2 = top.Distance(bottom);
 				if (length2 < divide)
@@ -241,13 +241,13 @@ void kexLightSurface::Subdivide(const float divide)
 	}
 }
 
-float kexLightSurface::TraceSurface(LevelMesh *mesh, const surface_t *fragmentSurface, const kexVec3 &fragmentPos)
+float LightSurface::TraceSurface(LevelMesh *mesh, const surface_t *fragmentSurface, const Vec3 &fragmentPos)
 {
 	if (fragmentSurface == surface)
 		return 1.0f; // light surface will always be fullbright
 
-	kexVec3 lightSurfaceNormal = surface->plane.Normal();
-	kexVec3 fragmentNormal = fragmentSurface ? fragmentSurface->plane.Normal() : kexVec3(0.0f, 0.0f, 0.0f);
+	Vec3 lightSurfaceNormal = surface->plane.Normal();
+	Vec3 fragmentNormal = fragmentSurface ? fragmentSurface->plane.Normal() : Vec3(0.0f, 0.0f, 0.0f);
 
 	float gzdoomRadiusScale = 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
 
@@ -257,16 +257,16 @@ float kexLightSurface::TraceSurface(LevelMesh *mesh, const surface_t *fragmentSu
 	float maxDistanceSqr = closestDistance * closestDistance;
 	for (size_t i = 0; i < origins.size(); ++i)
 	{
-		kexVec3 lightPos = origins[i];
-		kexVec3 lightDir = (lightPos - fragmentPos);
+		Vec3 lightPos = origins[i];
+		Vec3 lightDir = (lightPos - fragmentPos);
 
-		float dsqr = kexVec3::Dot(lightDir, lightDir);
+		float dsqr = Vec3::Dot(lightDir, lightDir);
 		if (dsqr > maxDistanceSqr)
 			continue; // out of range
 
 		count++;
 
-		float attenuation = fragmentSurface ? kexVec3::Dot(lightDir, fragmentNormal) : 1.0f;
+		float attenuation = fragmentSurface ? Vec3::Dot(lightDir, fragmentNormal) : 1.0f;
 		if (attenuation <= 0.0f)
 			continue; // not even facing the light surface
 

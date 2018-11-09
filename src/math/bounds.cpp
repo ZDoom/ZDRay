@@ -35,39 +35,39 @@
 #include <assert.h>
 
 //
-// kexBBox::kexBBox
+// BBox::BBox
 //
 
-kexBBox::kexBBox()
+BBox::BBox()
 {
 	Clear();
 }
 
 //
-// kexBBox::kexBBox
+// BBox::BBox
 //
 
-kexBBox::kexBBox(const kexVec3 &vMin, const kexVec3 &vMax)
+BBox::BBox(const Vec3 &vMin, const Vec3 &vMax)
 {
 	this->min = vMin;
 	this->max = vMax;
 }
 
 //
-// kexBBox::Clear
+// BBox::Clear
 //
 
-void kexBBox::Clear()
+void BBox::Clear()
 {
 	min.Set(M_INFINITY, M_INFINITY, M_INFINITY);
 	max.Set(-M_INFINITY, -M_INFINITY, -M_INFINITY);
 }
 
 //
-// kexBBox::AddPoint
+// BBox::AddPoint
 //
 
-void kexBBox::AddPoint(const kexVec3 &vec)
+void BBox::AddPoint(const Vec3 &vec)
 {
 	float lowx = min.x;
 	float lowy = min.y;
@@ -88,10 +88,10 @@ void kexBBox::AddPoint(const kexVec3 &vec)
 }
 
 //
-// kexBBox::Radius
+// BBox::Radius
 //
 
-float kexBBox::Radius() const
+float BBox::Radius() const
 {
 	int i;
 	float r = 0;
@@ -100,8 +100,8 @@ float kexBBox::Radius() const
 
 	for (i = 0; i < 3; i++)
 	{
-		r1 = kexMath::Fabs(min[i]);
-		r2 = kexMath::Fabs(max[i]);
+		r1 = Math::Fabs(min[i]);
+		r2 = Math::Fabs(max[i]);
 
 		if (r1 > r2)
 		{
@@ -113,46 +113,46 @@ float kexBBox::Radius() const
 		}
 	}
 
-	return kexMath::Sqrt(r);
+	return Math::Sqrt(r);
 }
 
 //
-// kexBBox::PointInside
+// BBox::PointInside
 //
 
-bool kexBBox::PointInside(const kexVec3 &vec) const
+bool BBox::PointInside(const Vec3 &vec) const
 {
 	return !(vec[0] < min[0] || vec[1] < min[1] || vec[2] < min[2] ||
 		vec[0] > max[0] || vec[1] > max[1] || vec[2] > max[2]);
 }
 
 //
-// kexBBox::IntersectingBox
+// BBox::IntersectingBox
 //
 
-bool kexBBox::IntersectingBox(const kexBBox &box) const
+bool BBox::IntersectingBox(const BBox &box) const
 {
 	return !(box.max[0] < min[0] || box.max[1] < min[1] || box.max[2] < min[2] ||
 		box.min[0] > max[0] || box.min[1] > max[1] || box.min[2] > max[2]);
 }
 
 //
-// kexBBox::IntersectingBox2D
+// BBox::IntersectingBox2D
 //
 
-bool kexBBox::IntersectingBox2D(const kexBBox &box) const
+bool BBox::IntersectingBox2D(const BBox &box) const
 {
 	return !(box.max[0] < min[0] || box.max[2] < min[2] ||
 		box.min[0] > max[0] || box.min[2] > max[2]);
 }
 
 //
-// kexBBox::DistanceToPlane
+// BBox::DistanceToPlane
 //
 
-float kexBBox::DistanceToPlane(kexPlane &plane)
+float BBox::DistanceToPlane(Plane &plane)
 {
-	kexVec3 c;
+	Vec3 c;
 	float distStart;
 	float distEnd;
 	float dist = 0;
@@ -160,9 +160,9 @@ float kexBBox::DistanceToPlane(kexPlane &plane)
 	c = Center();
 
 	distStart = plane.Distance(c);
-	distEnd = kexMath::Fabs((max.x - c.x) * plane.a) +
-		kexMath::Fabs((max.y - c.y) * plane.b) +
-		kexMath::Fabs((max.z - c.z) * plane.c);
+	distEnd = Math::Fabs((max.x - c.x) * plane.a) +
+		Math::Fabs((max.y - c.y) * plane.b) +
+		Math::Fabs((max.z - c.z) * plane.c);
 
 	dist = distStart - distEnd;
 
@@ -184,13 +184,13 @@ float kexBBox::DistanceToPlane(kexPlane &plane)
 }
 
 //
-// kexBBox::operator+
+// BBox::operator+
 //
 
-kexBBox kexBBox::operator+(const float radius) const
+BBox BBox::operator+(const float radius) const
 {
-	kexVec3 vmin = min;
-	kexVec3 vmax = max;
+	Vec3 vmin = min;
+	Vec3 vmax = max;
 
 	vmin.x -= radius;
 	vmin.y -= radius;
@@ -200,14 +200,14 @@ kexBBox kexBBox::operator+(const float radius) const
 	vmax.y += radius;
 	vmax.z += radius;
 
-	return kexBBox(vmin, vmax);
+	return BBox(vmin, vmax);
 }
 
 //
-// kexBBox::operator+=
+// BBox::operator+=
 //
 
-kexBBox &kexBBox::operator+=(const float radius)
+BBox &BBox::operator+=(const float radius)
 {
 	min.x -= radius;
 	min.y -= radius;
@@ -219,13 +219,13 @@ kexBBox &kexBBox::operator+=(const float radius)
 }
 
 //
-// kexBBox::operator+
+// BBox::operator+
 //
 
-kexBBox kexBBox::operator+(const kexVec3 &vec) const
+BBox BBox::operator+(const Vec3 &vec) const
 {
-	kexVec3 vmin = min;
-	kexVec3 vmax = max;
+	Vec3 vmin = min;
+	Vec3 vmax = max;
 
 	vmin.x += vec.x;
 	vmin.y += vec.y;
@@ -235,17 +235,17 @@ kexBBox kexBBox::operator+(const kexVec3 &vec) const
 	vmax.y += vec.y;
 	vmax.z += vec.z;
 
-	return kexBBox(vmin, vmax);
+	return BBox(vmin, vmax);
 }
 
 //
-// kexBBox::operator-
+// BBox::operator-
 //
 
-kexBBox kexBBox::operator-(const float radius) const
+BBox BBox::operator-(const float radius) const
 {
-	kexVec3 vmin = min;
-	kexVec3 vmax = max;
+	Vec3 vmin = min;
+	Vec3 vmax = max;
 
 	vmin.x += radius;
 	vmin.y += radius;
@@ -255,17 +255,17 @@ kexBBox kexBBox::operator-(const float radius) const
 	vmax.y -= radius;
 	vmax.z -= radius;
 
-	return kexBBox(vmin, vmax);
+	return BBox(vmin, vmax);
 }
 
 //
-// kexBBox::operator-
+// BBox::operator-
 //
 
-kexBBox kexBBox::operator-(const kexVec3 &vec) const
+BBox BBox::operator-(const Vec3 &vec) const
 {
-	kexVec3 vmin = min;
-	kexVec3 vmax = max;
+	Vec3 vmin = min;
+	Vec3 vmax = max;
 
 	vmin.x -= vec.x;
 	vmin.y -= vec.y;
@@ -275,14 +275,14 @@ kexBBox kexBBox::operator-(const kexVec3 &vec) const
 	vmax.y -= vec.y;
 	vmax.z -= vec.z;
 
-	return kexBBox(vmin, vmax);
+	return BBox(vmin, vmax);
 }
 
 //
-// kexBBox::operator-=
+// BBox::operator-=
 //
 
-kexBBox &kexBBox::operator-=(const float radius)
+BBox &BBox::operator-=(const float radius)
 {
 	min.x += radius;
 	min.y += radius;
@@ -294,25 +294,25 @@ kexBBox &kexBBox::operator-=(const float radius)
 }
 
 //
-// kexBBox::operator*
+// BBox::operator*
 //
 
-kexBBox kexBBox::operator*(const kexMatrix &matrix) const
+BBox BBox::operator*(const Mat4 &matrix) const
 {
-	kexVec3 c = Center();
-	kexVec3 ct = c * matrix;
-	kexBBox box(ct, ct);
+	Vec3 c = Center();
+	Vec3 ct = c * matrix;
+	BBox box(ct, ct);
 
-	kexMatrix mtx(matrix);
+	Mat4 mtx(matrix);
 
 	for (int i = 0; i < 3; i++)
 	{
-		mtx.vectors[i].x = kexMath::Fabs(mtx.vectors[i].x);
-		mtx.vectors[i].y = kexMath::Fabs(mtx.vectors[i].y);
-		mtx.vectors[i].z = kexMath::Fabs(mtx.vectors[i].z);
+		mtx.vectors[i].x = Math::Fabs(mtx.vectors[i].x);
+		mtx.vectors[i].y = Math::Fabs(mtx.vectors[i].y);
+		mtx.vectors[i].z = Math::Fabs(mtx.vectors[i].z);
 	}
 
-	kexVec3 ht = (max - c) * mtx;
+	Vec3 ht = (max - c) * mtx;
 	box.min -= ht;
 	box.max += ht;
 
@@ -320,24 +320,24 @@ kexBBox kexBBox::operator*(const kexMatrix &matrix) const
 }
 
 //
-// kexBBox::operator*=
+// BBox::operator*=
 //
 
-kexBBox &kexBBox::operator*=(const kexMatrix &matrix)
+BBox &BBox::operator*=(const Mat4 &matrix)
 {
-	kexVec3 c = Center();
-	kexVec3 ct = c * matrix;
+	Vec3 c = Center();
+	Vec3 ct = c * matrix;
 
-	kexMatrix mtx(matrix);
+	Mat4 mtx(matrix);
 
 	for (int i = 0; i < 3; i++)
 	{
-		mtx.vectors[i].x = kexMath::Fabs(mtx.vectors[i].x);
-		mtx.vectors[i].y = kexMath::Fabs(mtx.vectors[i].y);
-		mtx.vectors[i].z = kexMath::Fabs(mtx.vectors[i].z);
+		mtx.vectors[i].x = Math::Fabs(mtx.vectors[i].x);
+		mtx.vectors[i].y = Math::Fabs(mtx.vectors[i].y);
+		mtx.vectors[i].z = Math::Fabs(mtx.vectors[i].z);
 	}
 
-	kexVec3 ht = (max - c) * mtx;
+	Vec3 ht = (max - c) * mtx;
 
 	min = (ct - ht);
 	max = (ct + ht);
@@ -346,12 +346,12 @@ kexBBox &kexBBox::operator*=(const kexMatrix &matrix)
 }
 
 //
-// kexBBox::operator*
+// BBox::operator*
 //
 
-kexBBox kexBBox::operator*(const kexVec3 &vec) const
+BBox BBox::operator*(const Vec3 &vec) const
 {
-	kexBBox box = *this;
+	BBox box = *this;
 
 	if (vec.x < 0) { box.min.x += (vec.x - 1); }
 	else { box.max.x += (vec.x + 1); }
@@ -364,10 +364,10 @@ kexBBox kexBBox::operator*(const kexVec3 &vec) const
 }
 
 //
-// kexBBox::operator*=
+// BBox::operator*=
 //
 
-kexBBox &kexBBox::operator*=(const kexVec3 &vec)
+BBox &BBox::operator*=(const Vec3 &vec)
 {
 	if (vec.x < 0) { min.x += (vec.x - 1); }
 	else { max.x += (vec.x + 1); }
@@ -380,10 +380,10 @@ kexBBox &kexBBox::operator*=(const kexVec3 &vec)
 }
 
 //
-// kexBBox::operator=
+// BBox::operator=
 //
 
-kexBBox &kexBBox::operator=(const kexBBox &bbox)
+BBox &BBox::operator=(const BBox &bbox)
 {
 	min = bbox.min;
 	max = bbox.max;
@@ -392,61 +392,61 @@ kexBBox &kexBBox::operator=(const kexBBox &bbox)
 }
 
 //
-// kexBBox::operator[]
+// BBox::operator[]
 //
 
-kexVec3 kexBBox::operator[](int index) const
+Vec3 BBox::operator[](int index) const
 {
 	assert(index >= 0 && index < 2);
 	return index == 0 ? min : max;
 }
 
 //
-// kexBBox::operator[]
+// BBox::operator[]
 //
 
-kexVec3 &kexBBox::operator[](int index)
+Vec3 &BBox::operator[](int index)
 {
 	assert(index >= 0 && index < 2);
 	return index == 0 ? min : max;
 }
 
 //
-// kexBBox:LineIntersect
+// BBox:LineIntersect
 //
 
-bool kexBBox::LineIntersect(const kexVec3 &start, const kexVec3 &end)
+bool BBox::LineIntersect(const Vec3 &start, const Vec3 &end)
 {
 	float ld[3];
-	kexVec3 center = Center();
-	kexVec3 extents = max - center;
-	kexVec3 lineDir = (end - start) * 0.5f;
-	kexVec3 lineCenter = lineDir + start;
-	kexVec3 dir = lineCenter - center;
+	Vec3 center = Center();
+	Vec3 extents = max - center;
+	Vec3 lineDir = (end - start) * 0.5f;
+	Vec3 lineCenter = lineDir + start;
+	Vec3 dir = lineCenter - center;
 
-	ld[0] = kexMath::Fabs(lineDir.x);
-	if (kexMath::Fabs(dir.x) > extents.x + ld[0]) { return false; }
-	ld[1] = kexMath::Fabs(lineDir.y);
-	if (kexMath::Fabs(dir.y) > extents.y + ld[1]) { return false; }
-	ld[2] = kexMath::Fabs(lineDir.z);
-	if (kexMath::Fabs(dir.z) > extents.z + ld[2]) { return false; }
+	ld[0] = Math::Fabs(lineDir.x);
+	if (Math::Fabs(dir.x) > extents.x + ld[0]) { return false; }
+	ld[1] = Math::Fabs(lineDir.y);
+	if (Math::Fabs(dir.y) > extents.y + ld[1]) { return false; }
+	ld[2] = Math::Fabs(lineDir.z);
+	if (Math::Fabs(dir.z) > extents.z + ld[2]) { return false; }
 
-	kexVec3 cross = lineDir.Cross(dir);
+	Vec3 cross = lineDir.Cross(dir);
 
-	if (kexMath::Fabs(cross.x) > extents.y * ld[2] + extents.z * ld[1]) { return false; }
-	if (kexMath::Fabs(cross.y) > extents.x * ld[2] + extents.z * ld[0]) { return false; }
-	if (kexMath::Fabs(cross.z) > extents.x * ld[1] + extents.y * ld[0]) { return false; }
+	if (Math::Fabs(cross.x) > extents.y * ld[2] + extents.z * ld[1]) { return false; }
+	if (Math::Fabs(cross.y) > extents.x * ld[2] + extents.z * ld[0]) { return false; }
+	if (Math::Fabs(cross.z) > extents.x * ld[1] + extents.y * ld[0]) { return false; }
 
 	return true;
 }
 
 //
-// kexBBox::ToPoints
+// BBox::ToPoints
 //
 // Assumes points is an array of 24
 //
 
-void kexBBox::ToPoints(float *points) const
+void BBox::ToPoints(float *points) const
 {
 	points[0 * 3 + 0] = max[0];
 	points[0 * 3 + 1] = min[1];
@@ -475,12 +475,12 @@ void kexBBox::ToPoints(float *points) const
 }
 
 //
-// kexBBox::ToVectors
+// BBox::ToVectors
 //
 // Assumes vectors is an array of 8
 //
 
-void kexBBox::ToVectors(kexVec3 *vectors) const
+void BBox::ToVectors(Vec3 *vectors) const
 {
 	vectors[0][0] = max[0];
 	vectors[0][1] = min[1];

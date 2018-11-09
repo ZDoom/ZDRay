@@ -8,9 +8,9 @@
 
 extern int NumThreads;
 
-thread_local kexVec3 *colorSamples;
+thread_local Vec3 *colorSamples;
 
-void kexWorker::RunJob(int count, std::function<void(int)> callback)
+void Worker::RunJob(int count, std::function<void(int)> callback)
 {
 	int numThreads = NumThreads;
 	if (numThreads <= 0)
@@ -25,7 +25,7 @@ void kexWorker::RunJob(int count, std::function<void(int)> callback)
 	{
 		threads.push_back(std::thread([=]() {
 
-			std::vector<kexVec3> samples(LIGHTMAP_MAX_SIZE * LIGHTMAP_MAX_SIZE);
+			std::vector<Vec3> samples(LIGHTMAP_MAX_SIZE * LIGHTMAP_MAX_SIZE);
 			colorSamples = samples.data();
 
 			int start = threadIndex * count / numThreads;

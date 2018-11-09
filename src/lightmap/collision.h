@@ -30,9 +30,9 @@ class SphereShape
 {
 public:
 	SphereShape() { }
-	SphereShape(const kexVec3 &center, float radius) : center(center), radius(radius) { }
+	SphereShape(const Vec3 &center, float radius) : center(center), radius(radius) { }
 
-	kexVec3 center;
+	Vec3 center;
 	float radius = 0.0f;
 };
 
@@ -44,12 +44,12 @@ struct TraceHit
 	float c = 0.0f;
 };
 
-class CollisionBBox : public kexBBox
+class CollisionBBox : public BBox
 {
 public:
 	CollisionBBox() = default;
 
-	CollisionBBox(const kexVec3 &aabb_min, const kexVec3 &aabb_max) : kexBBox(aabb_min, aabb_max)
+	CollisionBBox(const Vec3 &aabb_min, const Vec3 &aabb_max) : BBox(aabb_min, aabb_max)
 	{
 		auto halfmin = aabb_min * 0.5f;
 		auto halfmax = aabb_max * 0.5f;
@@ -57,15 +57,15 @@ public:
 		Extents = halfmax - halfmin;
 	}
 
-	kexVec3 Center;
-	kexVec3 Extents;
+	Vec3 Center;
+	Vec3 Extents;
 	float ssePadding = 0.0f; // Needed to safely load Extents directly into a sse register
 };
 
 class RayBBox
 {
 public:
-	RayBBox(const kexVec3 &ray_start, const kexVec3 &ray_end) : start(ray_start), end(ray_end)
+	RayBBox(const Vec3 &ray_start, const Vec3 &ray_end) : start(ray_start), end(ray_end)
 	{
 		c = (ray_start + ray_end) * 0.5f;
 		w = ray_end - c;
@@ -74,15 +74,15 @@ public:
 		v.z = std::abs(w.z);
 	}
 
-	kexVec3 start, end;
-	kexVec3 c, w, v;
+	Vec3 start, end;
+	Vec3 c, w, v;
 	float ssePadding = 0.0f; // Needed to safely load v directly into a sse register
 };
 
 class TriangleMeshShape
 {
 public:
-	TriangleMeshShape(const kexVec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements);
+	TriangleMeshShape(const Vec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements);
 
 	int get_min_depth() const;
 	int get_max_depth() const;
@@ -91,20 +91,20 @@ public:
 
 	const CollisionBBox &get_bbox() const { return nodes[root].aabb; }
 
-	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, const kexVec3 &target);
+	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, const Vec3 &target);
 
 	static bool find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2);
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2);
-	static bool find_any_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end);
+	static bool find_any_hit(TriangleMeshShape *shape, const Vec3 &ray_start, const Vec3 &ray_end);
 
-	static TraceHit find_first_hit(TriangleMeshShape *shape, const kexVec3 &ray_start, const kexVec3 &ray_end);
+	static TraceHit find_first_hit(TriangleMeshShape *shape, const Vec3 &ray_start, const Vec3 &ray_end);
 
 private:
 	struct Node
 	{
 		Node() = default;
-		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int element_index) : aabb(aabb_min, aabb_max), element_index(element_index) { }
-		Node(const kexVec3 &aabb_min, const kexVec3 &aabb_max, int left, int right) : aabb(aabb_min, aabb_max), left(left), right(right) { }
+		Node(const Vec3 &aabb_min, const Vec3 &aabb_max, int element_index) : aabb(aabb_min, aabb_max), element_index(element_index) { }
+		Node(const Vec3 &aabb_min, const Vec3 &aabb_max, int left, int right) : aabb(aabb_min, aabb_max), left(left), right(right) { }
 
 		CollisionBBox aabb;
 		int left = -1;
@@ -112,7 +112,7 @@ private:
 		int element_index = -1;
 	};
 
-	const kexVec3 *vertices = nullptr;
+	const Vec3 *vertices = nullptr;
 	const int num_vertices = 0;
 	const unsigned int *elements = nullptr;
 	int num_elements = 0;
@@ -120,7 +120,7 @@ private:
 	std::vector<Node> nodes;
 	int root = -1;
 
-	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
+	static float sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const Vec3 &target);
 
 	static bool find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2, int a);
@@ -131,8 +131,8 @@ private:
 	inline static bool overlap_bv_ray(TriangleMeshShape *shape, const RayBBox &ray, int a);
 	inline static float intersect_triangle_ray(TriangleMeshShape *shape, const RayBBox &ray, int a, float &barycentricB, float &barycentricC);
 
-	inline static bool sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
-	inline static float sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const kexVec3 &target);
+	inline static bool sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const Vec3 &target);
+	inline static float sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const Vec3 &target);
 
 	inline static bool overlap_bv(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);
 	inline static bool overlap_bv_triangle(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);
@@ -143,34 +143,34 @@ private:
 	inline bool is_leaf(int node_index);
 	inline float volume(int node_index);
 
-	int subdivide(int *triangles, int num_triangles, const kexVec3 *centroids, int *work_buffer);
+	int subdivide(int *triangles, int num_triangles, const Vec3 *centroids, int *work_buffer);
 };
 
-class kexOrientedBBox
+class OrientedBBox
 {
 public:
-	kexVec3 Center;
-	kexVec3 Extents;
-	kexVec3 axis_x;
-	kexVec3 axis_y;
-	kexVec3 axis_z;
+	Vec3 Center;
+	Vec3 Extents;
+	Vec3 axis_x;
+	Vec3 axis_y;
+	Vec3 axis_z;
 };
 
 class FrustumPlanes
 {
 public:
 	FrustumPlanes();
-	explicit FrustumPlanes(const kexMatrix &world_to_projection);
+	explicit FrustumPlanes(const Mat4 &world_to_projection);
 
-	kexVec4 planes[6];
+	Vec4 planes[6];
 
 private:
-	static kexVec4 left_frustum_plane(const kexMatrix &matrix);
-	static kexVec4 right_frustum_plane(const kexMatrix &matrix);
-	static kexVec4 top_frustum_plane(const kexMatrix &matrix);
-	static kexVec4 bottom_frustum_plane(const kexMatrix &matrix);
-	static kexVec4 near_frustum_plane(const kexMatrix &matrix);
-	static kexVec4 far_frustum_plane(const kexMatrix &matrix);
+	static Vec4 left_frustum_plane(const Mat4 &matrix);
+	static Vec4 right_frustum_plane(const Mat4 &matrix);
+	static Vec4 top_frustum_plane(const Mat4 &matrix);
+	static Vec4 bottom_frustum_plane(const Mat4 &matrix);
+	static Vec4 near_frustum_plane(const Mat4 &matrix);
+	static Vec4 far_frustum_plane(const Mat4 &matrix);
 };
 
 class IntersectionTest
@@ -189,12 +189,12 @@ public:
 		overlap
 	};
 
-	static Result plane_aabb(const kexVec4 &plane, const kexBBox &aabb);
-	static Result plane_obb(const kexVec4 &plane, const kexOrientedBBox &obb);
-	static OverlapResult sphere(const kexVec3 &center1, float radius1, const kexVec3 &center2, float radius2);
-	static OverlapResult sphere_aabb(const kexVec3 &center, float radius, const kexBBox &aabb);
-	static OverlapResult aabb(const kexBBox &a, const kexBBox &b);
-	static Result frustum_aabb(const FrustumPlanes &frustum, const kexBBox &box);
-	static Result frustum_obb(const FrustumPlanes &frustum, const kexOrientedBBox &box);
+	static Result plane_aabb(const Vec4 &plane, const BBox &aabb);
+	static Result plane_obb(const Vec4 &plane, const OrientedBBox &obb);
+	static OverlapResult sphere(const Vec3 &center1, float radius1, const Vec3 &center2, float radius2);
+	static OverlapResult sphere_aabb(const Vec3 &center, float radius, const BBox &aabb);
+	static OverlapResult aabb(const BBox &a, const BBox &b);
+	static Result frustum_aabb(const FrustumPlanes &frustum, const BBox &box);
+	static Result frustum_obb(const FrustumPlanes &frustum, const OrientedBBox &box);
 	static OverlapResult ray_aabb(const RayBBox &ray, const CollisionBBox &box);
 };

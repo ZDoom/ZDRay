@@ -74,19 +74,19 @@
 #include "mathlib.h"
 
 //
-// kexMatrix::kexMatrix
+// Mat4::Mat4
 //
 
-kexMatrix::kexMatrix()
+Mat4::Mat4()
 {
 	Identity();
 }
 
 //
-// kexMatrix::kexMatrix
+// Mat4::Mat4
 //
 
-kexMatrix::kexMatrix(const kexMatrix &mtx)
+Mat4::Mat4(const Mat4 &mtx)
 {
 	for (int i = 0; i < 4; i++)
 	{
@@ -98,19 +98,19 @@ kexMatrix::kexMatrix(const kexMatrix &mtx)
 }
 
 //
-// kexMatrix::kexMatrix
+// Mat4::Mat4
 //
 
-kexMatrix::kexMatrix(const float x, const float y, const float z)
+Mat4::Mat4(const float x, const float y, const float z)
 {
 	Identity(x, y, z);
 }
 
 //
-// kexMatrix::kexMatrix
+// Mat4::Mat4
 //
 
-kexMatrix::kexMatrix(const kexQuat &quat)
+Mat4::Mat4(const Quat &quat)
 {
 	float xx = quat.x * quat.x;
 	float yx = quat.y * quat.x;
@@ -142,16 +142,16 @@ kexMatrix::kexMatrix(const kexQuat &quat)
 }
 
 //
-// kexMatrix::kexMatrix
+// Mat4::Mat4
 //
 
-kexMatrix::kexMatrix(const float angle, const int axis)
+Mat4::Mat4(const float angle, const int axis)
 {
 	float s;
 	float c;
 
-	s = kexMath::Sin(angle);
-	c = kexMath::Cos(angle);
+	s = Math::Sin(angle);
+	c = Math::Cos(angle);
 
 	Identity();
 
@@ -179,10 +179,10 @@ kexMatrix::kexMatrix(const float angle, const int axis)
 }
 
 //
-// kexMatrix::Identity
+// Mat4::Identity
 //
 
-kexMatrix &kexMatrix::Identity()
+Mat4 &Mat4::Identity()
 {
 	vectors[0].Set(1, 0, 0, 0);
 	vectors[1].Set(0, 1, 0, 0);
@@ -193,10 +193,10 @@ kexMatrix &kexMatrix::Identity()
 }
 
 //
-// kexMatrix::Identity
+// Mat4::Identity
 //
 
-kexMatrix &kexMatrix::Identity(const float x, const float y, const float z)
+Mat4 &Mat4::Identity(const float x, const float y, const float z)
 {
 	vectors[0].Set(x, 0, 0, 0);
 	vectors[1].Set(0, y, 0, 0);
@@ -207,30 +207,30 @@ kexMatrix &kexMatrix::Identity(const float x, const float y, const float z)
 }
 
 //
-// kexMatrix::SetTranslation
+// Mat4::SetTranslation
 //
 
-kexMatrix &kexMatrix::SetTranslation(const float x, const float y, const float z)
+Mat4 &Mat4::SetTranslation(const float x, const float y, const float z)
 {
 	vectors[3].ToVec3().Set(x, y, z);
 	return *this;
 }
 
 //
-// kexMatrix::SetTranslation
+// Mat4::SetTranslation
 //
 
-kexMatrix &kexMatrix::SetTranslation(const kexVec3 &vector)
+Mat4 &Mat4::SetTranslation(const Vec3 &vector)
 {
 	vectors[3].ToVec3() = vector;
 	return *this;
 }
 
 //
-// kexMatrix::AddTranslation
+// Mat4::AddTranslation
 //
 
-kexMatrix &kexMatrix::AddTranslation(const float x, const float y, const float z)
+Mat4 &Mat4::AddTranslation(const float x, const float y, const float z)
 {
 	vectors[3].x += x;
 	vectors[3].y += y;
@@ -239,20 +239,20 @@ kexMatrix &kexMatrix::AddTranslation(const float x, const float y, const float z
 }
 
 //
-// kexMatrix::AddTranslation
+// Mat4::AddTranslation
 //
 
-kexMatrix &kexMatrix::AddTranslation(const kexVec3 &vector)
+Mat4 &Mat4::AddTranslation(const Vec3 &vector)
 {
 	vectors[3].ToVec3() += vector;
 	return *this;
 }
 
 //
-// kexMatrix::Scale
+// Mat4::Scale
 //
 
-kexMatrix &kexMatrix::Scale(const float x, const float y, const float z)
+Mat4 &Mat4::Scale(const float x, const float y, const float z)
 {
 	vectors[0].ToVec3() *= x;
 	vectors[1].ToVec3() *= y;
@@ -262,10 +262,10 @@ kexMatrix &kexMatrix::Scale(const float x, const float y, const float z)
 }
 
 //
-// kexMatrix::Scale
+// Mat4::Scale
 //
 
-kexMatrix &kexMatrix::Scale(const kexVec3 &vector)
+Mat4 &Mat4::Scale(const Vec3 &vector)
 {
 	vectors[0].ToVec3() *= vector.x;
 	vectors[1].ToVec3() *= vector.y;
@@ -275,12 +275,12 @@ kexMatrix &kexMatrix::Scale(const kexVec3 &vector)
 }
 
 //
-// kexMatrix::Scale
+// Mat4::Scale
 //
 
-kexMatrix kexMatrix::Scale(const kexMatrix &mtx, const float x, const float y, const float z)
+Mat4 Mat4::Scale(const Mat4 &mtx, const float x, const float y, const float z)
 {
-	kexMatrix out;
+	Mat4 out;
 
 	out.vectors[0].ToVec3() = mtx.vectors[0].ToVec3() * x;
 	out.vectors[1].ToVec3() = mtx.vectors[1].ToVec3() * y;
@@ -290,13 +290,13 @@ kexMatrix kexMatrix::Scale(const kexMatrix &mtx, const float x, const float y, c
 }
 
 //
-// kexMatrix::Transpose
+// Mat4::Transpose
 //
 
-kexMatrix &kexMatrix::Transpose()
+Mat4 &Mat4::Transpose()
 {
-	kexVec3 v1 = vectors[1].ToVec3();
-	kexVec3 v2 = vectors[2].ToVec3();
+	Vec3 v1 = vectors[1].ToVec3();
+	Vec3 v2 = vectors[2].ToVec3();
 
 	vectors[1].ToVec3() = v2;
 	vectors[2].ToVec3() = v1;
@@ -304,12 +304,12 @@ kexMatrix &kexMatrix::Transpose()
 }
 
 //
-// kexMatrix::Transpose
+// Mat4::Transpose
 //
 
-kexMatrix kexMatrix::Transpose(const kexMatrix &mtx)
+Mat4 Mat4::Transpose(const Mat4 &mtx)
 {
-	kexMatrix out;
+	Mat4 out;
 
 	out.vectors[0].ToVec3() = mtx.vectors[0].ToVec3();
 	out.vectors[1].ToVec3() = mtx.vectors[2].ToVec3();
@@ -320,10 +320,10 @@ kexMatrix kexMatrix::Transpose(const kexMatrix &mtx)
 }
 
 //
-// kexMatrix::Invert
+// Mat4::Invert
 //
 
-kexMatrix kexMatrix::Invert(kexMatrix &mtx)
+Mat4 Mat4::Invert(Mat4 &mtx)
 {
 	float d;
 	float *m;
@@ -339,7 +339,7 @@ kexMatrix kexMatrix::Invert(kexMatrix &mtx)
 
 	if (d != 0.0f)
 	{
-		kexMatrix inv;
+		Mat4 inv;
 
 		d = (1.0f / d);
 
@@ -384,12 +384,12 @@ kexMatrix kexMatrix::Invert(kexMatrix &mtx)
 }
 
 //
-// kexMatrix::SetViewProjection
+// Mat4::SetViewProjection
 //
 
-void kexMatrix::SetViewProjection(float aspect, float fov, float zNear, float zFar)
+void Mat4::SetViewProjection(float aspect, float fov, float zNear, float zFar)
 {
-	float top = zNear * kexMath::Tan(fov * M_PI / 360.0f);
+	float top = zNear * Math::Tan(fov * M_PI / 360.0f);
 	float bottom = -top;
 	float left = bottom * aspect;
 	float right = top * aspect;
@@ -415,10 +415,10 @@ void kexMatrix::SetViewProjection(float aspect, float fov, float zNear, float zF
 }
 
 //
-// kexMatrix::SetOrtho
+// Mat4::SetOrtho
 //
 
-void kexMatrix::SetOrtho(float left, float right,
+void Mat4::SetOrtho(float left, float right,
 	float bottom, float top,
 	float zNear, float zFar)
 {
@@ -443,10 +443,10 @@ void kexMatrix::SetOrtho(float left, float right,
 }
 
 //
-// kexMatrix::ToQuat
+// Mat4::ToQuat
 //
 
-kexQuat kexMatrix::ToQuat()
+Quat Mat4::ToQuat()
 {
 	float t;
 	float d;
@@ -456,7 +456,7 @@ kexQuat kexMatrix::ToQuat()
 	float m21;
 	float m20;
 	float m10;
-	kexQuat q;
+	Quat q;
 
 	mx = vectors[0][0];
 	my = vectors[1][1];
@@ -470,7 +470,7 @@ kexQuat kexMatrix::ToQuat()
 
 	if (t > 0)
 	{
-		d = 0.5f / kexMath::Sqrt(t);
+		d = 0.5f / Math::Sqrt(t);
 		q.x = m21 * d;
 		q.y = m20 * d;
 		q.z = m10 * d;
@@ -478,7 +478,7 @@ kexQuat kexMatrix::ToQuat()
 	}
 	else if (mx > my && mx > mz)
 	{
-		d = kexMath::Sqrt(1.0f + mx - my - mz) * 2;
+		d = Math::Sqrt(1.0f + mx - my - mz) * 2;
 		q.x = 0.5f / d;
 		q.y = m10 / d;
 		q.z = m20 / d;
@@ -486,7 +486,7 @@ kexQuat kexMatrix::ToQuat()
 	}
 	else if (my > mz)
 	{
-		d = kexMath::Sqrt(1.0f + my - mx - mz) * 2;
+		d = Math::Sqrt(1.0f + my - mx - mz) * 2;
 		q.x = m10 / d;
 		q.y = 0.5f / d;
 		q.z = m21 / d;
@@ -494,7 +494,7 @@ kexQuat kexMatrix::ToQuat()
 	}
 	else
 	{
-		d = kexMath::Sqrt(1.0f + mz - mx - my) * 2;
+		d = Math::Sqrt(1.0f + mz - mx - my) * 2;
 		q.x = m20 / d;
 		q.y = m21 / d;
 		q.z = 0.5f / d;
@@ -506,12 +506,12 @@ kexQuat kexMatrix::ToQuat()
 }
 
 //
-// kexMatrix::operator*
+// Mat4::operator*
 //
 
-kexMatrix kexMatrix::operator*(const kexVec3 &vector)
+Mat4 Mat4::operator*(const Vec3 &vector)
 {
-	kexMatrix out(*this);
+	Mat4 out(*this);
 
 	out.vectors[3].ToVec3() +=
 		vectors[0].ToVec3() * vector.x +
@@ -521,10 +521,10 @@ kexMatrix kexMatrix::operator*(const kexVec3 &vector)
 }
 
 //
-// kexMatrix::operator*=
+// Mat4::operator*=
 //
 
-kexMatrix &kexMatrix::operator*=(const kexVec3 &vector)
+Mat4 &Mat4::operator*=(const Vec3 &vector)
 {
 	vectors[3].ToVec3() +=
 		vectors[0].ToVec3() * vector.x +
@@ -534,21 +534,21 @@ kexMatrix &kexMatrix::operator*=(const kexVec3 &vector)
 }
 
 //
-// kexMatrix::ToFloatPtr
+// Mat4::ToFloatPtr
 //
 
-float *kexMatrix::ToFloatPtr()
+float *Mat4::ToFloatPtr()
 {
 	return reinterpret_cast<float*>(vectors);
 }
 
 //
-// kexMatrix::operator*
+// Mat4::operator*
 //
 
-kexMatrix kexMatrix::operator*(const kexMatrix &matrix)
+Mat4 Mat4::operator*(const Mat4 &matrix)
 {
-	kexMatrix out;
+	Mat4 out;
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -578,10 +578,10 @@ kexMatrix kexMatrix::operator*(const kexMatrix &matrix)
 }
 
 //
-// kexMatrix::operator*=
+// Mat4::operator*=
 //
 
-kexMatrix &kexMatrix::operator*=(const kexMatrix &matrix)
+Mat4 &Mat4::operator*=(const Mat4 &matrix)
 {
 	for (int i = 0; i < 4; i++)
 	{
@@ -611,12 +611,12 @@ kexMatrix &kexMatrix::operator*=(const kexMatrix &matrix)
 }
 
 //
-// kexMatrix::operator*
+// Mat4::operator*
 //
 
-kexMatrix operator*(const kexMatrix &m1, const kexMatrix &m2)
+Mat4 operator*(const Mat4 &m1, const Mat4 &m2)
 {
-	kexMatrix out;
+	Mat4 out;
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -646,12 +646,12 @@ kexMatrix operator*(const kexMatrix &m1, const kexMatrix &m2)
 }
 
 //
-// kexMatrix::operator|
+// Mat4::operator|
 //
 
-kexMatrix kexMatrix::operator|(const kexMatrix &matrix)
+Mat4 Mat4::operator|(const Mat4 &matrix)
 {
-	kexMatrix out;
+	Mat4 out;
 
 	for (int i = 0; i < 3; i++)
 	{
@@ -686,10 +686,10 @@ kexMatrix kexMatrix::operator|(const kexMatrix &matrix)
 }
 
 //
-// kexMatrix::operator=
+// Mat4::operator=
 //
 
-kexMatrix &kexMatrix::operator=(const kexMatrix &matrix)
+Mat4 &Mat4::operator=(const Mat4 &matrix)
 {
 	vectors[0] = matrix.vectors[0];
 	vectors[1] = matrix.vectors[1];
@@ -700,10 +700,10 @@ kexMatrix &kexMatrix::operator=(const kexMatrix &matrix)
 }
 
 //
-// kexMatrix::operator=
+// Mat4::operator=
 //
 
-kexMatrix &kexMatrix::operator=(const float *m)
+Mat4 &Mat4::operator=(const float *m)
 {
 	for (int i = 0; i < 4; i++)
 	{

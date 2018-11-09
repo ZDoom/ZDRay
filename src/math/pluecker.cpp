@@ -47,7 +47,7 @@ kexPluecker::kexPluecker()
 // kexPluecker::kexPluecker
 //
 
-kexPluecker::kexPluecker(const kexVec3 &start, const kexVec3 &end, bool bRay)
+kexPluecker::kexPluecker(const Vec3 &start, const Vec3 &end, bool bRay)
 {
 	bRay ? SetRay(start, end) : SetLine(start, end);
 }
@@ -65,7 +65,7 @@ void kexPluecker::Clear()
 // kexPluecker::SetLine
 //
 
-void kexPluecker::SetLine(const kexVec3 &start, const kexVec3 &end)
+void kexPluecker::SetLine(const Vec3 &start, const Vec3 &end)
 {
 	p[0] = start.x * end.y - end.x * start.y;
 	p[1] = start.x * end.z - end.x * start.z;
@@ -80,7 +80,7 @@ void kexPluecker::SetLine(const kexVec3 &start, const kexVec3 &end)
 // kexPluecker::SetRay
 //
 
-void kexPluecker::SetRay(const kexVec3 &start, const kexVec3 &dir)
+void kexPluecker::SetRay(const Vec3 &start, const Vec3 &dir)
 {
 	p[0] = start.x * dir.y - dir.x * start.y;
 	p[1] = start.x * dir.z - dir.x * start.z;

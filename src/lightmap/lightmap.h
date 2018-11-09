@@ -37,14 +37,14 @@
 #define LIGHTCELL_BLOCK_SIZE 16
 
 class FWadWriter;
-class kexLightSurface;
+class LightSurface;
 
 class LightCellBlock
 {
 public:
 	int z;
 	int layers;
-	TArray<kexVec3> cells;
+	TArray<Vec3> cells;
 };
 
 class LightCellGrid
@@ -55,11 +55,11 @@ public:
 	std::vector<LightCellBlock> blocks;
 };
 
-class kexLightmapBuilder
+class LightmapBuilder
 {
 public:
-	kexLightmapBuilder();
-	~kexLightmapBuilder();
+	LightmapBuilder();
+	~LightmapBuilder();
 
 	void CreateLightmaps(FLevel &doomMap);
 	//void WriteTexturesToTGA();
@@ -73,23 +73,23 @@ public:
 private:
 	void NewTexture();
 	bool MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
-	kexBBox GetBoundsFromSurface(const surface_t *surface);
-	kexVec3 LightTexelSample(const kexVec3 &origin, surface_t *surface);
-	bool EmitFromCeiling(const surface_t *surface, const kexVec3 &origin, const kexVec3 &normal, kexVec3 &color);
+	BBox GetBoundsFromSurface(const surface_t *surface);
+	Vec3 LightTexelSample(const Vec3 &origin, surface_t *surface);
+	bool EmitFromCeiling(const surface_t *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color);
 
 	void BuildSurfaceParams(surface_t *surface);
 	void TraceSurface(surface_t *surface);
 	void TraceIndirectLight(surface_t *surface);
 	void SetupLightCellGrid();
 	void LightBlock(int blockid);
-	void LightSurface(const int surfid);
+	void LightSurfacex(const int surfid);
 	void LightIndirect(const int surfid);
 
 	void CreateLightSurfaces();
 
 	std::unique_ptr<LevelMesh> mesh;
 	FLevel *map;
-	std::vector<std::unique_ptr<kexLightSurface>> lightSurfaces;
+	std::vector<std::unique_ptr<LightSurface>> lightSurfaces;
 	std::vector<std::vector<uint16_t>> textures;
 	std::vector<uint16_t> indirectoutput;
 	std::vector<std::vector<int>> allocBlocks;

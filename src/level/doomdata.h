@@ -109,8 +109,8 @@ struct IntSector
 	// empty is enough
 	MapSector data;
 
-	kexPlane ceilingplane;
-	kexPlane floorplane;
+	Plane ceilingplane;
+	Plane floorplane;
 
 	int floorlightdef;
 	int ceilinglightdef;
@@ -242,10 +242,9 @@ struct IntVertex
 	TArray<UDMFKey> props;
 };
 
-class kexBBox;
-class kexVec3;
-class kexVec2;
-class kexLightSurface;
+class BBox;
+class Vec3;
+class Vec2;
 struct vertex_t;
 struct surface_t;
 struct thingLight_t;
@@ -264,22 +263,22 @@ struct lightDef_t
 	float           intensity;
 	float           falloff;
 	bool            bCeiling;
-	kexVec3         rgb;
+	Vec3         rgb;
 };
 
 struct mapDef_t
 {
 	int             map;
 	int             sunIgnoreTag;
-	kexVec3         sunDir;
-	kexVec3         sunColor;
+	Vec3         sunDir;
+	Vec3         sunColor;
 };
 
 struct thingLight_t
 {
 	IntThing        *mapThing;
-	kexVec2         origin;
-	kexVec3         rgb;
+	Vec2         origin;
+	Vec3         rgb;
 	float           intensity;
 	float           innerAngleCos;
 	float           outerAngleCos;
@@ -294,7 +293,7 @@ struct surfaceLightDef
 {
 	float           distance;
 	float           intensity;
-	kexVec3         rgb;
+	Vec3         rgb;
 };
 
 enum mapFlags_t
@@ -358,8 +357,8 @@ struct FLevel
 	void SetupDlight();
 	void CreateLights();
 
-	const kexVec3 &GetSunColor() const;
-	const kexVec3 &GetSunDirection() const;
+	const Vec3 &GetSunColor() const;
+	const Vec3 &GetSunDirection() const;
 	IntSector *GetFrontSector(const IntSideDef *side);
 	IntSector *GetBackSector(const IntSideDef *side);
 	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);

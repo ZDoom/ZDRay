@@ -53,16 +53,16 @@ enum surfaceType_t
 
 struct surface_t
 {
-	kexPlane plane;
+	Plane plane;
 	int lightmapNum;
 	int lightmapOffs[2];
 	int lightmapDims[2];
-	kexVec3 lightmapOrigin;
-	kexVec3 lightmapSteps[2];
-	kexVec3 textureCoords[2];
-	kexBBox bounds;
+	Vec3 lightmapOrigin;
+	Vec3 lightmapSteps[2];
+	Vec3 textureCoords[2];
+	BBox bounds;
 	int numVerts;
-	std::vector<kexVec3> verts;
+	std::vector<Vec3> verts;
 	std::vector<float> lightmapCoords;
 	surfaceType_t type;
 	int typeIndex;
@@ -72,8 +72,8 @@ struct surface_t
 
 struct LevelTraceHit
 {
-	kexVec3 start;
-	kexVec3 end;
+	Vec3 start;
+	Vec3 end;
 	float fraction;
 
 	surface_t *hitSurface;
@@ -86,14 +86,14 @@ class LevelMesh
 public:
 	LevelMesh(FLevel &doomMap);
 
-	LevelTraceHit Trace(const kexVec3 &startVec, const kexVec3 &endVec);
-	bool TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec);
+	LevelTraceHit Trace(const Vec3 &startVec, const Vec3 &endVec);
+	bool TraceAnyHit(const Vec3 &startVec, const Vec3 &endVec);
 
 	void WriteMeshToOBJ();
 
 	std::vector<std::unique_ptr<surface_t>> surfaces;
 
-	TArray<kexVec3> MeshVertices;
+	TArray<Vec3> MeshVertices;
 	TArray<int> MeshUVIndex;
 	TArray<unsigned int> MeshElements;
 	TArray<int> MeshSurfaces;
@@ -106,5 +106,5 @@ private:
 
 	void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side);
 
-	static bool IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2);
+	static bool IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2);
 };

@@ -38,14 +38,14 @@ typedef union
 	float   f;
 } fint_t;
 
-uint8_t kexBinFile::Read8()
+uint8_t BinFile::Read8()
 {
 	uint8_t result;
 	result = buffer[bufferOffset++];
 	return result;
 }
 
-short kexBinFile::Read16()
+short BinFile::Read16()
 {
 	int result;
 	result = Read8();
@@ -53,7 +53,7 @@ short kexBinFile::Read16()
 	return result;
 }
 
-int kexBinFile::Read32()
+int BinFile::Read32()
 {
 	int result;
 	result = Read8();
@@ -63,16 +63,16 @@ int kexBinFile::Read32()
 	return result;
 }
 
-float kexBinFile::ReadFloat()
+float BinFile::ReadFloat()
 {
 	fint_t fi;
 	fi.i = Read32();
 	return fi.f;
 }
 
-kexVec3 kexBinFile::ReadVector()
+Vec3 BinFile::ReadVector()
 {
-	kexVec3 vec;
+	Vec3 vec;
 
 	vec.x = ReadFloat();
 	vec.y = ReadFloat();
@@ -81,7 +81,7 @@ kexVec3 kexBinFile::ReadVector()
 	return vec;
 }
 
-std::string kexBinFile::ReadString()
+std::string BinFile::ReadString()
 {
 	std::string str;
 	char c = 0;
@@ -99,19 +99,19 @@ std::string kexBinFile::ReadString()
 	return str;
 }
 
-void kexBinFile::Write8(const uint8_t val)
+void BinFile::Write8(const uint8_t val)
 {
 	buffer[bufferOffset] = val;
 	bufferOffset++;
 }
 
-void kexBinFile::Write16(const short val)
+void BinFile::Write16(const short val)
 {
 	Write8(val & 0xff);
 	Write8((val >> 8) & 0xff);
 }
 
-void kexBinFile::Write32(const int val)
+void BinFile::Write32(const int val)
 {
 	Write8(val & 0xff);
 	Write8((val >> 8) & 0xff);
@@ -119,21 +119,21 @@ void kexBinFile::Write32(const int val)
 	Write8((val >> 24) & 0xff);
 }
 
-void kexBinFile::WriteFloat(const float val)
+void BinFile::WriteFloat(const float val)
 {
 	fint_t fi;
 	fi.f = val;
 	Write32(fi.i);
 }
 
-void kexBinFile::WriteVector(const kexVec3 &val)
+void BinFile::WriteVector(const Vec3 &val)
 {
 	WriteFloat(val.x);
 	WriteFloat(val.y);
 	WriteFloat(val.z);
 }
 
-void kexBinFile::WriteString(const std::string &val)
+void BinFile::WriteString(const std::string &val)
 {
 	const char *c = val.c_str();
 
@@ -145,12 +145,12 @@ void kexBinFile::WriteString(const std::string &val)
 	Write8(0);
 }
 
-int kexBinFile::GetOffsetValue(int id)
+int BinFile::GetOffsetValue(int id)
 {
 	return *(int*)(buffer + (id << 2));
 }
 
-uint8_t *kexBinFile::GetOffset(int id, uint8_t *subdata, int *count)
+uint8_t *BinFile::GetOffset(int id, uint8_t *subdata, int *count)
 {
 	uint8_t *data = (subdata == nullptr) ? buffer : subdata;
 

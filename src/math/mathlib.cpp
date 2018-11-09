@@ -33,10 +33,10 @@
 #include "mathlib.h"
 
 //
-// kexMath::RoundPowerOfTwo
+// Math::RoundPowerOfTwo
 //
 
-int kexMath::RoundPowerOfTwo(int x)
+int Math::RoundPowerOfTwo(int x)
 {
 	int mask = 1;
 
@@ -54,19 +54,19 @@ int kexMath::RoundPowerOfTwo(int x)
 }
 
 //
-// kexMath::CubicCurve
+// Math::CubicCurve
 //
 
-void kexMath::CubicCurve(const kexVec3 &start, const kexVec3 &end, const float time,
-	const kexVec3 &point, kexVec3 *vec)
+void Math::CubicCurve(const Vec3 &start, const Vec3 &end, const float time,
+	const Vec3 &point, Vec3 *vec)
 {
 	int i;
 	float xyz[3];
 
 	for (i = 0; i < 3; i++)
 	{
-		xyz[i] = kexMath::Pow(1 - time, 2) * start[i] +
-			(2 * (1 - time)) * time * point[i] + kexMath::Pow(time, 2) * end[i];
+		xyz[i] = Math::Pow(1 - time, 2) * start[i] +
+			(2 * (1 - time)) * time * point[i] + Math::Pow(time, 2) * end[i];
 	}
 
 	vec->x = xyz[0];
@@ -75,20 +75,20 @@ void kexMath::CubicCurve(const kexVec3 &start, const kexVec3 &end, const float t
 }
 
 //
-// kexMath::QuadraticCurve
+// Math::QuadraticCurve
 //
 
-void kexMath::QuadraticCurve(const kexVec3 &start, const kexVec3 &end, const float time,
-	const kexVec3 &pt1, const kexVec3 &pt2, kexVec3 *vec)
+void Math::QuadraticCurve(const Vec3 &start, const Vec3 &end, const float time,
+	const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec)
 {
 	int i;
 	float xyz[3];
 
 	for (i = 0; i < 3; i++)
 	{
-		xyz[i] = kexMath::Pow(1 - time, 3) * start[i] + (3 * kexMath::Pow(1 - time, 2)) *
-			time * pt1[i] + (3 * (1 - time)) * kexMath::Pow(time, 2) * pt2[i] +
-			kexMath::Pow(time, 3) * end[i];
+		xyz[i] = Math::Pow(1 - time, 3) * start[i] + (3 * Math::Pow(1 - time, 2)) *
+			time * pt1[i] + (3 * (1 - time)) * Math::Pow(time, 2) * pt2[i] +
+			Math::Pow(time, 3) * end[i];
 	}
 
 	vec->x = xyz[0];

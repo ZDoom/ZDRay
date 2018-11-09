@@ -32,29 +32,29 @@
 struct FLevel;
 struct surfaceLightDef;
 
-class kexLightSurface
+class LightSurface
 {
 public:
-	kexLightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface);
-	~kexLightSurface();
+	LightSurface(const surfaceLightDef &lightSurfaceDef, surface_t *surface);
+	~LightSurface();
 
 	void Subdivide(const float divide);
-	float TraceSurface(LevelMesh *map, const surface_t *surface, const kexVec3 &origin);
+	float TraceSurface(LevelMesh *map, const surface_t *surface, const Vec3 &origin);
 
 	const float Distance() const { return distance; }
 	const float Intensity() const { return intensity; }
-	const kexVec3 GetRGB() const { return rgb; }
+	const Vec3 GetRGB() const { return rgb; }
 	const surface_t *Surface() const { return surface; }
 
 private:
-	typedef std::vector<kexVec3> vertexBatch_t;
+	typedef std::vector<Vec3> vertexBatch_t;
 
 	bool SubdivideRecursion(vertexBatch_t &surfPoints, float divide, std::vector<std::unique_ptr<vertexBatch_t>> &points);
-	void Clip(vertexBatch_t &points, const kexVec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
+	void Clip(vertexBatch_t &points, const Vec3 &normal, float dist, vertexBatch_t *frontPoints, vertexBatch_t *backPoints);
 
 	float distance;
 	float intensity;
-	kexVec3 rgb;
+	Vec3 rgb;
 	vertexBatch_t origins;
 	surface_t *surface;
 };

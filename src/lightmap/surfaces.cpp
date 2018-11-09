@@ -287,7 +287,7 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 	}
 	else
 	{
-		surf->plane = kexPlane::Inverse(sector->ceilingplane);
+		surf->plane = Plane::Inverse(sector->ceilingplane);
 	}
 
 	for (int j = 0; j < surf->numVerts; j++)
@@ -320,7 +320,7 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 	}
 	else
 	{
-		surf->plane = kexPlane::Inverse(sector->floorplane);
+		surf->plane = Plane::Inverse(sector->floorplane);
 	}
 
 	for (int j = 0; j < surf->numVerts; j++)
@@ -372,7 +372,7 @@ void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
 }
 
-LevelTraceHit LevelMesh::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
+LevelTraceHit LevelMesh::Trace(const Vec3 &startVec, const Vec3 &endVec)
 {
 	TraceHit hit = TriangleMeshShape::find_first_hit(CollisionMesh.get(), startVec, endVec);
 
@@ -402,12 +402,12 @@ LevelTraceHit LevelMesh::Trace(const kexVec3 &startVec, const kexVec3 &endVec)
 	return trace;
 }
 
-bool LevelMesh::TraceAnyHit(const kexVec3 &startVec, const kexVec3 &endVec)
+bool LevelMesh::TraceAnyHit(const Vec3 &startVec, const Vec3 &endVec)
 {
 	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
 }
 
-bool LevelMesh::IsDegenerate(const kexVec3 &v0, const kexVec3 &v1, const kexVec3 &v2)
+bool LevelMesh::IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
 {
 	// A degenerate triangle has a zero cross product for two of its sides.
 	float ax = v1.x - v0.x;

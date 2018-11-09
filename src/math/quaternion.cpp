@@ -34,22 +34,22 @@
 #include "mathlib.h"
 
 //
-// kexQuat::kexQuat
+// Quat::Quat
 //
 
-kexQuat::kexQuat()
+Quat::Quat()
 {
 	Clear();
 }
 
 //
-// kexQuat::kexQuat
+// Quat::Quat
 //
 
-kexQuat::kexQuat(const float angle, const float x, const float y, const float z)
+Quat::Quat(const float angle, const float x, const float y, const float z)
 {
-	float s = kexMath::Sin(angle * 0.5f);
-	float c = kexMath::Cos(angle * 0.5f);
+	float s = Math::Sin(angle * 0.5f);
+	float c = Math::Cos(angle * 0.5f);
 
 	this->x = x * s;
 	this->y = y * s;
@@ -58,13 +58,13 @@ kexQuat::kexQuat(const float angle, const float x, const float y, const float z)
 }
 
 //
-// kexQuat::kexQuat
+// Quat::Quat
 //
 
-kexQuat::kexQuat(const float angle, kexVec3 &vector)
+Quat::Quat(const float angle, Vec3 &vector)
 {
-	float s = kexMath::Sin(angle * 0.5f);
-	float c = kexMath::Cos(angle * 0.5f);
+	float s = Math::Sin(angle * 0.5f);
+	float c = Math::Cos(angle * 0.5f);
 
 	this->x = vector.x * s;
 	this->y = vector.y * s;
@@ -73,13 +73,13 @@ kexQuat::kexQuat(const float angle, kexVec3 &vector)
 }
 
 //
-// kexQuat::kexQuat
+// Quat::Quat
 //
 
-kexQuat::kexQuat(const float angle, const kexVec3 &vector)
+Quat::Quat(const float angle, const Vec3 &vector)
 {
-	float s = kexMath::Sin(angle * 0.5f);
-	float c = kexMath::Cos(angle * 0.5f);
+	float s = Math::Sin(angle * 0.5f);
+	float c = Math::Cos(angle * 0.5f);
 
 	this->x = vector.x * s;
 	this->y = vector.y * s;
@@ -88,10 +88,10 @@ kexQuat::kexQuat(const float angle, const kexVec3 &vector)
 }
 
 //
-// kexQuat::Set
+// Quat::Set
 //
 
-void kexQuat::Set(const float x, const float y, const float z, const float w)
+void Quat::Set(const float x, const float y, const float z, const float w)
 {
 	this->x = x;
 	this->y = y;
@@ -100,38 +100,38 @@ void kexQuat::Set(const float x, const float y, const float z, const float w)
 }
 
 //
-// kexQuat::Clear
+// Quat::Clear
 //
 
-void kexQuat::Clear()
+void Quat::Clear()
 {
 	x = y = z = 0.0f;
 	w = 1.0f;
 }
 
 //
-// kexVec3::UnitSq
+// Vec3::UnitSq
 //
 
-float kexQuat::UnitSq() const
+float Quat::UnitSq() const
 {
 	return x * x + y * y + z * z + w * w;
 }
 
 //
-// kexVec3::Unit
+// Vec3::Unit
 //
 
-float kexQuat::Unit() const
+float Quat::Unit() const
 {
-	return kexMath::Sqrt(UnitSq());
+	return Math::Sqrt(UnitSq());
 }
 
 //
-// kexQuat::Normalize
+// Quat::Normalize
 //
 
-kexQuat &kexQuat::Normalize()
+Quat &Quat::Normalize()
 {
 	float d = Unit();
 	if (d != 0.0f)
@@ -143,23 +143,23 @@ kexQuat &kexQuat::Normalize()
 }
 
 //
-// kexQuat::Inverse
+// Quat::Inverse
 //
 
-kexQuat kexQuat::Inverse() const
+Quat Quat::Inverse() const
 {
-	kexQuat out;
+	Quat out;
 	out.Set(-x, -y, -z, -w);
 	return out;
 }
 
 //
-// kexQuat::operator+
+// Quat::operator+
 //
 
-kexQuat kexQuat::operator+(const kexQuat &quat)
+Quat Quat::operator+(const Quat &quat)
 {
-	kexQuat out;
+	Quat out;
 	out.x = x + quat.x;
 	out.y = y + quat.y;
 	out.z = z + quat.z;
@@ -168,10 +168,10 @@ kexQuat kexQuat::operator+(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator+=
+// Quat::operator+=
 //
 
-kexQuat &kexQuat::operator+=(const kexQuat &quat)
+Quat &Quat::operator+=(const Quat &quat)
 {
 	x += quat.x;
 	y += quat.y;
@@ -181,12 +181,12 @@ kexQuat &kexQuat::operator+=(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator-
+// Quat::operator-
 //
 
-kexQuat kexQuat::operator-(const kexQuat &quat)
+Quat Quat::operator-(const Quat &quat)
 {
-	kexQuat out;
+	Quat out;
 	out.x = x - quat.x;
 	out.y = y - quat.y;
 	out.z = z - quat.z;
@@ -195,10 +195,10 @@ kexQuat kexQuat::operator-(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator-=
+// Quat::operator-=
 //
 
-kexQuat &kexQuat::operator-=(const kexQuat &quat)
+Quat &Quat::operator-=(const Quat &quat)
 {
 	x -= quat.x;
 	y -= quat.y;
@@ -208,12 +208,12 @@ kexQuat &kexQuat::operator-=(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator*
+// Quat::operator*
 //
 
-kexQuat kexQuat::operator*(const kexQuat &quat)
+Quat Quat::operator*(const Quat &quat)
 {
-	kexQuat out;
+	Quat out;
 
 	out.x = x * quat.w - y * quat.z + quat.x * w + quat.y * z;
 	out.y = x * quat.z + y * quat.w - quat.x * z + w * quat.y;
@@ -224,10 +224,10 @@ kexQuat kexQuat::operator*(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator*=
+// Quat::operator*=
 //
 
-kexQuat &kexQuat::operator*=(const kexQuat &quat)
+Quat &Quat::operator*=(const Quat &quat)
 {
 	float tx = x;
 	float ty = y;
@@ -243,12 +243,12 @@ kexQuat &kexQuat::operator*=(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator*
+// Quat::operator*
 //
 
-kexQuat kexQuat::operator*(const float val) const
+Quat Quat::operator*(const float val) const
 {
-	kexQuat out;
+	Quat out;
 	out.x = x * val;
 	out.y = y * val;
 	out.z = z * val;
@@ -257,10 +257,10 @@ kexQuat kexQuat::operator*(const float val) const
 }
 
 //
-// kexQuat::operator*=
+// Quat::operator*=
 //
 
-kexQuat &kexQuat::operator*=(const float val)
+Quat &Quat::operator*=(const float val)
 {
 	x *= val;
 	y *= val;
@@ -271,10 +271,10 @@ kexQuat &kexQuat::operator*=(const float val)
 }
 
 //
-// kexQuat::operator|
+// Quat::operator|
 //
 
-kexVec3 kexQuat::operator|(const kexVec3 &vector)
+Vec3 Quat::operator|(const Vec3 &vector)
 {
 	float xx = x * x;
 	float yx = y * x;
@@ -287,7 +287,7 @@ kexVec3 kexQuat::operator|(const kexVec3 &vector)
 	float wz = w * z;
 	float ww = w * w;
 
-	return kexVec3(
+	return Vec3(
 		((yx + yx) - (wz + wz)) * vector.y +
 		((wy + wy + zx + zx)) * vector.z +
 		(((ww + xx) - yy) - zz) * vector.x,
@@ -301,21 +301,21 @@ kexVec3 kexQuat::operator|(const kexVec3 &vector)
 }
 
 //
-// kexQuat::Dot
+// Quat::Dot
 //
 
-float kexQuat::Dot(const kexQuat &quat) const
+float Quat::Dot(const Quat &quat) const
 {
 	return (x * quat.x + y * quat.y + z * quat.z + w * quat.w);
 }
 
 //
-// kexQuat::Slerp
+// Quat::Slerp
 //
 
-kexQuat kexQuat::Slerp(const kexQuat &quat, float movement) const
+Quat Quat::Slerp(const Quat &quat, float movement) const
 {
-	kexQuat rdest = quat;
+	Quat rdest = quat;
 	float d1 = Dot(quat);
 	float d2 = Dot(quat.Inverse());
 
@@ -327,12 +327,12 @@ kexQuat kexQuat::Slerp(const kexQuat &quat, float movement) const
 
 	if (d1 <= 0.7071067811865001f)
 	{
-		float halfcos = kexMath::ACos(d1);
-		float halfsin = kexMath::Sin(halfcos);
+		float halfcos = Math::ACos(d1);
+		float halfsin = Math::Sin(halfcos);
 
 		if (halfsin == 0)
 		{
-			kexQuat out;
+			Quat out;
 			out.Set(x, y, z, w);
 			return out;
 		}
@@ -343,8 +343,8 @@ kexQuat kexQuat::Slerp(const kexQuat &quat, float movement) const
 			float ms2;
 
 			d = 1.0f / halfsin;
-			ms1 = kexMath::Sin((1.0f - movement) * halfcos) * d;
-			ms2 = kexMath::Sin(halfcos * movement) * d;
+			ms1 = Math::Sin((1.0f - movement) * halfcos) * d;
+			ms2 = Math::Sin(halfcos * movement) * d;
 
 			if (ms2 < 0)
 			{
@@ -356,43 +356,43 @@ kexQuat kexQuat::Slerp(const kexQuat &quat, float movement) const
 	}
 	else
 	{
-		kexQuat out = (rdest - *this) * movement + *this;
+		Quat out = (rdest - *this) * movement + *this;
 		out.Normalize();
 		return out;
 	}
 }
 
 //
-// kexQuat::RotateFrom
+// Quat::RotateFrom
 //
 
-kexQuat kexQuat::RotateFrom(const kexVec3 &location, const kexVec3 &target, float maxAngle)
+Quat Quat::RotateFrom(const Vec3 &location, const Vec3 &target, float maxAngle)
 {
-	kexVec3 axis;
-	kexVec3 dir;
-	kexVec3 cp;
-	kexQuat prot;
+	Vec3 axis;
+	Vec3 dir;
+	Vec3 cp;
+	Quat prot;
 	float an;
 
-	dir = (*this | kexVec3::vecForward);
+	dir = (*this | Vec3::vecForward);
 	axis = (target - location).Normalize();
 	cp = dir.Cross(axis).Normalize();
 
-	an = kexMath::ACos(axis.Dot(dir));
+	an = Math::ACos(axis.Dot(dir));
 
 	if (maxAngle != 0 && an >= maxAngle)
 	{
 		an = maxAngle;
 	}
 
-	return (*this * kexQuat(an, cp));
+	return (*this * Quat(an, cp));
 }
 
 //
-// kexQuat::operator=
+// Quat::operator=
 //
 
-kexQuat &kexQuat::operator=(const kexQuat &quat)
+Quat &Quat::operator=(const Quat &quat)
 {
 	x = quat.x;
 	y = quat.y;
@@ -402,10 +402,10 @@ kexQuat &kexQuat::operator=(const kexQuat &quat)
 }
 
 //
-// kexQuat::operator=
+// Quat::operator=
 //
 
-kexQuat &kexQuat::operator=(const kexVec4 &vec)
+Quat &Quat::operator=(const Vec4 &vec)
 {
 	x = vec.x;
 	y = vec.y;
@@ -415,10 +415,10 @@ kexQuat &kexQuat::operator=(const kexVec4 &vec)
 }
 
 //
-// kexQuat::operator=
+// Quat::operator=
 //
 
-kexQuat &kexQuat::operator=(const float *vecs)
+Quat &Quat::operator=(const float *vecs)
 {
 	x = vecs[0];
 	y = vecs[1];
@@ -428,19 +428,19 @@ kexQuat &kexQuat::operator=(const float *vecs)
 }
 
 //
-// kexQuat::ToVec3
+// Quat::ToVec3
 //
 
-kexVec3 const &kexQuat::ToVec3() const
+Vec3 const &Quat::ToVec3() const
 {
-	return *reinterpret_cast<const kexVec3*>(this);
+	return *reinterpret_cast<const Vec3*>(this);
 }
 
 //
-// kexQuat::ToVec3
+// Quat::ToVec3
 //
 
-kexVec3 &kexQuat::ToVec3()
+Vec3 &Quat::ToVec3()
 {
-	return *reinterpret_cast<kexVec3*>(this);
+	return *reinterpret_cast<Vec3*>(this);
 }

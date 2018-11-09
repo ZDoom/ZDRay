@@ -437,13 +437,13 @@ static void ParseArgs(int argc, char **argv)
 			Samples = atoi(optarg);
 			if (Samples <= 0) Samples = 1;
 			if (Samples > 128) Samples = 128;
-			Samples = kexMath::RoundPowerOfTwo(Samples);
+			Samples = Math::RoundPowerOfTwo(Samples);
 			break;
 		case 'S':
 			LMDims = atoi(optarg);
 			if (LMDims <= 0) LMDims = 1;
 			if (LMDims > LIGHTMAP_MAX_SIZE) LMDims = LIGHTMAP_MAX_SIZE;
-			LMDims = kexMath::RoundPowerOfTwo(LMDims);
+			LMDims = Math::RoundPowerOfTwo(LMDims);
 			break;
 		case 'M':
 			Multisample = atoi(optarg);

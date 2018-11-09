@@ -34,10 +34,10 @@
 #include "mathlib.h"
 #include <assert.h>
 
-const kexVec3 kexVec3::vecRight(1, 0, 0);
-const kexVec3 kexVec3::vecUp(0, 0, 1);
-const kexVec3 kexVec3::vecForward(0, 1, 0);
+const Vec3 Vec3::vecRight(1, 0, 0);
+const Vec3 Vec3::vecUp(0, 0, 1);
+const Vec3 Vec3::vecForward(0, 1, 0);
 
-const kexVec2 kexVec2::vecRight(1, 0);
-const kexVec2 kexVec2::vecUp(0, 1);
-kexVec2 kexVec2::vecZero(0, 0);
+const Vec2 Vec2::vecRight(1, 0);
+const Vec2 Vec2::vecUp(0, 1);
+Vec2 Vec2::vecZero(0, 0);

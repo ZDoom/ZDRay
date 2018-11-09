@@ -129,5 +129,5 @@ private:
 
 	bool NodesBuilt = false;
 	bool LightmapsBuilt = false;
-	kexLightmapBuilder LMBuilder;
+	LightmapBuilder LMBuilder;
 };
