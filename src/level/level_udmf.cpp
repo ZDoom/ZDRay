@@ -234,6 +234,7 @@ void FProcessor::ParseThing(IntThing *th)
 
 void FProcessor::ParseLinedef(IntLineDef *ld)
 {
+	const char *tagstring = nullptr;
 	SC_MustGetStringName("{");
 	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
 	ld->flags = 0;
@@ -277,6 +278,13 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		{
 			ld->args[4] = CheckInt(key);
 		}
+		else if (stricmp(key, "moreids") == 0)
+		{
+			// delay parsing of the tag string until parsing of the sector is complete
+			// This ensures that the ID is always the first tag in the list.
+			tagstring = value;
+			break;
+		}
 		else if (!stricmp(key, "blocking") && !stricmp(value, "true"))
 		{
 			ld->flags |= ML_BLOCKING;
@@ -288,6 +296,12 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		else if (!stricmp(key, "twosided") && !stricmp(value, "true"))
 		{
 			ld->flags |= ML_TWOSIDED;
+		}
+		else if (Extended && !stricmp(key, "id"))
+		{
+			int id = CheckInt(key);
+			ld->ids.Clear();
+			if (id != -1) ld->ids.Push(id);
 		}
 
 		if (!stricmp(key, "sidefront"))
@@ -304,6 +318,20 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};
 		ld->props.Push(k);
+	}
+	if (tagstring != nullptr && *tagstring == '"')
+	{
+		// skip the quotation mark
+		auto workstring = strdup(tagstring + 1);
+		for (char *token = strtok(workstring, " \""); token; token = strtok(nullptr, " \""))
+		{
+			auto tag = strtoll(token, nullptr, 0);
+			if (tag != -1 && (int)tag == tag)
+			{
+				ld->ids.Push(tag);	// don't bother with duplicates, they don't pose a problem.
+			}
+		}
+		free(workstring);
 	}
 }
 
@@ -371,6 +399,7 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 
 void FProcessor::ParseSector(IntSector *sec)
 {
+	const char * tagstring = nullptr;
 	memset(&sec->data, 0, sizeof(sec->data));
 	sec->data.lightlevel = 160;
 
@@ -408,7 +437,10 @@ void FProcessor::ParseSector(IntSector *sec)
 		}
 		else if (stricmp(key, "id") == 0)
 		{
-			sec->data.tag = CheckInt(key);
+			int id = CheckInt(key);
+			sec->data.tag = (short)id;
+			sec->tags.Clear();
+			if (id != 0) sec->tags.Push(id);
 		}
 		else if (stricmp(key, "ceilingplane_a") == 0)
 		{
@@ -450,6 +482,13 @@ void FProcessor::ParseSector(IntSector *sec)
 			floorplane|=8;
 			sec->floorplane.d = CheckFloat(key);
 		}
+		else if (stricmp(key, "moreids") == 0)
+		{
+			// delay parsing of the tag string until parsing of the sector is complete
+			// This ensures that the ID is always the first tag in the list.
+			tagstring = value;
+			break;
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};
@@ -489,6 +528,20 @@ void FProcessor::ParseSector(IntSector *sec)
 		sec->floorplane.d *= scale;
 		sec->floorplane.d = -sec->floorplane.d;
 	}
+	if (tagstring != nullptr && *tagstring == '"')
+	{
+		// skip the quotation mark
+		auto workstring = strdup(tagstring + 1);
+		for (char *token = strtok(workstring, " \""); token; token = strtok(nullptr, " \""))
+		{
+			auto tag = strtoll(token, nullptr, 0);
+			if (tag != 0 && (int)tag == tag)
+			{
+				sec->tags.Push(tag);	// don't bother with duplicates, they don't pose a problem.
+			}
+		}
+		free(workstring);
+	}
 }
 
 //===========================================================================
@@ -513,6 +566,14 @@ void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
 		else if (!stricmp(key, "y"))
 		{
 			vt->y = CheckFixed(key);
+		}
+		if (!stricmp(key, "zfloor"))
+		{
+			vtp->zfloor = CheckFixed(key);
+		}
+		else if (!stricmp(key, "zceiling"))
+		{
+			vtp->zceiling = CheckFixed(key);
 		}
 
 		// now store the key in its unprocessed form

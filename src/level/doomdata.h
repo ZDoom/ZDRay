@@ -88,6 +88,7 @@ struct IntLineDef
 	uint32_t sidenum[2];
 
 	TArray<UDMFKey> props;
+	TArray<int> ids;
 };
 
 struct MapSector
@@ -108,6 +109,7 @@ struct IntSector
 	// UDMF. Just storing the UDMF keys and leaving the binary fields
 	// empty is enough
 	MapSector data;
+	TArray<int> tags;
 
 	Plane ceilingplane;
 	Plane floorplane;
@@ -240,6 +242,7 @@ struct IntThing
 struct IntVertex
 {
 	TArray<UDMFKey> props;
+	double zfloor = 100000, zceiling = 100000;
 };
 
 class BBox;

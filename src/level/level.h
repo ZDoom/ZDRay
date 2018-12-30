@@ -10,6 +10,24 @@
 #include "lightmap/lightmap.h"
 #include <zlib.h>
 
+#define DEFINE_SPECIAL(name, num, min, max, map) name = num,
+
+typedef enum {
+#include "actionspecials.h"
+} linespecial_t;
+#undef DEFINE_SPECIAL
+
+typedef enum {
+	Init_Gravity = 0,
+	Init_Color = 1,
+	Init_Damage = 2,
+	Init_SectorLink = 3,
+	NUM_STATIC_INITS,
+	Init_EDSector = 253,
+	Init_EDLine = 254,
+	Init_TransferSky = 255
+} staticinit_t;
+
 class ZLibOut
 {
 public:
@@ -49,6 +67,7 @@ private:
 	void LoadSides();
 	void LoadSectors();
 	void GetPolySpots();
+	void SetLineID(IntLineDef *ld);
 
 	MapNodeEx *NodesToEx(const MapNode *nodes, int count);
 	MapSubsectorEx *SubsectorsToEx(const MapSubsector *ssec, int count);

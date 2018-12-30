@@ -177,6 +177,62 @@ void FProcessor::LoadThings ()
 	}
 }
 
+void FProcessor::SetLineID(IntLineDef *ld)
+{
+	// For Hexen format we need to extract the line ID from the special because there is no explicit field for it.
+	int setid = -1;
+	switch (ld->special)
+	{
+	case Line_SetIdentification:
+		// For native Hexen maps this should mask out args[4], but such maps are not relevant for slopes anyway.
+		setid = ld->args[0] + 256 * ld->args[4];
+		break;
+
+	case TranslucentLine:
+		setid = ld->args[0];
+		break;
+
+	case Teleport_Line:
+	case Scroll_Texture_Model:
+		setid = ld->args[0];
+		break;
+
+	case Polyobj_StartLine:
+		setid = ld->args[3];
+		break;
+
+	case Polyobj_ExplicitLine:
+		setid = ld->args[4];
+		break;
+
+	case Plane_Align:
+		// This compatibility option is not relevant for new content.
+		/*if (!(ib_compatflags & BCOMPATF_NOSLOPEID))*/ setid = ld->args[2];
+		break;
+
+	case Static_Init:
+		if (ld->args[1] == Init_SectorLink) setid = ld->args[0];
+		break;
+
+	case Line_SetPortal:
+		setid = ld->args[1]; // 0 = target id, 1 = this id, 2 = plane anchor
+		break;
+
+	case Sector_Set3DFloor:
+		if (ld->args[1] & 8)
+		{
+			setid = ld->args[4];
+		}
+		break;
+	}
+
+	if (setid != -1)
+	{
+		ld->ids.Push(setid);
+	}
+}
+
+
 void FProcessor::LoadLines ()
 {
 	int NumLines;
@@ -203,6 +259,7 @@ void FProcessor::LoadLines ()
 			Level.Lines[i].sidenum[1] = LittleShort(Lines[i].sidenum[1]);
 			if (Level.Lines[i].sidenum[0] == NO_MAP_INDEX) Level.Lines[i].sidenum[0] = NO_INDEX;
 			if (Level.Lines[i].sidenum[1] == NO_MAP_INDEX) Level.Lines[i].sidenum[1] = NO_INDEX;
+			SetLineID(&Level.Lines[i]);
 		}
 		delete[] Lines;
 	}
@@ -226,6 +283,8 @@ void FProcessor::LoadLines ()
 			Level.Lines[i].special = 0;
 			Level.Lines[i].args[0] = LittleShort(ml[i].special);
 			Level.Lines[i].args[1] = LittleShort(ml[i].tag);
+			// We do not support slope creation via linedefs in Doom format maps because due to customizable translation
+			// we can never be sure what number a sloping special is.
 		}
 		delete[] ml;
 	}
