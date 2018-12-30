@@ -114,9 +114,10 @@ bool			 V5GLNodes = false;
 bool			 HaveSSE1, HaveSSE2;
 int				 SSELevel;
 int				 NumThreads = 0;
-int				 LMDims = LIGHTMAP_MAX_SIZE;
+int				 LMDims = 1024;
 int				 Samples = 8;
 int				 Multisample = 1;
+int				 LightBounce = 0;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -155,6 +156,7 @@ static option long_opts[] =
 	{"samples",			required_argument,	0,	'Q'},
 	{"size",			required_argument,	0,	'S'},
 	{"multisample",		required_argument,	0,	'M'},
+	{"bounce",			required_argument,	0,	'B'},
 	{0,0,0,0}
 };
 
@@ -442,13 +444,18 @@ static void ParseArgs(int argc, char **argv)
 		case 'S':
 			LMDims = atoi(optarg);
 			if (LMDims <= 0) LMDims = 1;
-			if (LMDims > LIGHTMAP_MAX_SIZE) LMDims = LIGHTMAP_MAX_SIZE;
+			if (LMDims > 1024) LMDims = 1024;
 			LMDims = Math::RoundPowerOfTwo(LMDims);
 			break;
 		case 'M':
 			Multisample = atoi(optarg);
 			if (Multisample <= 0) Multisample = 1;
 			if (Multisample > 64) Multisample = 64;
+			break;
+		case 'B':
+			LightBounce = atoi(optarg);
+			if (LightBounce < 0) LightBounce = 0;
+			if (LightBounce > 1) LightBounce = 1;
 			break;
 		case 1000:
 			ShowUsage();
@@ -497,6 +504,7 @@ static void ShowUsage()
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"
+		"  -B, --bounce=NNN         Number of indirect light bounces (default %d, max 1)\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
 		"  -t, --no-timing          Suppress timing information\n"
@@ -511,6 +519,7 @@ static void ShowUsage()
 		, AAPreference
 		, (int)std::thread::hardware_concurrency()
 		, Multisample
+		, LightBounce
 	);
 }
 

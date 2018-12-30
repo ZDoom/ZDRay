@@ -8,8 +8,6 @@
 
 extern int NumThreads;
 
-thread_local Vec3 *colorSamples;
-
 void Worker::RunJob(int count, std::function<void(int)> callback)
 {
 	int numThreads = NumThreads;
@@ -24,9 +22,6 @@ void Worker::RunJob(int count, std::function<void(int)> callback)
 	for (int threadIndex = 0; threadIndex < numThreads; threadIndex++)
 	{
 		threads.push_back(std::thread([=]() {
-
-			std::vector<Vec3> samples(LIGHTMAP_MAX_SIZE * LIGHTMAP_MAX_SIZE);
-			colorSamples = samples.data();
 
 			int start = threadIndex * count / numThreads;
 			int end = std::min((threadIndex + 1) * count / numThreads, count);

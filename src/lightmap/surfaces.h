@@ -61,6 +61,8 @@ struct Surface
 	int numVerts;
 	std::vector<Vec3> verts;
 	std::vector<float> lightmapCoords;
+	std::vector<Vec3> samples;
+	std::vector<Vec3> indirect;
 	SurfaceType type;
 	int typeIndex;
 	IntSector *controlSector;

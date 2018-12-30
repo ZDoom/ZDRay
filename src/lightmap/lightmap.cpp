@@ -44,7 +44,7 @@
 #endif
 
 extern int Multisample;
-extern thread_local Vec3 *colorSamples;
+extern int LightBounce;
 
 LightmapBuilder::LightmapBuilder()
 {
@@ -59,7 +59,7 @@ void LightmapBuilder::NewTexture()
 	numTextures++;
 
 	allocBlocks.push_back(std::vector<int>(textureWidth));
-	textures.push_back(std::vector<uint16_t>(textureWidth * textureHeight * 3));
+	textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
 }
 
 // Determines where to map a new block on to the lightmap texture
@@ -398,30 +398,22 @@ void LightmapBuilder::BuildSurfaceParams(Surface *surface)
 }
 
 // Steps through each texel and traces a line to the world.
-// For each non-occluded trace, color is accumulated and saved off into the lightmap texture based on what block is mapped to
 void LightmapBuilder::TraceSurface(Surface *surface)
 {
-	int sampleWidth;
-	int sampleHeight;
-	Vec3 normal;
-	Vec3 pos;
-	Vec3 tDelta;
-	int i;
-	int j;
-	uint16_t *currentTexture;
-	bool bShouldLookupTexture = false;
+	int sampleWidth = surface->lightmapDims[0];
+	int sampleHeight = surface->lightmapDims[1];
 
-	sampleWidth = surface->lightmapDims[0];
-	sampleHeight = surface->lightmapDims[1];
-
-	normal = surface->plane.Normal();
+	Vec3 normal = surface->plane.Normal();
 
 	int multisampleCount = Multisample;
 
+	surface->samples.resize(sampleWidth * sampleHeight);
+	Vec3 *colorSamples = surface->samples.data();
+
 	// start walking through each texel
-	for (i = 0; i < sampleHeight; i++)
+	for (int i = 0; i < sampleHeight; i++)
 	{
-		for (j = 0; j < sampleWidth; j++)
+		for (int j = 0; j < sampleWidth; j++)
 		{
 			Vec3 c(0.0f, 0.0f, 0.0f);
 
@@ -440,35 +432,65 @@ void LightmapBuilder::TraceSurface(Surface *surface)
 
 				// convert the texel into world-space coordinates.
 				// this will be the origin in which a line will be traced from
-				pos = surface->lightmapOrigin + normal +
-					(surface->lightmapSteps[0] * multisamplePos.x) +
-					(surface->lightmapSteps[1] * multisamplePos.y);
+				Vec3 pos = surface->lightmapOrigin + normal + (surface->lightmapSteps[0] * multisamplePos.x) + (surface->lightmapSteps[1] * multisamplePos.y);
 
 				c += LightTexelSample(pos, surface);
 			}
 
 			c /= multisampleCount;
 
-			// if nothing at all was traced and color is completely black
-			// then this surface will not go through the extra rendering
-			// step in rendering the lightmap
-			if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
-			{
-				bShouldLookupTexture = true;
-			}
+			colorSamples[i * sampleWidth + j] = c;
+		}
+	}
 
-			colorSamples[i * LIGHTMAP_MAX_SIZE + j] = c;
+	// texture coordinates relative to block
+	for (int i = 0; i < surface->numVerts; i++)
+	{
+		Vec3 tDelta = surface->verts[i] - surface->bounds.min;
+		surface->lightmapCoords[i * 2 + 0] = tDelta.Dot(surface->textureCoords[0]);
+		surface->lightmapCoords[i * 2 + 1] = tDelta.Dot(surface->textureCoords[1]);
+	}
+}
+
+void LightmapBuilder::FinishSurface(Surface *surface)
+{
+	int sampleWidth = surface->lightmapDims[0];
+	int sampleHeight = surface->lightmapDims[1];
+	Vec3 *colorSamples = surface->samples.data();
+
+	if (!surface->indirect.empty())
+	{
+		Vec3 *indirect = surface->indirect.data();
+		for (int i = 0; i < sampleHeight; i++)
+		{
+			for (int j = 0; j < sampleWidth; j++)
+			{
+				colorSamples[i * sampleWidth + j] += indirect[i * sampleWidth + j] * 0.5f;
+			}
 		}
 	}
 
 	// SVE redraws the scene for lightmaps, so for optimizations,
 	// tell the engine to ignore this surface if completely black
-	/*if (bShouldLookupTexture == false)
+	bool bShouldLookupTexture = false;
+	for (int i = 0; i < sampleHeight; i++)
+	{
+		for (int j = 0; j < sampleWidth; j++)
+		{
+			const auto &c = colorSamples[i * sampleWidth + j];
+			if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
+			{
+				bShouldLookupTexture = true;
+				break;
+			}
+		}
+	}
+
+	if (bShouldLookupTexture == false)
 	{
 		surface->lightmapNum = -1;
-		return;
 	}
-	else*/
+	else
 	{
 		int x = 0, y = 0;
 		int width = surface->lightmapDims[0];
@@ -490,38 +512,34 @@ void LightmapBuilder::TraceSurface(Surface *surface)
 			}
 		}
 
+		uint16_t *currentTexture = textures[surface->lightmapNum]->Pixels();
+
 		lock.unlock();
 
 		// calculate texture coordinates
-		for (i = 0; i < surface->numVerts; i++)
+		for (int i = 0; i < surface->numVerts; i++)
 		{
-			tDelta = surface->verts[i] - surface->bounds.min;
-			surface->lightmapCoords[i * 2 + 0] =
-				(tDelta.Dot(surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
-			surface->lightmapCoords[i * 2 + 1] =
-				(tDelta.Dot(surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
+			Vec3 tDelta = surface->verts[i] - surface->bounds.min;
+			surface->lightmapCoords[i * 2 + 0] = (tDelta.Dot(surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
+			surface->lightmapCoords[i * 2 + 1] = (tDelta.Dot(surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
 		}
 
 		surface->lightmapOffs[0] = x;
 		surface->lightmapOffs[1] = y;
-	}
 
-	std::unique_lock<std::mutex> lock(mutex);
-	currentTexture = textures[surface->lightmapNum].data();
-	lock.unlock();
-
-	// store results to lightmap texture
-	for (i = 0; i < sampleHeight; i++)
-	{
-		for (j = 0; j < sampleWidth; j++)
+		// store results to lightmap texture
+		for (int i = 0; i < sampleHeight; i++)
 		{
-			// get texture offset
-			int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+			for (int j = 0; j < sampleWidth; j++)
+			{
+				// get texture offset
+				int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
 
-			// convert RGB to bytes
-			currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * LIGHTMAP_MAX_SIZE + j].x);
-			currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * LIGHTMAP_MAX_SIZE + j].y);
-			currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * LIGHTMAP_MAX_SIZE + j].z);
+				// convert RGB to bytes
+				currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * sampleWidth + j].x);
+				currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * sampleWidth + j].y);
+				currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * sampleWidth + j].z);
+			}
 		}
 	}
 }
@@ -563,15 +581,13 @@ static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness)
 
 void LightmapBuilder::TraceIndirectLight(Surface *surface)
 {
-	if (surface->lightmapNum == -1)
-		return;
-
 	int sampleWidth = surface->lightmapDims[0];
 	int sampleHeight = surface->lightmapDims[1];
 
 	Vec3 normal = surface->plane.Normal();
 
-	uint16_t *currentTexture = &indirectoutput[surface->lightmapNum * textureWidth * textureHeight * 3];
+	surface->indirect.resize(sampleWidth * sampleHeight);
+	Vec3 *indirect = surface->indirect.data();
 
 	for (int i = 0; i < sampleHeight; i++)
 	{
@@ -616,16 +632,14 @@ void LightmapBuilder::TraceIndirectLight(Surface *surface)
 								hit.hitSurface->lightmapCoords[hit.indices[1] * 2 + 1] * hit.b +
 								hit.hitSurface->lightmapCoords[hit.indices[2] * 2 + 1] * hit.c;
 
-							int hitTexelX = clamp((int)(u * textureWidth + 0.5f), 0, textureWidth - 1);
-							int hitTexelY = clamp((int)(v * textureHeight + 0.5f), 0, textureHeight - 1);
+							int hitTexelX = clamp((int)(u + 0.5f), 0, hit.hitSurface->lightmapDims[0] - 1);
+							int hitTexelY = clamp((int)(v + 0.5f), 0, hit.hitSurface->lightmapDims[1] - 1);
 
-							uint16_t *hitTexture = textures[hit.hitSurface->lightmapNum].data();
-							uint16_t *hitPixel = hitTexture + (hitTexelX + hitTexelY * textureWidth) * 3;
+							Vec3 *hitTexture = hit.hitSurface->samples.data();
+							const Vec3 &hitPixel = hitTexture[hitTexelX + hitTexelY * hit.hitSurface->lightmapDims[0]];
 
 							float attenuation = (1.0f - hit.fraction);
-							surfaceLight.x = halfToFloat(hitPixel[0]) * attenuation;
-							surfaceLight.y = halfToFloat(hitPixel[1]) * attenuation;
-							surfaceLight.z = halfToFloat(hitPixel[2]) * attenuation;
+							surfaceLight = hitPixel * attenuation;
 						}
 						c += surfaceLight * NdotL;
 					}
@@ -635,13 +649,7 @@ void LightmapBuilder::TraceIndirectLight(Surface *surface)
 
 			c = c / totalWeight;
 
-			// convert RGB to bytes
-			int tx = j + surface->lightmapOffs[0];
-			int ty = i + surface->lightmapOffs[1];
-			uint16_t *pixel = currentTexture + (tx + ty * textureWidth) * 3;
-			pixel[0] = floatToHalf(c.x);
-			pixel[1] = floatToHalf(c.y);
-			pixel[2] = floatToHalf(c.z);
+			indirect[i * sampleWidth + j] = c;
 		}
 	}
 }
@@ -752,28 +760,23 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 
 	printf("Texels traced: %i \n\n", tracedTexels);
 
-	printf("------------- Tracing indirect -------------\n");
-
-	indirectoutput.resize(textures.size() * textureWidth * textureHeight * 3);
-
-	tracedTexels = 0;
-	processed = 0;
-	Worker::RunJob(mesh->surfaces.size(), [=](int id) {
-		LightIndirect(id);
-	});
-
-	for (size_t i = 0; i < textures.size(); i++)
+	if (LightBounce > 0)
 	{
-		uint16_t *tex = textures[i].data();
-		uint16_t *indirect = &indirectoutput[i * textureWidth * textureHeight * 3];
-		int count = textureWidth * textureHeight * 3;
-		for (int j = 0; j < count; j++)
-		{
-			tex[j] = floatToHalf(halfToFloat(tex[j]) + halfToFloat(indirect[j]));
-		}
+		printf("------------- Tracing indirect -------------\n");
+
+		tracedTexels = 0;
+		processed = 0;
+		Worker::RunJob(mesh->surfaces.size(), [=](int id) {
+			LightIndirect(id);
+		});
 	}
 
 	printf("Texels traced: %i \n\n", tracedTexels);
+
+	for (auto &surf : mesh->surfaces)
+	{
+		FinishSurface(surf.get());
+	}
 }
 
 void LightmapBuilder::SetupLightCellGrid()
@@ -1012,9 +1015,10 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	for (size_t i = 0; i < textures.size(); i++)
 	{
 		unsigned int count = (textureWidth * textureHeight) * 3;
+		uint16_t *pixels = textures[i]->Pixels();
 		for (unsigned int j = 0; j < count; j++)
 		{
-			lumpFile.Write16(textures[i][j]);
+			lumpFile.Write16(pixels[j]);
 		}
 	}
 

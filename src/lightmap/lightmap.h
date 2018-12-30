@@ -31,8 +31,6 @@
 #include "framework/tarray.h"
 #include <mutex>
 
-#define LIGHTMAP_MAX_SIZE  1024
-
 #define LIGHTCELL_SIZE 64
 #define LIGHTCELL_BLOCK_SIZE 16
 
@@ -55,6 +53,20 @@ public:
 	std::vector<LightCellBlock> blocks;
 };
 
+class LightmapTexture
+{
+public:
+	LightmapTexture(int width, int height)
+	{
+		mPixels.resize(width * height * 3);
+	}
+
+	uint16_t *Pixels() { return mPixels.data(); }
+
+private:
+	std::vector<uint16_t> mPixels;
+};
+
 class LightmapBuilder
 {
 public:
@@ -74,6 +86,7 @@ private:
 	void BuildSurfaceParams(Surface *surface);
 	void TraceSurface(Surface *surface);
 	void TraceIndirectLight(Surface *surface);
+	void FinishSurface(Surface *surface);
 	void SetupLightCellGrid();
 	void LightBlock(int blockid);
 	void LightSurface(const int surfid);
@@ -88,8 +101,7 @@ private:
 
 	std::unique_ptr<LevelMesh> mesh;
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
-	std::vector<std::vector<uint16_t>> textures;
-	std::vector<uint16_t> indirectoutput;
+	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<std::vector<int>> allocBlocks;
 	int numTextures = 0;
 	int extraSamples = 2;
