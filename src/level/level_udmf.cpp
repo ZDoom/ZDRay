@@ -353,7 +353,7 @@ void FProcessor::ParseSector(IntSector *sec)
 	memset(&sec->data, 0, sizeof(sec->data));
 	sec->data.lightlevel = 160;
 
-	bool ceilingplane = false, floorplane = false;
+	int ceilingplane = 0, floorplane = 0;
 
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
@@ -391,42 +391,42 @@ void FProcessor::ParseSector(IntSector *sec)
 		}
 		else if (stricmp(key, "ceilingplane_a") == 0)
 		{
-			ceilingplane = true;
+			ceilingplane|=1;
 			sec->ceilingplane.a = CheckFloat(key);
 		}
 		else if (stricmp(key, "ceilingplane_b") == 0)
 		{
-			ceilingplane = true;
+			ceilingplane|=2;
 			sec->ceilingplane.b = CheckFloat(key);
 		}
 		else if (stricmp(key, "ceilingplane_c") == 0)
 		{
-			ceilingplane = true;
+			ceilingplane|=4;
 			sec->ceilingplane.c = CheckFloat(key);
 		}
 		else if (stricmp(key, "ceilingplane_d") == 0)
 		{
-			ceilingplane = true;
+			ceilingplane|=8;
 			sec->ceilingplane.d = CheckFloat(key);
 		}
 		else if (stricmp(key, "floorplane_a") == 0)
 		{
-			floorplane = true;
+			floorplane|=1;
 			sec->floorplane.a = CheckFloat(key);
 		}
 		else if (stricmp(key, "floorplane_b") == 0)
 		{
-			floorplane = true;
+			floorplane|=2;
 			sec->floorplane.b = CheckFloat(key);
 		}
 		else if (stricmp(key, "floorplane_c") == 0)
 		{
-			floorplane = true;
+			floorplane|=4;
 			sec->floorplane.c = CheckFloat(key);
 		}
 		else if (stricmp(key, "floorplane_d") == 0)
 		{
-			floorplane = true;
+			floorplane|=8;
 			sec->floorplane.d = CheckFloat(key);
 		}
 
@@ -435,7 +435,7 @@ void FProcessor::ParseSector(IntSector *sec)
 		sec->props.Push(k);
 	}
 
-	if (!ceilingplane)
+	if (ceilingplane != 15)
 	{
 		sec->ceilingplane.a = 0.0f;
 		sec->ceilingplane.b = 0.0f;
@@ -452,7 +452,7 @@ void FProcessor::ParseSector(IntSector *sec)
 		sec->ceilingplane.d = -sec->ceilingplane.d;
 	}
 
-	if (!floorplane)
+	if (floorplane != 15)
 	{
 		sec->floorplane.a = 0.0f;
 		sec->floorplane.b = 0.0f;
