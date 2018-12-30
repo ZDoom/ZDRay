@@ -61,20 +61,27 @@ void FLevel::SetupLights()
 		if (line->sidenum[1] < Sides.Size())
 			Sides[line->sidenum[1]].line = line;
 
-		if (line->special == 160) // Sector_Set3dFloor
+		if (line->special == Sector_Set3DFloor)
 		{
 			int sectorTag = line->args[0];
 			int type = line->args[1];
-			//int opacity = line.args[3];
+			int opacity = line->args[3];
 
-			IntSector *controlsector = &Sectors[Sides[Lines[i].sidenum[0]].sector];
-			controlsector->controlsector = true;
-
-			for (unsigned int j = 0; j < Sectors.Size(); j++)
+			if (opacity > 0)
 			{
-				if (Sectors[j].data.tag == sectorTag)
+				IntSector *controlsector = &Sectors[Sides[Lines[i].sidenum[0]].sector];
+				controlsector->controlsector = true;
+
+				for (unsigned int j = 0; j < Sectors.Size(); j++)
 				{
-					Sectors[j].x3dfloors.Push(controlsector);
+					for (unsigned t = 0; t < Sectors[j].tags.Size(); t++)
+					{
+						if (Sectors[j].tags[t] == sectorTag)
+						{
+							Sectors[j].x3dfloors.Push(controlsector);
+							break;
+						}
+					}
 				}
 			}
 		}
