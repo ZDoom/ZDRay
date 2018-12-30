@@ -214,8 +214,8 @@ struct MapThing2
 	short		angle;
 	short		type;
 	short		flags;
-	char		special;
-	char		args[5];
+	uint8_t		special;
+	uint8_t		args[5];
 };
 
 struct IntThing
@@ -228,8 +228,8 @@ struct IntThing
 	short		angle;
 	short		type;
 	short		flags;
-	char		special;
-	char		args[5];
+	int			special;
+	int			args[5];
 
 	short pitch; // UDMF
 	float height; // UDMF

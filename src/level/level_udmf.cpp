@@ -171,9 +171,6 @@ void FProcessor::ParseThing(IntThing *th)
 		const char *value;
 		const char *key = ParseKey(value);
 
-		// The only properties we need from a thing are
-		// x, y, angle and type.
-
 		if (!stricmp(key, "x"))
 		{
 			th->x = CheckFixed(key);
@@ -196,7 +193,31 @@ void FProcessor::ParseThing(IntThing *th)
 		}
 		if (!stricmp(key, "height"))
 		{
-			th->height = CheckFloat(key);
+			th->height = CheckInt(key);
+		}
+		if (!stricmp(key, "special"))
+		{
+			th->special = CheckInt(key);
+		}
+		if (!stricmp(key, "arg0"))
+		{
+			th->args[0] = CheckInt(key);
+		}
+		if (!stricmp(key, "arg1"))
+		{
+			th->args[1] = CheckInt(key);
+		}
+		if (!stricmp(key, "arg2"))
+		{
+			th->args[2] = CheckInt(key);
+		}
+		if (!stricmp(key, "arg3"))
+		{
+			th->args[3] = CheckInt(key);
+		}
+		if (!stricmp(key, "arg4"))
+		{
+			th->args[4] = CheckInt(key);
 		}
 
 		// now store the key in its unprocessed form

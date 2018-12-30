@@ -43,7 +43,20 @@ enum
     PO_ANCHOR_TYPE = 9300,
     PO_SPAWN_TYPE,
     PO_SPAWNCRUSH_TYPE,
-	PO_SPAWNHURT_TYPE
+	PO_SPAWNHURT_TYPE,
+	
+	// Thing numbers used to define slopes
+	SMT_VavoomFloor = 1500,
+	SMT_VavoomCeiling = 1501,
+	SMT_VertexFloorZ = 1504,
+	SMT_VertexCeilingZ = 1505,
+	SMT_SlopeFloorPointLine = 9500,
+	SMT_SlopeCeilingPointLine = 9501,
+	SMT_SetFloorSlope = 9502,
+	SMT_SetCeilingSlope = 9503,
+	SMT_CopyFloorPlane = 9510,
+	SMT_CopyCeilingPlane = 9511,
+	
 };
 
 FLevel::FLevel ()
