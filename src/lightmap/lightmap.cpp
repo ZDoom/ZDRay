@@ -417,27 +417,23 @@ void LightmapBuilder::TraceSurface(Surface *surface)
 		{
 			Vec3 c(0.0f, 0.0f, 0.0f);
 
-			for (int k = 0; k < multisampleCount; k++)
+			int totalsamples = (multisampleCount * 2 + 1);
+			float scale = 0.5f / totalsamples;
+			for (int yy = -multisampleCount; yy <= multisampleCount; yy++)
 			{
-				Vec2 multisamplePos((float)j, (float)i);
-				if (k > 0)
+				for (int xx = -multisampleCount; xx <= multisampleCount; xx++)
 				{
-					multisamplePos.x += rand() / (float)RAND_MAX - 0.5f;
-					multisamplePos.y += rand() / (float)RAND_MAX - 0.5f;
-					multisamplePos.x = std::max(multisamplePos.x, 0.0f);
-					multisamplePos.y = std::max(multisamplePos.y, 0.0f);
-					multisamplePos.x = std::min(multisamplePos.x, (float)sampleWidth);
-					multisamplePos.y = std::min(multisamplePos.y, (float)sampleHeight);
+					Vec2 multisamplePos((float)j + xx * scale, (float)i + yy * scale);
+
+					// convert the texel into world-space coordinates.
+					// this will be the origin in which a line will be traced from
+					Vec3 pos = surface->lightmapOrigin + normal + (surface->lightmapSteps[0] * multisamplePos.x) + (surface->lightmapSteps[1] * multisamplePos.y);
+
+					c += LightTexelSample(pos, surface);
 				}
-
-				// convert the texel into world-space coordinates.
-				// this will be the origin in which a line will be traced from
-				Vec3 pos = surface->lightmapOrigin + normal + (surface->lightmapSteps[0] * multisamplePos.x) + (surface->lightmapSteps[1] * multisamplePos.y);
-
-				c += LightTexelSample(pos, surface);
 			}
 
-			c /= multisampleCount;
+			c /= totalsamples * totalsamples;
 
 			colorSamples[i * sampleWidth + j] = c;
 		}

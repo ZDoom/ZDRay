@@ -449,8 +449,8 @@ static void ParseArgs(int argc, char **argv)
 			break;
 		case 'M':
 			Multisample = atoi(optarg);
-			if (Multisample <= 0) Multisample = 1;
-			if (Multisample > 64) Multisample = 64;
+			if (Multisample <= 0) Multisample = 0;
+			if (Multisample > 16) Multisample = 16;
 			break;
 		case 'B':
 			LightBounce = atoi(optarg);
