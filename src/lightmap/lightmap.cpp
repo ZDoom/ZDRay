@@ -54,78 +54,6 @@ LightmapBuilder::~LightmapBuilder()
 {
 }
 
-void LightmapBuilder::NewTexture()
-{
-	numTextures++;
-
-	allocBlocks.push_back(std::vector<int>(textureWidth));
-	textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
-}
-
-// Determines where to map a new block on to the lightmap texture
-bool LightmapBuilder::MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num)
-{
-	int i;
-	int j;
-	int k;
-	int bestRow1;
-	int bestRow2;
-
-	*num = -1;
-
-	if (allocBlocks.empty())
-	{
-		return false;
-	}
-
-	for (k = 0; k < numTextures; ++k)
-	{
-		bestRow1 = textureHeight;
-
-		for (i = 0; i <= textureWidth - width; i++)
-		{
-			bestRow2 = 0;
-
-			for (j = 0; j < width; j++)
-			{
-				if (allocBlocks[k][i + j] >= bestRow1)
-				{
-					break;
-				}
-
-				if (allocBlocks[k][i + j] > bestRow2)
-				{
-					bestRow2 = allocBlocks[k][i + j];
-				}
-			}
-
-			// found a free block
-			if (j == width)
-			{
-				*x = i;
-				*y = bestRow1 = bestRow2;
-			}
-		}
-
-		if (bestRow1 + height > textureHeight)
-		{
-			// no room
-			continue;
-		}
-
-		for (i = 0; i < width; i++)
-		{
-			// store row offset
-			allocBlocks[k][*x + i] = bestRow1 + height;
-		}
-
-		*num = k;
-		return true;
-	}
-
-	return false;
-}
-
 BBox LightmapBuilder::GetBoundsFromSurface(const Surface *surface)
 {
 	Vec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
@@ -477,28 +405,7 @@ void LightmapBuilder::FinishSurface(Surface *surface)
 	else
 	{
 		int x = 0, y = 0;
-		int width = surface->lightmapDims[0];
-		int height = surface->lightmapDims[1];
-
-		std::unique_lock<std::mutex> lock(mutex);
-
-		// now that we know the width and height of this block, see if we got
-		// room for it in the light map texture. if not, then we must allocate
-		// a new texture
-		if (!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
-		{
-			// allocate a new texture for this block
-			NewTexture();
-
-			if (!MakeRoomForBlock(width, height, &x, &y, &surface->lightmapNum))
-			{
-				throw std::runtime_error("Lightmap allocation failed");
-			}
-		}
-
-		uint16_t *currentTexture = textures[surface->lightmapNum]->Pixels();
-
-		lock.unlock();
+		uint16_t *currentTexture = AllocTextureRoom(surface, &x, &y);
 
 		// calculate texture coordinates
 		for (int i = 0; i < surface->numVerts; i++)
@@ -526,6 +433,34 @@ void LightmapBuilder::FinishSurface(Surface *surface)
 			}
 		}
 	}
+}
+
+uint16_t *LightmapBuilder::AllocTextureRoom(Surface *surface, int *x, int *y)
+{
+	int width = surface->lightmapDims[0];
+	int height = surface->lightmapDims[1];
+	int numTextures = textures.size();
+
+	int k;
+	for (k = 0; k < numTextures; ++k)
+	{
+		if (textures[k]->MakeRoomForBlock(width, height, x, y))
+		{
+			break;
+		}
+	}
+
+	if (k == numTextures)
+	{
+		textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
+		if (!textures[k]->MakeRoomForBlock(width, height, x, y))
+		{
+			throw std::runtime_error("Lightmap allocation failed");
+		}
+	}
+
+	surface->lightmapNum = k;
+	return textures[surface->lightmapNum]->Pixels();
 }
 
 static float RadicalInverse_VdC(uint32_t bits)
@@ -1032,4 +967,57 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	ZLibOut zout(wadFile);
 	wadFile.StartWritingLump("LIGHTMAP");
 	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+LightmapTexture::LightmapTexture(int width, int height) : textureWidth(width), textureHeight(height)
+{
+	mPixels.resize(width * height * 3);
+	allocBlocks.resize(width);
+}
+
+bool LightmapTexture::MakeRoomForBlock(const int width, const int height, int *x, int *y)
+{
+	int bestRow1 = textureHeight;
+
+	for (int i = 0; i <= textureWidth - width; i++)
+	{
+		int bestRow2 = 0;
+
+		int j;
+		for (j = 0; j < width; j++)
+		{
+			if (allocBlocks[i + j] >= bestRow1)
+			{
+				break;
+			}
+
+			if (allocBlocks[i + j] > bestRow2)
+			{
+				bestRow2 = allocBlocks[i + j];
+			}
+		}
+
+		// found a free block
+		if (j == width)
+		{
+			*x = i;
+			*y = bestRow1 = bestRow2;
+		}
+	}
+
+	if (bestRow1 + height > textureHeight)
+	{
+		// no room
+		return false;
+	}
+
+	// store row offset
+	for (int i = 0; i < width; i++)
+	{
+		allocBlocks[*x + i] = bestRow1 + height;
+	}
+
+	return true;
 }

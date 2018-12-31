@@ -56,15 +56,17 @@ public:
 class LightmapTexture
 {
 public:
-	LightmapTexture(int width, int height)
-	{
-		mPixels.resize(width * height * 3);
-	}
+	LightmapTexture(int width, int height);
+
+	bool MakeRoomForBlock(const int width, const int height, int *x, int *y);
 
 	uint16_t *Pixels() { return mPixels.data(); }
 
 private:
+	int textureWidth;
+	int textureHeight;
 	std::vector<uint16_t> mPixels;
+	std::vector<int> allocBlocks;
 };
 
 class TraceTask
@@ -89,8 +91,6 @@ public:
 	void AddLightmapLump(FWadWriter &wadFile);
 
 private:
-	void NewTexture();
-	bool MakeRoomForBlock(const int width, const int height, int *x, int *y, int *num);
 	BBox GetBoundsFromSurface(const Surface *surface);
 	Vec3 LightTexelSample(const Vec3 &origin, Surface *surface);
 	bool EmitFromCeiling(const Surface *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color);
@@ -107,6 +107,8 @@ private:
 
 	void CreateSurfaceLights();
 
+	uint16_t *AllocTextureRoom(Surface *surface, int *x, int *y);
+
 	FLevel *map;
 	int samples = 16;
 	int textureWidth = 128;
@@ -116,8 +118,6 @@ private:
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<TraceTask> traceTasks;
-	std::vector<std::vector<int>> allocBlocks;
-	int numTextures = 0;
 	int extraSamples = 2;
 	int tracedTexels = 0;
 
