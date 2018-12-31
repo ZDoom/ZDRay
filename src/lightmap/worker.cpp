@@ -23,9 +23,7 @@ void Worker::RunJob(int count, std::function<void(int)> callback)
 	{
 		threads.push_back(std::thread([=]() {
 
-			int start = threadIndex * count / numThreads;
-			int end = std::min((threadIndex + 1) * count / numThreads, count);
-			for (int i = start; i < end; i++)
+			for (int i = threadIndex; i < count; i += numThreads)
 			{
 				callback(i);
 			}

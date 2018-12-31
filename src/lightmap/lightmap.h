@@ -67,6 +67,18 @@ private:
 	std::vector<uint16_t> mPixels;
 };
 
+class TraceTask
+{
+public:
+	TraceTask() { }
+	TraceTask(int surface, int offset) : surface(surface), offset(offset) { }
+
+	int surface = 0;
+	int offset = 0;
+
+	static const int tasksize = 64;
+};
+
 class LightmapBuilder
 {
 public:
@@ -84,13 +96,14 @@ private:
 	bool EmitFromCeiling(const Surface *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color);
 
 	void BuildSurfaceParams(Surface *surface);
-	void TraceSurface(Surface *surface);
-	void TraceIndirectLight(Surface *surface);
+	void TraceSurface(Surface *surface, int offset);
+	void TraceIndirectLight(Surface *surface, int offset);
 	void FinishSurface(Surface *surface);
 	void SetupLightCellGrid();
 	void LightBlock(int blockid);
-	void LightSurface(const int surfid);
-	void LightIndirect(const int surfid);
+	void CreateTraceTasks();
+	void LightSurface(const int taskid);
+	void LightIndirect(const int taskid);
 
 	void CreateSurfaceLights();
 
@@ -102,6 +115,7 @@ private:
 	std::unique_ptr<LevelMesh> mesh;
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
+	std::vector<TraceTask> traceTasks;
 	std::vector<std::vector<int>> allocBlocks;
 	int numTextures = 0;
 	int extraSamples = 2;

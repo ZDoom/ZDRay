@@ -398,53 +398,41 @@ void LightmapBuilder::BuildSurfaceParams(Surface *surface)
 }
 
 // Steps through each texel and traces a line to the world.
-void LightmapBuilder::TraceSurface(Surface *surface)
+void LightmapBuilder::TraceSurface(Surface *surface, int offset)
 {
 	int sampleWidth = surface->lightmapDims[0];
 	int sampleHeight = surface->lightmapDims[1];
-
 	Vec3 normal = surface->plane.Normal();
-
 	int multisampleCount = Multisample;
-
-	surface->samples.resize(sampleWidth * sampleHeight);
 	Vec3 *colorSamples = surface->samples.data();
 
-	// start walking through each texel
-	for (int i = 0; i < sampleHeight; i++)
+	int offsetend = std::min(offset + TraceTask::tasksize, sampleWidth * sampleHeight);
+	for (int pos = offset; pos < offsetend; pos++)
 	{
-		for (int j = 0; j < sampleWidth; j++)
+		int i = pos / sampleWidth;
+		int j = pos % sampleWidth;
+
+		Vec3 c(0.0f, 0.0f, 0.0f);
+
+		int totalsamples = (multisampleCount * 2 + 1);
+		float scale = 0.5f / totalsamples;
+		for (int yy = -multisampleCount; yy <= multisampleCount; yy++)
 		{
-			Vec3 c(0.0f, 0.0f, 0.0f);
-
-			int totalsamples = (multisampleCount * 2 + 1);
-			float scale = 0.5f / totalsamples;
-			for (int yy = -multisampleCount; yy <= multisampleCount; yy++)
+			for (int xx = -multisampleCount; xx <= multisampleCount; xx++)
 			{
-				for (int xx = -multisampleCount; xx <= multisampleCount; xx++)
-				{
-					Vec2 multisamplePos((float)j + xx * scale, (float)i + yy * scale);
+				Vec2 multisamplePos((float)j + xx * scale, (float)i + yy * scale);
 
-					// convert the texel into world-space coordinates.
-					// this will be the origin in which a line will be traced from
-					Vec3 pos = surface->lightmapOrigin + normal + (surface->lightmapSteps[0] * multisamplePos.x) + (surface->lightmapSteps[1] * multisamplePos.y);
+				// convert the texel into world-space coordinates.
+				// this will be the origin in which a line will be traced from
+				Vec3 pos = surface->lightmapOrigin + normal + (surface->lightmapSteps[0] * multisamplePos.x) + (surface->lightmapSteps[1] * multisamplePos.y);
 
-					c += LightTexelSample(pos, surface);
-				}
+				c += LightTexelSample(pos, surface);
 			}
-
-			c /= totalsamples * totalsamples;
-
-			colorSamples[i * sampleWidth + j] = c;
 		}
-	}
 
-	// texture coordinates relative to block
-	for (int i = 0; i < surface->numVerts; i++)
-	{
-		Vec3 tDelta = surface->verts[i] - surface->bounds.min;
-		surface->lightmapCoords[i * 2 + 0] = tDelta.Dot(surface->textureCoords[0]);
-		surface->lightmapCoords[i * 2 + 1] = tDelta.Dot(surface->textureCoords[1]);
+		c /= totalsamples * totalsamples;
+
+		colorSamples[i * sampleWidth + j] = c;
 	}
 }
 
@@ -575,111 +563,132 @@ static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness)
 	return Vec3::Normalize(sampleVec);
 }
 
-void LightmapBuilder::TraceIndirectLight(Surface *surface)
+void LightmapBuilder::TraceIndirectLight(Surface *surface, int offset)
 {
 	int sampleWidth = surface->lightmapDims[0];
 	int sampleHeight = surface->lightmapDims[1];
-
 	Vec3 normal = surface->plane.Normal();
-
-	surface->indirect.resize(sampleWidth * sampleHeight);
 	Vec3 *indirect = surface->indirect.data();
 
-	for (int i = 0; i < sampleHeight; i++)
+	int offsetend = std::min(offset + TraceTask::tasksize, sampleWidth * sampleHeight);
+	for (int offpos = offset; offpos < offsetend; offpos++)
 	{
-		for (int j = 0; j < sampleWidth; j++)
+		int i = offpos / sampleWidth;
+		int j = offpos % sampleWidth;
+
+		Vec3 pos = surface->lightmapOrigin + normal +
+			(surface->lightmapSteps[0] * (float)j) +
+			(surface->lightmapSteps[1] * (float)i);
+
+		const int SAMPLE_COUNT = 128;// 1024;
+
+		float totalWeight = 0.0f;
+		Vec3 c(0.0f, 0.0f, 0.0f);
+
+		for (int i = 0; i < SAMPLE_COUNT; i++)
 		{
-			Vec3 pos = surface->lightmapOrigin + normal +
-				(surface->lightmapSteps[0] * (float)j) +
-				(surface->lightmapSteps[1] * (float)i);
+			Vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+			Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
+			Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
 
-			const int SAMPLE_COUNT = 128;// 1024;
-
-			float totalWeight = 0.0f;
-			Vec3 c(0.0f, 0.0f, 0.0f);
-
-			for (int i = 0; i < SAMPLE_COUNT; i++)
+			float NdotL = std::max(Vec3::Dot(normal, L), 0.0f);
+			if (NdotL > 0.0f)
 			{
-				Vec2 Xi = Hammersley(i, SAMPLE_COUNT);
-				Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
-				Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
-
-				float NdotL = std::max(Vec3::Dot(normal, L), 0.0f);
-				if (NdotL > 0.0f)
+				tracedTexels++;
+				LevelTraceHit hit = mesh->Trace(pos, pos + L * 1000.0f);
+				if (hit.fraction < 1.0f)
 				{
-					tracedTexels++;
-					LevelTraceHit hit = mesh->Trace(pos, pos + L * 1000.0f);
-					if (hit.fraction < 1.0f)
+					Vec3 surfaceLight;
+					if (hit.hitSurface->bSky)
 					{
-						Vec3 surfaceLight;
-						if (hit.hitSurface->bSky)
-						{
-							surfaceLight = { 0.5f, 0.5f, 0.5f };
-						}
-						else
-						{
-							float u =
-								hit.hitSurface->lightmapCoords[hit.indices[0] * 2] * (1.0f - hit.b - hit.c) +
-								hit.hitSurface->lightmapCoords[hit.indices[1] * 2] * hit.b +
-								hit.hitSurface->lightmapCoords[hit.indices[2] * 2] * hit.c;
-
-							float v =
-								hit.hitSurface->lightmapCoords[hit.indices[0] * 2 + 1] * (1.0f - hit.b - hit.c) +
-								hit.hitSurface->lightmapCoords[hit.indices[1] * 2 + 1] * hit.b +
-								hit.hitSurface->lightmapCoords[hit.indices[2] * 2 + 1] * hit.c;
-
-							int hitTexelX = clamp((int)(u + 0.5f), 0, hit.hitSurface->lightmapDims[0] - 1);
-							int hitTexelY = clamp((int)(v + 0.5f), 0, hit.hitSurface->lightmapDims[1] - 1);
-
-							Vec3 *hitTexture = hit.hitSurface->samples.data();
-							const Vec3 &hitPixel = hitTexture[hitTexelX + hitTexelY * hit.hitSurface->lightmapDims[0]];
-
-							float attenuation = (1.0f - hit.fraction);
-							surfaceLight = hitPixel * attenuation;
-						}
-						c += surfaceLight * NdotL;
+						surfaceLight = { 0.5f, 0.5f, 0.5f };
 					}
-					totalWeight += NdotL;
+					else
+					{
+						float u =
+							hit.hitSurface->lightmapCoords[hit.indices[0] * 2] * (1.0f - hit.b - hit.c) +
+							hit.hitSurface->lightmapCoords[hit.indices[1] * 2] * hit.b +
+							hit.hitSurface->lightmapCoords[hit.indices[2] * 2] * hit.c;
+
+						float v =
+							hit.hitSurface->lightmapCoords[hit.indices[0] * 2 + 1] * (1.0f - hit.b - hit.c) +
+							hit.hitSurface->lightmapCoords[hit.indices[1] * 2 + 1] * hit.b +
+							hit.hitSurface->lightmapCoords[hit.indices[2] * 2 + 1] * hit.c;
+
+						int hitTexelX = clamp((int)(u + 0.5f), 0, hit.hitSurface->lightmapDims[0] - 1);
+						int hitTexelY = clamp((int)(v + 0.5f), 0, hit.hitSurface->lightmapDims[1] - 1);
+
+						Vec3 *hitTexture = hit.hitSurface->samples.data();
+						const Vec3 &hitPixel = hitTexture[hitTexelX + hitTexelY * hit.hitSurface->lightmapDims[0]];
+
+						float attenuation = (1.0f - hit.fraction);
+						surfaceLight = hitPixel * attenuation;
+					}
+					c += surfaceLight * NdotL;
 				}
+				totalWeight += NdotL;
 			}
-
-			c = c / totalWeight;
-
-			indirect[i * sampleWidth + j] = c;
 		}
+
+		c = c / totalWeight;
+
+		indirect[i * sampleWidth + j] = c;
 	}
 }
 
-void LightmapBuilder::LightSurface(const int surfid)
+void LightmapBuilder::CreateTraceTasks()
 {
-	BuildSurfaceParams(mesh->surfaces[surfid].get());
-	TraceSurface(mesh->surfaces[surfid].get());
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		Surface *surface = mesh->surfaces[i].get();
+
+		BuildSurfaceParams(surface);
+
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+		surface->samples.resize(sampleWidth * sampleHeight);
+
+		if (LightBounce > 0)
+			surface->indirect.resize(sampleWidth * sampleHeight);
+
+		int total = sampleWidth * sampleHeight;
+		int count = (total + TraceTask::tasksize - 1) / TraceTask::tasksize;
+		for (int j = 0; j < count; j++)
+			traceTasks.push_back(TraceTask(i, j * TraceTask::tasksize));
+	}
+}
+
+void LightmapBuilder::LightSurface(const int taskid)
+{
+	const TraceTask &task = traceTasks[taskid];
+	TraceSurface(mesh->surfaces[task.surface].get(), task.offset);
 
 	std::unique_lock<std::mutex> lock(mutex);
 
-	int numsurfs = mesh->surfaces.size();
-	int lastproc = processed * 100 / numsurfs;
+	int numtasks = traceTasks.size();
+	int lastproc = processed * 100 / numtasks;
 	processed++;
-	int curproc = processed * 100 / numsurfs;
+	int curproc = processed * 100 / numtasks;
 	if (lastproc != curproc || processed == 1)
 	{
-		float remaining = (float)processed / (float)numsurfs;
-		printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
+		float remaining = (float)processed / (float)numtasks;
+		printf("%i%c done\r", (int)(remaining * 100.0f), '%');
 	}
 }
 
-void LightmapBuilder::LightIndirect(const int surfid)
+void LightmapBuilder::LightIndirect(const int taskid)
 {
-	TraceIndirectLight(mesh->surfaces[surfid].get());
+	const TraceTask &task = traceTasks[taskid];
+	TraceIndirectLight(mesh->surfaces[task.surface].get(), task.offset);
 
-	int numsurfs = mesh->surfaces.size();
-	int lastproc = processed * 100 / numsurfs;
+	int numtasks = traceTasks.size();
+	int lastproc = processed * 100 / numtasks;
 	processed++;
-	int curproc = processed * 100 / numsurfs;
+	int curproc = processed * 100 / numtasks;
 	if (lastproc != curproc || processed == 1)
 	{
-		float remaining = (float)processed / (float)numsurfs;
-		printf("%i%c surfaces done\r", (int)(remaining * 100.0f), '%');
+		float remaining = (float)processed / (float)numtasks;
+		printf("%i%c done\r", (int)(remaining * 100.0f), '%');
 	}
 }
 
@@ -733,6 +742,7 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 	mesh = std::make_unique<LevelMesh>(doomMap);
 
 	CreateSurfaceLights();
+	CreateTraceTasks();
 
 	printf("-------------- Tracing cells ---------------\n");
 
@@ -750,7 +760,7 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 
 	tracedTexels = 0;
 	processed = 0;
-	Worker::RunJob(mesh->surfaces.size(), [=](int id) {
+	Worker::RunJob(traceTasks.size(), [=](int id) {
 		LightSurface(id);
 	});
 
@@ -762,12 +772,12 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 
 		tracedTexels = 0;
 		processed = 0;
-		Worker::RunJob(mesh->surfaces.size(), [=](int id) {
+		Worker::RunJob(traceTasks.size(), [=](int id) {
 			LightIndirect(id);
 		});
-	}
 
-	printf("Texels traced: %i \n\n", tracedTexels);
+		printf("Texels traced: %i \n\n", tracedTexels);
+	}
 
 	for (auto &surf : mesh->surfaces)
 	{
