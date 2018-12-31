@@ -107,6 +107,9 @@ private:
 
 	void CreateSurfaceLights();
 
+	void SetupTaskProcessed(const char *name, int total);
+	void PrintTaskProcessed();
+
 	uint16_t *AllocTextureRoom(Surface *surface, int *x, int *y);
 
 	FLevel *map;
@@ -118,11 +121,11 @@ private:
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<TraceTask> traceTasks;
-	int extraSamples = 2;
 	int tracedTexels = 0;
 
 	LightCellGrid grid;
 
 	std::mutex mutex;
 	int processed = 0;
+	int progresstotal = 0;
 };

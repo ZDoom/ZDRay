@@ -54,6 +54,50 @@ LightmapBuilder::~LightmapBuilder()
 {
 }
 
+void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int textureSize)
+{
+	map = &doomMap;
+	samples = sampleDistance;
+	textureWidth = textureSize;
+	textureHeight = textureSize;
+
+	mesh = std::make_unique<LevelMesh>(doomMap);
+
+	CreateSurfaceLights();
+	CreateTraceTasks();
+
+	SetupLightCellGrid();
+
+	SetupTaskProcessed("Tracing cells", grid.blocks.size());
+	Worker::RunJob(grid.blocks.size(), [=](int id) {
+		LightBlock(id);
+		PrintTaskProcessed();
+	});
+	printf("Cells traced: %i \n\n", tracedTexels);
+
+	SetupTaskProcessed("Tracing surfaces", traceTasks.size());
+	Worker::RunJob(traceTasks.size(), [=](int id) {
+		LightSurface(id);
+		PrintTaskProcessed();
+	});
+	printf("Texels traced: %i \n\n", tracedTexels);
+
+	if (LightBounce > 0)
+	{
+		SetupTaskProcessed("Tracing indirect", traceTasks.size());
+		Worker::RunJob(traceTasks.size(), [=](int id) {
+			LightIndirect(id);
+			PrintTaskProcessed();
+		});
+		printf("Texels traced: %i \n\n", tracedTexels);
+	}
+
+	for (auto &surf : mesh->surfaces)
+	{
+		FinishSurface(surf.get());
+	}
+}
+
 BBox LightmapBuilder::GetBoundsFromSurface(const Surface *surface)
 {
 	Vec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
@@ -597,34 +641,12 @@ void LightmapBuilder::LightSurface(const int taskid)
 {
 	const TraceTask &task = traceTasks[taskid];
 	TraceSurface(mesh->surfaces[task.surface].get(), task.offset);
-
-	std::unique_lock<std::mutex> lock(mutex);
-
-	int numtasks = traceTasks.size();
-	int lastproc = processed * 100 / numtasks;
-	processed++;
-	int curproc = processed * 100 / numtasks;
-	if (lastproc != curproc || processed == 1)
-	{
-		float remaining = (float)processed / (float)numtasks;
-		printf("%i%c done\r", (int)(remaining * 100.0f), '%');
-	}
 }
 
 void LightmapBuilder::LightIndirect(const int taskid)
 {
 	const TraceTask &task = traceTasks[taskid];
 	TraceIndirectLight(mesh->surfaces[task.surface].get(), task.offset);
-
-	int numtasks = traceTasks.size();
-	int lastproc = processed * 100 / numtasks;
-	processed++;
-	int curproc = processed * 100 / numtasks;
-	if (lastproc != curproc || processed == 1)
-	{
-		float remaining = (float)processed / (float)numtasks;
-		printf("%i%c done\r", (int)(remaining * 100.0f), '%');
-	}
 }
 
 void LightmapBuilder::CreateSurfaceLights()
@@ -664,59 +686,6 @@ void LightmapBuilder::CreateSurfaceLights()
 				}
 			}
 		}
-	}
-}
-
-void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int textureSize)
-{
-	map = &doomMap;
-	samples = sampleDistance;
-	textureWidth = textureSize;
-	textureHeight = textureSize;
-
-	mesh = std::make_unique<LevelMesh>(doomMap);
-
-	CreateSurfaceLights();
-	CreateTraceTasks();
-
-	printf("-------------- Tracing cells ---------------\n");
-
-	SetupLightCellGrid();
-
-	processed = 0;
-	tracedTexels = 0;
-	Worker::RunJob(grid.blocks.size(), [=](int id) {
-		LightBlock(id);
-	});
-
-	printf("Cells traced: %i \n\n", tracedTexels);
-
-	printf("------------- Tracing surfaces -------------\n");
-
-	tracedTexels = 0;
-	processed = 0;
-	Worker::RunJob(traceTasks.size(), [=](int id) {
-		LightSurface(id);
-	});
-
-	printf("Texels traced: %i \n\n", tracedTexels);
-
-	if (LightBounce > 0)
-	{
-		printf("------------- Tracing indirect -------------\n");
-
-		tracedTexels = 0;
-		processed = 0;
-		Worker::RunJob(traceTasks.size(), [=](int id) {
-			LightIndirect(id);
-		});
-
-		printf("Texels traced: %i \n\n", tracedTexels);
-	}
-
-	for (auto &surf : mesh->surfaces)
-	{
-		FinishSurface(surf.get());
 	}
 }
 
@@ -818,18 +787,6 @@ void LightmapBuilder::LightBlock(int id)
 		// Entire block is outside the map
 		block.z = 0;
 		block.layers = 0;
-	}
-
-	std::unique_lock<std::mutex> lock(mutex);
-
-	int numblocks = grid.blocks.size();
-	int lastproc = processed * 100 / numblocks;
-	processed++;
-	int curproc = processed * 100 / numblocks;
-	if (lastproc != curproc || processed == 1)
-	{
-		float remaining = (float)processed / (float)numblocks;
-		printf("%i%c cells done\r", (int)(remaining * 100.0f), '%');
 	}
 }
 
@@ -967,6 +924,28 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	ZLibOut zout(wadFile);
 	wadFile.StartWritingLump("LIGHTMAP");
 	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
+}
+
+void LightmapBuilder::SetupTaskProcessed(const char *name, int total)
+{
+	printf("-------------- %s ---------------\n", name);
+
+	processed = 0;
+	progresstotal = total;
+}
+
+void LightmapBuilder::PrintTaskProcessed()
+{
+	std::unique_lock<std::mutex> lock(mutex);
+
+	int lastproc = processed * 100 / progresstotal;
+	processed++;
+	int curproc = processed * 100 / progresstotal;
+	if (lastproc != curproc || processed == 1)
+	{
+		float remaining = (float)processed / (float)progresstotal;
+		printf("%i%c done\r", (int)(remaining * 100.0f), '%');
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////
