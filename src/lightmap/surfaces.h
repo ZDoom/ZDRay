@@ -88,8 +88,6 @@ public:
 	LevelTraceHit Trace(const Vec3 &startVec, const Vec3 &endVec);
 	bool TraceAnyHit(const Vec3 &startVec, const Vec3 &endVec);
 
-	void WriteMeshToOBJ();
-
 	std::vector<std::unique_ptr<Surface>> surfaces;
 
 	TArray<Vec3> MeshVertices;

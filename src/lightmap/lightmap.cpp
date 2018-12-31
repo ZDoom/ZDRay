@@ -1028,46 +1028,8 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 		}
 	}
 
-#if 0
-	// Apply compression predictor
-	uint8_t *texBytes = lumpFile.BufferAt() - texDataSize;
-	for (int i = texDataSize - 1; i > 0; i--)
-	{
-		texBytes[i] -= texBytes[i - 1];
-	}
-#endif
-
 	// Compress and store in lump
 	ZLibOut zout(wadFile);
 	wadFile.StartWritingLump("LIGHTMAP");
 	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
 }
-
-/*
-void LightmapBuilder::WriteTexturesToTGA()
-{
-	BinFile file;
-
-	for (unsigned int i = 0; i < textures.size(); i++)
-	{
-		file.Create(Va("lightmap_%02d.tga", i));
-		file.Write16(0);
-		file.Write16(2);
-		file.Write16(0);
-		file.Write16(0);
-		file.Write16(0);
-		file.Write16(0);
-		file.Write16(textureWidth);
-		file.Write16(textureHeight);
-		file.Write16(24);
-
-		for (int j = 0; j < (textureWidth * textureHeight) * 3; j += 3)
-		{
-			file.Write8(textures[i][j + 2]);
-			file.Write8(textures[i][j + 1]);
-			file.Write8(textures[i][j + 0]);
-		}
-		file.Close();
-	}
-}
-*/
