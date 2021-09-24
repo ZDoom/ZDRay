@@ -33,9 +33,9 @@ struct MapSideDef
 {
 	short	textureoffset;
 	short	rowoffset;
-	char	toptexture[8];
-	char	bottomtexture[8];
-	char	midtexture[8];
+	char	toptexture[64/*8*/];
+	char	bottomtexture[64/*8*/];
+	char	midtexture[64/*8*/];
 	uint16_t	sector;
 };
 
@@ -46,9 +46,9 @@ struct IntSideDef
 	// the first 5 values are only used for binary format maps
 	short	textureoffset;
 	short	rowoffset;
-	char	toptexture[8];
-	char	bottomtexture[8];
-	char	midtexture[8];
+	char	toptexture[64/*8*/];
+	char	bottomtexture[64/*8*/];
+	char	midtexture[64/*8*/];
 
 	int sector;
 	int lightdef;
@@ -95,8 +95,8 @@ struct MapSector
 {
 	short	floorheight;
 	short	ceilingheight;
-	char	floorpic[8];
-	char	ceilingpic[8];
+	char	floorpic[64/*8*/];
+	char	ceilingpic[64/*8*/];
 	short	lightlevel;
 	short	special;
 	short	tag;

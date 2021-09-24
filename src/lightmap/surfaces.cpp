@@ -89,9 +89,9 @@ LevelMesh::LevelMesh(FLevel &doomMap)
 			}
 			if (!IsDegenerate(s->verts[1], s->verts[2], s->verts[3]))
 			{
-				MeshElements.Push(pos + 1);
-				MeshElements.Push(pos + 2);
 				MeshElements.Push(pos + 3);
+				MeshElements.Push(pos + 2);
+				MeshElements.Push(pos + 1);
 				MeshSurfaces.Push(i);
 			}
 		}
@@ -126,6 +126,9 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 	int typeIndex = side - &doomMap.Sides[0];
 
+	Vec2 dx(v2.x - v1.x, v2.y - v1.y);
+	float distance = std::sqrt(dx.Dot(dx));
+
 	if (back)
 	{
 		for (unsigned int j = 0; j < front->x3dfloors.Size(); j++)
@@ -145,7 +148,11 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			if (bothSides)
 				continue;
 
+			float texWidth = 128.0f;
+			float texHeight = 128.0f;
+
 			auto surf = std::make_unique<Surface>();
+			surf->material = "texture";
 			surf->type = ST_MIDDLESIDE;
 			surf->typeIndex = typeIndex;
 			surf->controlSector = xfloor;
@@ -161,6 +168,18 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			surf->verts[3].z = xfloor->ceilingplane.zAt(v1.x, v1.y);
 			surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
 			surf->plane.SetDistance(surf->verts[0]);
+
+			float texZ = surf->verts[0].z;
+
+			surf->uvs.resize(4);
+			surf->uvs[0].x = 0.0f;
+			surf->uvs[1].x = distance / texWidth;
+			surf->uvs[2].x = 0.0f;
+			surf->uvs[3].x = distance / texWidth;
+			surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
+			surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
+			surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
+			surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 			surfaces.push_back(std::move(surf));
 		}
@@ -180,7 +199,11 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		{
 			if (side->bottomtexture[0] != '-')
 			{
+				float texWidth = 128.0f;
+				float texHeight = 128.0f;
+
 				auto surf = std::make_unique<Surface>();
+				surf->material = side->bottomtexture;
 				surf->numVerts = 4;
 				surf->verts.resize(4);
 
@@ -198,6 +221,18 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = typeIndex;
 				surf->controlSector = nullptr;
+
+				float texZ = surf->verts[0].z;
+
+				surf->uvs.resize(4);
+				surf->uvs[0].x = 0.0f;
+				surf->uvs[1].x = distance / texWidth;
+				surf->uvs[2].x = 0.0f;
+				surf->uvs[3].x = distance / texWidth;
+				surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
+				surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
+				surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
+				surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 				surfaces.push_back(std::move(surf));
 			}
@@ -221,7 +256,11 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			if (side->toptexture[0] != '-' || bSky)
 			{
+				float texWidth = 128.0f;
+				float texHeight = 128.0f;
+
 				auto surf = std::make_unique<Surface>();
+				surf->material = side->toptexture;
 				surf->numVerts = 4;
 				surf->verts.resize(4);
 
@@ -241,6 +280,18 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->bSky = bSky;
 				surf->controlSector = nullptr;
 
+				float texZ = surf->verts[0].z;
+
+				surf->uvs.resize(4);
+				surf->uvs[0].x = 0.0f;
+				surf->uvs[1].x = distance / texWidth;
+				surf->uvs[2].x = 0.0f;
+				surf->uvs[3].x = distance / texWidth;
+				surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
+				surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
+				surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
+				surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+
 				surfaces.push_back(std::move(surf));
 			}
 
@@ -252,7 +303,11 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	// middle seg
 	if (back == nullptr)
 	{
+		float texWidth = 128.0f;
+		float texHeight = 128.0f;
+
 		auto surf = std::make_unique<Surface>();
+		surf->material = side->midtexture;
 		surf->numVerts = 4;
 		surf->verts.resize(4);
 
@@ -271,6 +326,18 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->typeIndex = typeIndex;
 		surf->controlSector = nullptr;
 
+		float texZ = surf->verts[0].z;
+
+		surf->uvs.resize(4);
+		surf->uvs[0].x = 0.0f;
+		surf->uvs[1].x = distance / texWidth;
+		surf->uvs[2].x = 0.0f;
+		surf->uvs[3].x = distance / texWidth;
+		surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
+		surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
+		surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
+		surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+
 		surfaces.push_back(std::move(surf));
 	}
 }
@@ -278,8 +345,10 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
 	auto surf = std::make_unique<Surface>();
+	surf->material = sector->data.floorpic;
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
+	surf->uvs.resize(surf->numVerts);
 
 	if (!is3DFloor)
 	{
@@ -298,6 +367,9 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 		surf->verts[j].x = v1.x;
 		surf->verts[j].y = v1.y;
 		surf->verts[j].z = surf->plane.zAt(surf->verts[j].x, surf->verts[j].y);
+
+		surf->uvs[j].x = v1.x / 64.0f;
+		surf->uvs[j].y = v1.y / 64.0f;
 	}
 
 	surf->type = ST_FLOOR;
@@ -310,8 +382,10 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
 	auto surf = std::make_unique<Surface>();
+	surf->material = sector->data.ceilingpic;
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
+	surf->uvs.resize(surf->numVerts);
 	surf->bSky = sector->skySector;
 
 	if (!is3DFloor)
@@ -331,6 +405,9 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 		surf->verts[j].x = v1.x;
 		surf->verts[j].y = v1.y;
 		surf->verts[j].z = surf->plane.zAt(surf->verts[j].x, surf->verts[j].y);
+
+		surf->uvs[j].x = v1.x / 64.0f;
+		surf->uvs[j].y = v1.y / 64.0f;
 	}
 
 	surf->type = ST_CEILING;
@@ -421,4 +498,184 @@ bool LevelMesh::IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
 	float crossz = ax * by - ay * bx;
 	float crosslengthsqr = crossx * crossx + crossy * crossy + crossz * crossz;
 	return crosslengthsqr <= 1.e-6f;
+}
+
+void LevelMesh::Export(std::string filename)
+{
+	// Convert model mesh:
+
+	auto zmodel = std::make_unique<ZModel>();
+
+	zmodel->Vertices.resize(MeshVertices.Size());
+	for (unsigned int i = 0; i < MeshVertices.Size(); i++)
+	{
+		ZModelVertex &vertex = zmodel->Vertices[i];
+		vertex.Pos.X = MeshVertices[i].x;
+		vertex.Pos.Y = MeshVertices[i].z;
+		vertex.Pos.Z = MeshVertices[i].y;
+		vertex.BoneWeights.X = 0.0f;
+		vertex.BoneWeights.Y = 0.0f;
+		vertex.BoneWeights.Z = 0.0f;
+		vertex.BoneWeights.W = 0.0f;
+		vertex.BoneIndices.X = 0;
+		vertex.BoneIndices.Y = 0;
+		vertex.BoneIndices.Z = 0;
+		vertex.BoneIndices.W = 0;
+		vertex.Normal.X = 0.0f;
+		vertex.Normal.Y = 0.0f;
+		vertex.Normal.Z = 0.0f;
+		vertex.TexCoords.X = 0.0f;
+		vertex.TexCoords.Y = 0.0f;
+	}
+
+	std::map<std::string, std::vector<uint32_t>> materialRanges;
+
+	for (unsigned int surfidx = 0; surfidx < MeshElements.Size() / 3; surfidx++)
+	{
+		Surface *surface = surfaces[MeshSurfaces[surfidx]].get();
+		for (int i = 0; i < 3; i++)
+		{
+			int elementidx = surfidx * 3 + i;
+			int vertexidx = MeshElements[elementidx];
+			int uvindex = MeshUVIndex[vertexidx];
+
+			ZModelVertex &vertex = zmodel->Vertices[vertexidx];
+			vertex.Normal.X = surface->plane.Normal().x;
+			vertex.Normal.Y = surface->plane.Normal().z;
+			vertex.Normal.Z = surface->plane.Normal().y;
+			vertex.TexCoords.X = surface->uvs[uvindex].x;
+			vertex.TexCoords.Y = surface->uvs[uvindex].y;
+			vertex.TexCoords2.X = surface->lightmapCoords[uvindex * 2];
+			vertex.TexCoords2.Y = surface->lightmapCoords[uvindex * 2 + 1];
+			vertex.TexCoords2.Z = surface->lightmapNum;
+
+			std::string matname = surface->material;
+
+			size_t lastslash = matname.find_last_of('/');
+			if (lastslash != std::string::npos)
+				matname = matname.substr(lastslash + 1);
+
+			size_t lastdot = matname.find_last_of('.');
+			if (lastdot != 0 && lastdot != std::string::npos)
+				matname = matname.substr(0, lastdot);
+
+			for (auto &c : matname)
+			{
+				if (c >= 'A' && c <= 'Z') c = 'a' + (c - 'A');
+			}
+
+			matname = "materials/" + matname;
+
+			materialRanges[matname].push_back(vertexidx);
+		}
+	}
+
+	zmodel->Elements.reserve(MeshElements.Size());
+
+	for (const auto &it : materialRanges)
+	{
+		uint32_t startElement = (uint32_t)zmodel->Elements.size();
+		for (uint32_t vertexidx : it.second)
+			zmodel->Elements.push_back(vertexidx);
+		uint32_t vertexCount = (uint32_t)zmodel->Elements.size() - startElement;
+
+		ZModelMaterial mat;
+		mat.Name = it.first;
+		mat.Flags = 0;
+		mat.Renderstyle = 0;
+		mat.StartElement = startElement;
+		mat.VertexCount = vertexCount;
+		zmodel->Materials.push_back(mat);
+	}
+
+	// Save mesh
+
+	ZChunkStream zmdl, zdat;
+
+	// zmdl
+	{
+		ZChunkStream &s = zmdl;
+		s.Uint32(zmodel->Version);
+
+		s.Uint32(zmodel->Materials.size());
+		for (const ZModelMaterial &mat : zmodel->Materials)
+		{
+			s.String(mat.Name);
+			s.Uint32(mat.Flags);
+			s.Uint32(mat.Renderstyle);
+			s.Uint32(mat.StartElement);
+			s.Uint32(mat.VertexCount);
+		}
+
+		s.Uint32(zmodel->Bones.size());
+		for (const ZModelBone &bone : zmodel->Bones)
+		{
+			s.String(bone.Name);
+			s.Uint32((uint32_t)bone.Type);
+			s.Uint32(bone.ParentBone);
+			s.Vec3f(bone.Pivot);
+		}
+
+		s.Uint32(zmodel->Animations.size());
+		for (const ZModelAnimation &anim : zmodel->Animations)
+		{
+			s.String(anim.Name);
+			s.Float(anim.Duration);
+			s.Vec3f(anim.AabbMin);
+			s.Vec3f(anim.AabbMax);
+			s.Uint32(anim.Bones.size());
+			for (const ZModelBoneAnim &bone : anim.Bones)
+			{
+				s.FloatArray(bone.Translation.Timestamps);
+				s.Vec3fArray(bone.Translation.Values);
+				s.FloatArray(bone.Rotation.Timestamps);
+				s.QuaternionfArray(bone.Rotation.Values);
+				s.FloatArray(bone.Scale.Timestamps);
+				s.Vec3fArray(bone.Scale.Values);
+			}
+			s.Uint32(anim.Materials.size());
+			for (const ZModelMaterialAnim &mat : anim.Materials)
+			{
+				s.FloatArray(mat.Translation.Timestamps);
+				s.Vec3fArray(mat.Translation.Values);
+				s.FloatArray(mat.Rotation.Timestamps);
+				s.QuaternionfArray(mat.Rotation.Values);
+				s.FloatArray(mat.Scale.Timestamps);
+				s.Vec3fArray(mat.Scale.Values);
+			}
+		}
+
+		s.Uint32(zmodel->Attachments.size());
+		for (const ZModelAttachment &attach : zmodel->Attachments)
+		{
+			s.String(attach.Name);
+			s.Uint32(attach.Bone);
+			s.Vec3f(attach.Position);
+		}
+	}
+
+	// zdat
+	{
+		ZChunkStream &s = zdat;
+
+		s.VertexArray(zmodel->Vertices);
+		s.Uint32Array(zmodel->Elements);
+	}
+
+	FILE *file = fopen(filename.c_str(), "wb");
+	if (file)
+	{
+		uint32_t chunkhdr[2];
+		memcpy(chunkhdr, "ZMDL", 4);
+		chunkhdr[1] = zmdl.ChunkLength();
+		fwrite(chunkhdr, 8, 1, file);
+		fwrite(zmdl.ChunkData(), zmdl.ChunkLength(), 1, file);
+
+		memcpy(chunkhdr, "ZDAT", 4);
+		chunkhdr[1] = zdat.ChunkLength();
+		fwrite(chunkhdr, 8, 1, file);
+		fwrite(zdat.ChunkData(), zdat.ChunkLength(), 1, file);
+
+		fclose(file);
+	}
 }

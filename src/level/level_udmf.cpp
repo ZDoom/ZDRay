@@ -366,15 +366,15 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 
 		if (stricmp(key, "texturetop") == 0)
 		{
-			CopyUDMFString(sd->toptexture, 8, value);
+			CopyUDMFString(sd->toptexture, 64, value);
 		}
 		else if (stricmp(key, "texturemiddle") == 0)
 		{
-			CopyUDMFString(sd->midtexture, 8, value);
+			CopyUDMFString(sd->midtexture, 64, value);
 		}
 		else if (stricmp(key, "texturebottom") == 0)
 		{
-			CopyUDMFString(sd->bottomtexture, 8, value);
+			CopyUDMFString(sd->bottomtexture, 64, value);
 		}
 		else if (stricmp(key, "offsetx_mid") == 0)
 		{
@@ -413,11 +413,11 @@ void FProcessor::ParseSector(IntSector *sec)
 
 		if (stricmp(key, "textureceiling") == 0)
 		{
-			CopyUDMFString(sec->data.ceilingpic, 8, value);
+			CopyUDMFString(sec->data.ceilingpic, 64, value);
 		}
 		else if (stricmp(key, "texturefloor") == 0)
 		{
-			CopyUDMFString(sec->data.floorpic, 8, value);
+			CopyUDMFString(sec->data.floorpic, 64, value);
 		}
 		else if (stricmp(key, "heightceiling") == 0)
 		{
@@ -886,6 +886,7 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 	if (LightmapsBuilt)
 	{
 		LMBuilder.AddLightmapLump(out);
+		//LMBuilder.ExportMesh("level.zmdl");
 	}
 
 	out.CreateLabel("ENDMAP");

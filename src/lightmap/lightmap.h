@@ -60,6 +60,8 @@ public:
 
 	bool MakeRoomForBlock(const int width, const int height, int *x, int *y);
 
+	int Width() const { return textureWidth; }
+	int Height() const { return textureHeight; }
 	uint16_t *Pixels() { return mPixels.data(); }
 
 private:
@@ -89,6 +91,7 @@ public:
 
 	void CreateLightmaps(FLevel &doomMap, int sampleDistance, int textureSize);
 	void AddLightmapLump(FWadWriter &wadFile);
+	void ExportMesh(std::string filename);
 
 private:
 	BBox GetBoundsFromSurface(const Surface *surface);

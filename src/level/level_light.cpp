@@ -92,17 +92,17 @@ void FLevel::SetupLights()
 
 void FLevel::CheckSkySectors()
 {
-	char name[9];
+	char name[65];
 
 	for (int i = 0; i < (int)Sectors.Size(); ++i)
 	{
 		//if (mapDef && mapDef->sunIgnoreTag != 0 && Sectors[i].data.tag == mapDef->sunIgnoreTag)
 		//	continue;
 
-		strncpy(name, Sectors[i].data.ceilingpic, 8);
-		name[8] = 0;
+		strncpy(name, Sectors[i].data.ceilingpic, 64);
+		name[64] = 0;
 
-		if (!strncmp(name, "F_SKY001", 8) || !strncmp(name, "F_SKY1", 8) || !strncmp(name, "F_SKY", 8))
+		if (!strncmp(name, "F_SKY001", 64) || !strncmp(name, "F_SKY1", 64) || !strncmp(name, "F_SKY", 64))
 		{
 			Sectors[i].skySector = true;
 		}
