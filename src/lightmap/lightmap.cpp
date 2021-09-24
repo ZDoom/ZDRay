@@ -67,6 +67,7 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 	CreateSurfaceLights();
 	CreateTraceTasks();
 
+	/*
 	SetupLightCellGrid();
 
 	SetupTaskProcessed("Tracing cells", grid.blocks.size());
@@ -75,6 +76,7 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 		PrintTaskProcessed();
 	});
 	printf("Cells traced: %i \n\n", tracedTexels);
+	*/
 
 	SetupTaskProcessed("Tracing surfaces", traceTasks.size());
 	Worker::RunJob(traceTasks.size(), [=](int id) {
@@ -690,6 +692,7 @@ void LightmapBuilder::CreateSurfaceLights()
 	}
 }
 
+/*
 void LightmapBuilder::SetupLightCellGrid()
 {
 	BBox worldBBox = mesh->CollisionMesh->get_bbox();
@@ -790,6 +793,7 @@ void LightmapBuilder::LightBlock(int id)
 		block.layers = 0;
 	}
 }
+*/
 
 void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 {
@@ -806,17 +810,17 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 			numSurfaces++;
 		}
 	}
-	int numCells = 0;
-	for (size_t i = 0; i < grid.blocks.size(); i++)
-		numCells += grid.blocks[i].cells.Size();
+	//int numCells = 0;
+	//for (size_t i = 0; i < grid.blocks.size(); i++)
+	//	numCells += grid.blocks[i].cells.Size();
 	int version = 0;
 	int headerSize = 4 * sizeof(uint32_t) + 6 * sizeof(uint16_t);
-	int cellBlocksSize = grid.blocks.size() * 2 * sizeof(uint16_t);
-	int cellsSize = numCells * sizeof(float) * 3;
+	//int cellBlocksSize = grid.blocks.size() * 2 * sizeof(uint16_t);
+	//int cellsSize = numCells * sizeof(float) * 3;
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
 	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
-	int lumpSize = headerSize + cellBlocksSize + cellsSize + surfacesSize + texCoordsSize + texDataSize;
+	int lumpSize = headerSize + /*cellBlocksSize + cellsSize +*/ surfacesSize + texCoordsSize + texDataSize;
 
 	// Setup buffer
 	std::vector<uint8_t> buffer(lumpSize);
@@ -829,6 +833,7 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	lumpFile.Write16(textures.size());
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
+	/*
 	lumpFile.Write16(grid.x);
 	lumpFile.Write16(grid.y);
 	lumpFile.Write16(grid.width);
@@ -853,6 +858,7 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 			lumpFile.WriteFloat(cells[j].z);
 		}
 	}
+	*/
 
 	// Write surfaces
 	int coordOffsets = 0;

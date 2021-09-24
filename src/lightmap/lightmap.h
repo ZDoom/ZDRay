@@ -102,8 +102,8 @@ private:
 	void TraceSurface(Surface *surface, int offset);
 	void TraceIndirectLight(Surface *surface, int offset);
 	void FinishSurface(Surface *surface);
-	void SetupLightCellGrid();
-	void LightBlock(int blockid);
+	//void SetupLightCellGrid();
+	//void LightBlock(int blockid);
 	void CreateTraceTasks();
 	void LightSurface(const int taskid);
 	void LightIndirect(const int taskid);
@@ -126,7 +126,7 @@ private:
 	std::vector<TraceTask> traceTasks;
 	int tracedTexels = 0;
 
-	LightCellGrid grid;
+	//LightCellGrid grid;
 
 	std::mutex mutex;
 	int processed = 0;
