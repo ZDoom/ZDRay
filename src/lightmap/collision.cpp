@@ -23,6 +23,7 @@
 #include "collision.h"
 #include <algorithm>
 #include <functional>
+#include <cfloat>
 #ifndef NO_SSE
 #include <immintrin.h>
 #endif

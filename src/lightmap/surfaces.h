@@ -30,6 +30,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <cstring>
 
 #include "framework/tarray.h"
 #include "lightmap/collision.h"
