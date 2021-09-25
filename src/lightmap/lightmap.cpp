@@ -223,8 +223,8 @@ Vec3 LightmapBuilder::LightTexelSample(const Vec3 &origin, Surface *surface)
 			float negPitch = -radians(tl->mapThing->pitch);
 			float xyLen = std::cos(negPitch);
 			Vec3 spotDir;
-			spotDir.x = std::sin(radians(tl->mapThing->angle)) * xyLen;
-			spotDir.y = std::cos(radians(tl->mapThing->angle)) * xyLen;
+			spotDir.x = -std::cos(radians(tl->mapThing->angle)) * xyLen;
+			spotDir.y = -std::sin(radians(tl->mapThing->angle)) * xyLen;
 			spotDir.z = -std::sin(negPitch);
 			float cosDir = Vec3::Dot(dir, spotDir);
 			spotAttenuation = smoothstep(tl->outerAngleCos, tl->innerAngleCos, cosDir);
