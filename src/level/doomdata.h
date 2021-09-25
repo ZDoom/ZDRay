@@ -325,6 +325,7 @@ struct FLevel
 
 	TArray<ThingLight> ThingLights;
 	TArray<SurfaceLightDef> SurfaceLights;
+	TArray<int> ThingLightProbes;
 
 	void FindMapBounds ();
 	void RemoveExtraLines ();

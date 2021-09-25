@@ -87,6 +87,15 @@ void FLevel::SetupLights()
 		}
 	}
 
+	for (int i = 0; i < (int)Things.Size(); ++i)
+	{
+		IntThing* thing = &Things[i];
+		if (thing->type == 9875)
+		{
+			ThingLightProbes.Push(i);
+		}
+	}
+
 	CreateLights();
 }
 

@@ -37,22 +37,6 @@
 class FWadWriter;
 class SurfaceLight;
 
-class LightCellBlock
-{
-public:
-	int z;
-	int layers;
-	TArray<Vec3> cells;
-};
-
-class LightCellGrid
-{
-public:
-	int x, y;
-	int width, height;
-	std::vector<LightCellBlock> blocks;
-};
-
 class LightmapTexture
 {
 public:
@@ -102,8 +86,7 @@ private:
 	void TraceSurface(Surface *surface, int offset);
 	void TraceIndirectLight(Surface *surface, int offset);
 	void FinishSurface(Surface *surface);
-	//void SetupLightCellGrid();
-	//void LightBlock(int blockid);
+	void LightProbe(int probeid);
 	void CreateTraceTasks();
 	void LightSurface(const int taskid);
 	void LightIndirect(const int taskid);
@@ -124,9 +107,8 @@ private:
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<TraceTask> traceTasks;
+	std::vector<Vec3> lightProbes;
 	int tracedTexels = 0;
-
-	//LightCellGrid grid;
 
 	std::mutex mutex;
 	int processed = 0;

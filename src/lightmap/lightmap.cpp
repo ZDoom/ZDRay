@@ -67,16 +67,14 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 	CreateSurfaceLights();
 	CreateTraceTasks();
 
-	/*
-	SetupLightCellGrid();
+	lightProbes.resize(map->ThingLightProbes.Size(), Vec3(0.0f, 0.0f, 0.0f));
 
-	SetupTaskProcessed("Tracing cells", grid.blocks.size());
-	Worker::RunJob(grid.blocks.size(), [=](int id) {
-		LightBlock(id);
+	SetupTaskProcessed("Tracing light probes", lightProbes.size());
+	Worker::RunJob(lightProbes.size(), [=](int id) {
+		LightProbe(id);
 		PrintTaskProcessed();
 	});
-	printf("Cells traced: %i \n\n", tracedTexels);
-	*/
+	printf("Probes traced: %i \n\n", tracedTexels);
 
 	SetupTaskProcessed("Tracing surfaces", traceTasks.size());
 	Worker::RunJob(traceTasks.size(), [=](int id) {
@@ -692,108 +690,16 @@ void LightmapBuilder::CreateSurfaceLights()
 	}
 }
 
-/*
-void LightmapBuilder::SetupLightCellGrid()
+void LightmapBuilder::LightProbe(int id)
 {
-	BBox worldBBox = mesh->CollisionMesh->get_bbox();
-	float blockWorldSize = LIGHTCELL_BLOCK_SIZE * LIGHTCELL_SIZE;
-	grid.x = static_cast<int>(std::floor(worldBBox.min.x / blockWorldSize));
-	grid.y = static_cast<int>(std::floor(worldBBox.min.y / blockWorldSize));
-	grid.width = static_cast<int>(std::ceil(worldBBox.max.x / blockWorldSize)) - grid.x;
-	grid.height = static_cast<int>(std::ceil(worldBBox.max.y / blockWorldSize)) - grid.y;
-	grid.blocks.resize(grid.width * grid.height);
+	int thingIndex = map->ThingLightProbes[id];
+	const IntThing& thing = map->Things[thingIndex];
+	float x = (float)(thing.x >> FRACBITS);
+	float y = (float)(thing.y >> FRACBITS);
+	float z = (float)thing.z + thing.height * 0.5f;
+
+	lightProbes[id] = LightTexelSample({ x, y, z }, nullptr);
 }
-
-void LightmapBuilder::LightBlock(int id)
-{
-	float blockWorldSize = LIGHTCELL_BLOCK_SIZE * LIGHTCELL_SIZE;
-
-	// Locate block in world
-	LightCellBlock &block = grid.blocks[id];
-	int x = grid.x + id % grid.width;
-	int y = grid.y + id / grid.height;
-	float worldX = blockWorldSize * x + 0.5f * LIGHTCELL_SIZE;
-	float worldY = blockWorldSize * y + 0.5f * LIGHTCELL_SIZE;
-
-	// Analyze for cells
-	IntSector *sectors[LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE];
-	float ceilings[LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE];
-	float floors[LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE];
-	float maxCeiling = -M_INFINITY;
-	float minFloor = M_INFINITY;
-	for (int yy = 0; yy < LIGHTCELL_BLOCK_SIZE; yy++)
-	{
-		for (int xx = 0; xx < LIGHTCELL_BLOCK_SIZE; xx++)
-		{
-			int idx = xx + yy * LIGHTCELL_BLOCK_SIZE;
-			float cellWorldX = worldX + xx * LIGHTCELL_SIZE;
-			float cellWorldY = worldY + yy * LIGHTCELL_SIZE;
-			MapSubsectorEx *subsector = map->PointInSubSector(cellWorldX, cellWorldY);
-			if (subsector)
-			{
-				IntSector *sector = map->GetSectorFromSubSector(subsector);
-
-				float ceiling = sector->ceilingplane.zAt(cellWorldX, cellWorldY);
-				float floor = sector->floorplane.zAt(cellWorldX, cellWorldY);
-
-				sectors[idx] = sector;
-				ceilings[idx] = ceiling;
-				floors[idx] = floor;
-				maxCeiling = std::max(maxCeiling, ceiling);
-				minFloor = std::min(minFloor, floor);
-			}
-			else
-			{
-				sectors[idx] = nullptr;
-				ceilings[idx] = -M_INFINITY;
-				floors[idx] = M_INFINITY;
-			}
-		}
-	}
-
-	if (minFloor != M_INFINITY)
-	{
-		// Allocate space for the cells
-		block.z = static_cast<int>(std::floor(minFloor / LIGHTCELL_SIZE));
-		block.layers = static_cast<int>(std::ceil(maxCeiling / LIGHTCELL_SIZE)) - block.z;
-		block.cells.Resize(LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE * block.layers);
-
-		// Ray trace the cells
-		for (int yy = 0; yy < LIGHTCELL_BLOCK_SIZE; yy++)
-		{
-			for (int xx = 0; xx < LIGHTCELL_BLOCK_SIZE; xx++)
-			{
-				int idx = xx + yy * LIGHTCELL_BLOCK_SIZE;
-				float cellWorldX = worldX + xx * LIGHTCELL_SIZE;
-				float cellWorldY = worldY + yy * LIGHTCELL_SIZE;
-
-				for (int zz = 0; zz < block.layers; zz++)
-				{
-					float cellWorldZ = (block.z + zz + 0.5f) * LIGHTCELL_SIZE;
-
-					Vec3 color;
-					if (cellWorldZ > floors[idx] && cellWorldZ < ceilings[idx])
-					{
-						color = LightTexelSample({ cellWorldX, cellWorldY, cellWorldZ }, nullptr);
-					}
-					else
-					{
-						color = { 0.0f, 0.0f, 0.0f };
-					}
-
-					block.cells[idx + zz * LIGHTCELL_BLOCK_SIZE * LIGHTCELL_BLOCK_SIZE] = color;
-				}
-			}
-		}
-	}
-	else
-	{
-		// Entire block is outside the map
-		block.z = 0;
-		block.layers = 0;
-	}
-}
-*/
 
 void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 {
@@ -810,17 +716,14 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 			numSurfaces++;
 		}
 	}
-	//int numCells = 0;
-	//for (size_t i = 0; i < grid.blocks.size(); i++)
-	//	numCells += grid.blocks[i].cells.Size();
+
 	int version = 0;
-	int headerSize = 4 * sizeof(uint32_t) + 6 * sizeof(uint16_t);
-	//int cellBlocksSize = grid.blocks.size() * 2 * sizeof(uint16_t);
-	//int cellsSize = numCells * sizeof(float) * 3;
+	int headerSize = 4 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
 	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
-	int lumpSize = headerSize + /*cellBlocksSize + cellsSize +*/ surfacesSize + texCoordsSize + texDataSize;
+	int lightProbesSize = lightProbes.size() * (1 + sizeof(uint32_t) + 3 * sizeof(float));
+	int lumpSize = headerSize + lightProbesSize + surfacesSize + texCoordsSize + texDataSize;
 
 	// Setup buffer
 	std::vector<uint8_t> buffer(lumpSize);
@@ -833,32 +736,16 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	lumpFile.Write16(textures.size());
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
-	/*
-	lumpFile.Write16(grid.x);
-	lumpFile.Write16(grid.y);
-	lumpFile.Write16(grid.width);
-	lumpFile.Write16(grid.height);
-	lumpFile.Write32(numCells);
+	lumpFile.Write32(lightProbes.size());
 
-	// Write cell blocks
-	for (size_t i = 0; i < grid.blocks.size(); i++)
+	// Write light probes
+	for (size_t i = 0; i < lightProbes.size(); i++)
 	{
-		lumpFile.Write16(grid.blocks[i].z);
-		lumpFile.Write16(grid.blocks[i].layers);
+		lumpFile.Write32(map->ThingLightProbes[i]);
+		lumpFile.WriteFloat(lightProbes[i].x);
+		lumpFile.WriteFloat(lightProbes[i].y);
+		lumpFile.WriteFloat(lightProbes[i].z);
 	}
-
-	// Write cells
-	for (size_t i = 0; i < grid.blocks.size(); i++)
-	{
-		const auto &cells = grid.blocks[i].cells;
-		for (unsigned int j = 0; j < cells.Size(); j++)
-		{
-			lumpFile.WriteFloat(cells[j].x);
-			lumpFile.WriteFloat(cells[j].y);
-			lumpFile.WriteFloat(cells[j].z);
-		}
-	}
-	*/
 
 	// Write surfaces
 	int coordOffsets = 0;
