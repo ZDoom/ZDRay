@@ -346,6 +346,8 @@ struct FLevel
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
 	FloatVertex GetSegVertex(int index);
 
+	Vec3 GetLightProbePosition(int index);
+
 private:
 	void CheckSkySectors();
 	void CreateLights();

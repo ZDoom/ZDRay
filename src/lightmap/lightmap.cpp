@@ -692,13 +692,7 @@ void LightmapBuilder::CreateSurfaceLights()
 
 void LightmapBuilder::LightProbe(int id)
 {
-	int thingIndex = map->ThingLightProbes[id];
-	const IntThing& thing = map->Things[thingIndex];
-	float x = (float)(thing.x >> FRACBITS);
-	float y = (float)(thing.y >> FRACBITS);
-	float z = (float)thing.z /* + thing.height * 0.5f*/;
-
-	lightProbes[id] = LightTexelSample({ x, y, z }, nullptr);
+	lightProbes[id] = LightTexelSample(map->GetLightProbePosition(id), nullptr);
 }
 
 void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
@@ -741,15 +735,10 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	// Write light probes
 	for (size_t i = 0; i < lightProbes.size(); i++)
 	{
-		int thingIndex = map->ThingLightProbes[i];
-		const IntThing& thing = map->Things[thingIndex];
-		float x = (float)(thing.x >> FRACBITS);
-		float y = (float)(thing.y >> FRACBITS);
-		float z = (float)thing.z /* + thing.height * 0.5f*/;
-
-		lumpFile.WriteFloat(x);
-		lumpFile.WriteFloat(y);
-		lumpFile.WriteFloat(z);
+		Vec3 pos = map->GetLightProbePosition(i);
+		lumpFile.WriteFloat(pos.x);
+		lumpFile.WriteFloat(pos.y);
+		lumpFile.WriteFloat(pos.z);
 		lumpFile.WriteFloat(lightProbes[i].x);
 		lumpFile.WriteFloat(lightProbes[i].y);
 		lumpFile.WriteFloat(lightProbes[i].z);

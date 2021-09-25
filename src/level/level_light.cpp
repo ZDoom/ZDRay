@@ -402,3 +402,24 @@ void FLevel::CreateLights()
 
 	printf("Surface lights: %i\n", (int)SurfaceLights.Size());
 }
+
+Vec3 FLevel::GetLightProbePosition(int index)
+{
+	int thingIndex = ThingLightProbes[index];
+	const IntThing& thing = Things[thingIndex];
+
+	float x = (float)(thing.x >> FRACBITS);
+	float y = (float)(thing.y >> FRACBITS);
+	float z = 0.0f;
+
+	MapSubsectorEx* ssect = PointInSubSector(x, y);
+	if (ssect)
+	{
+		IntSector* sector = GetSectorFromSubSector(ssect);
+		if (sector)
+		{
+			z = sector->floorplane.zAt(x, y) + thing.height;
+		}
+	}
+	return Vec3(x, y, z);
+}
