@@ -696,7 +696,7 @@ void LightmapBuilder::LightProbe(int id)
 	const IntThing& thing = map->Things[thingIndex];
 	float x = (float)(thing.x >> FRACBITS);
 	float y = (float)(thing.y >> FRACBITS);
-	float z = (float)thing.z + thing.height * 0.5f;
+	float z = (float)thing.z /* + thing.height * 0.5f*/;
 
 	lightProbes[id] = LightTexelSample({ x, y, z }, nullptr);
 }
@@ -745,7 +745,7 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 		const IntThing& thing = map->Things[thingIndex];
 		float x = (float)(thing.x >> FRACBITS);
 		float y = (float)(thing.y >> FRACBITS);
-		float z = (float)thing.z + thing.height * 0.5f;
+		float z = (float)thing.z /* + thing.height * 0.5f*/;
 
 		lumpFile.WriteFloat(x);
 		lumpFile.WriteFloat(y);
