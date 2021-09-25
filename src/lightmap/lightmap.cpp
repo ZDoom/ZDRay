@@ -722,7 +722,7 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
 	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
-	int lightProbesSize = lightProbes.size() * (1 + sizeof(uint32_t) + 3 * sizeof(float));
+	int lightProbesSize = lightProbes.size() * 6 * sizeof(float);
 	int lumpSize = headerSize + lightProbesSize + surfacesSize + texCoordsSize + texDataSize;
 
 	// Setup buffer
@@ -741,7 +741,15 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	// Write light probes
 	for (size_t i = 0; i < lightProbes.size(); i++)
 	{
-		lumpFile.Write32(map->ThingLightProbes[i]);
+		int thingIndex = map->ThingLightProbes[i];
+		const IntThing& thing = map->Things[thingIndex];
+		float x = (float)(thing.x >> FRACBITS);
+		float y = (float)(thing.y >> FRACBITS);
+		float z = (float)thing.z + thing.height * 0.5f;
+
+		lumpFile.WriteFloat(x);
+		lumpFile.WriteFloat(y);
+		lumpFile.WriteFloat(z);
 		lumpFile.WriteFloat(lightProbes[i].x);
 		lumpFile.WriteFloat(lightProbes[i].y);
 		lumpFile.WriteFloat(lightProbes[i].z);
