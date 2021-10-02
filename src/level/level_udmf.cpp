@@ -234,7 +234,7 @@ void FProcessor::ParseThing(IntThing *th)
 
 void FProcessor::ParseLinedef(IntLineDef *ld)
 {
-	const char *tagstring = nullptr;
+	std::vector<int> moreids;
 	SC_MustGetStringName("{");
 	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
 	ld->flags = 0;
@@ -282,8 +282,21 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		{
 			// delay parsing of the tag string until parsing of the sector is complete
 			// This ensures that the ID is always the first tag in the list.
-			tagstring = value;
-			break;
+			auto tagstring = value;
+			if (tagstring != nullptr && *tagstring == '"')
+			{
+				// skip the quotation mark
+				auto workstring = strdup(tagstring + 1);
+				for (char* token = strtok(workstring, " \""); token; token = strtok(nullptr, " \""))
+				{
+					auto tag = strtoll(token, nullptr, 0);
+					if (tag != -1 && (int)tag == tag)
+					{
+						moreids.push_back(tag);
+					}
+				}
+				free(workstring);
+			}
 		}
 		else if (!stricmp(key, "blocking") && !stricmp(value, "true"))
 		{
@@ -319,20 +332,9 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 		UDMFKey k = {key, value};
 		ld->props.Push(k);
 	}
-	if (tagstring != nullptr && *tagstring == '"')
-	{
-		// skip the quotation mark
-		auto workstring = strdup(tagstring + 1);
-		for (char *token = strtok(workstring, " \""); token; token = strtok(nullptr, " \""))
-		{
-			auto tag = strtoll(token, nullptr, 0);
-			if (tag != -1 && (int)tag == tag)
-			{
-				ld->ids.Push(tag);	// don't bother with duplicates, they don't pose a problem.
-			}
-		}
-		free(workstring);
-	}
+
+	for (int tag : moreids)
+		ld->ids.Push(tag);	// don't bother with duplicates, they don't pose a problem.
 }
 
 //===========================================================================
@@ -399,7 +401,7 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 
 void FProcessor::ParseSector(IntSector *sec)
 {
-	const char * tagstring = nullptr;
+	std::vector<int> moreids;
 	memset(&sec->data, 0, sizeof(sec->data));
 	sec->data.lightlevel = 160;
 
@@ -486,8 +488,21 @@ void FProcessor::ParseSector(IntSector *sec)
 		{
 			// delay parsing of the tag string until parsing of the sector is complete
 			// This ensures that the ID is always the first tag in the list.
-			tagstring = value;
-			break;
+			auto tagstring = value;
+			if (tagstring != nullptr && *tagstring == '"')
+			{
+				// skip the quotation mark
+				auto workstring = strdup(tagstring + 1);
+				for (char* token = strtok(workstring, " \""); token; token = strtok(nullptr, " \""))
+				{
+					auto tag = strtoll(token, nullptr, 0);
+					if (tag != 0 && (int)tag == tag)
+					{
+						moreids.push_back(tag);
+					}
+				}
+				free(workstring);
+			}
 		}
 
 		// now store the key in its unprocessed form
@@ -528,20 +543,9 @@ void FProcessor::ParseSector(IntSector *sec)
 		sec->floorplane.d *= scale;
 		sec->floorplane.d = -sec->floorplane.d;
 	}
-	if (tagstring != nullptr && *tagstring == '"')
-	{
-		// skip the quotation mark
-		auto workstring = strdup(tagstring + 1);
-		for (char *token = strtok(workstring, " \""); token; token = strtok(nullptr, " \""))
-		{
-			auto tag = strtoll(token, nullptr, 0);
-			if (tag != 0 && (int)tag == tag)
-			{
-				sec->tags.Push(tag);	// don't bother with duplicates, they don't pose a problem.
-			}
-		}
-		free(workstring);
-	}
+
+	for (int tag : moreids)
+		sec->tags.Push(tag);	// don't bother with duplicates, they don't pose a problem.
 }
 
 //===========================================================================
