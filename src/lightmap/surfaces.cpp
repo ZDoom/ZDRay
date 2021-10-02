@@ -502,6 +502,131 @@ bool LevelMesh::IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
 
 void LevelMesh::Export(std::string filename)
 {
+	// This is so ugly! I had nothing to do with it! ;)
+	std::string mtlfilename = filename;
+	for (int i = 0; i < 3; i++) mtlfilename.pop_back();
+	mtlfilename += "mtl";
+
+	TArray<Vec3> outvertices;
+	TArray<Vec2> outuv;
+	TArray<Vec3> outnormal;
+	TArray<int> outface;
+
+	outvertices.Resize(MeshVertices.Size());
+	outuv.Resize(MeshVertices.Size());
+	outnormal.Resize(MeshVertices.Size());
+
+	for (unsigned int surfidx = 0; surfidx < MeshElements.Size() / 3; surfidx++)
+	{
+		Surface* surface = surfaces[MeshSurfaces[surfidx]].get();
+		for (int i = 0; i < 3; i++)
+		{
+			int elementidx = surfidx * 3 + i;
+			int vertexidx = MeshElements[elementidx];
+			int uvindex = MeshUVIndex[vertexidx];
+
+			outvertices[vertexidx] = MeshVertices[vertexidx];
+			outuv[vertexidx] = Vec2(surface->lightmapCoords[uvindex * 2], surface->lightmapCoords[uvindex * 2 + 1]);
+			outnormal[vertexidx] = surface->plane.Normal();
+			outface.Push(vertexidx);
+
+			//surface->lightmapNum;
+		}
+	}
+
+	std::string buffer;
+	buffer.reserve(16 * 1024 * 1024);
+
+	buffer += "# zdray exported mesh\r\n";
+
+	buffer += "mtllib ";
+	buffer += mtlfilename;
+	buffer += "\r\n";
+
+	buffer += "usemtl Textured\r\n";
+
+	float scale = 0.01f;
+
+	for (unsigned int i = 0; i < outvertices.Size(); i++)
+	{
+		buffer += "v ";
+		buffer += std::to_string(-outvertices[i].x * scale);
+		buffer += " ";
+		buffer += std::to_string(outvertices[i].z * scale);
+		buffer += " ";
+		buffer += std::to_string(outvertices[i].y * scale);
+		buffer += "\r\n";
+	}
+
+	for (unsigned int i = 0; i < outnormal.Size(); i++)
+	{
+		buffer += "vn ";
+		buffer += std::to_string(-outnormal[i].x);
+		buffer += " ";
+		buffer += std::to_string(outnormal[i].z);
+		buffer += " ";
+		buffer += std::to_string(outnormal[i].y);
+		buffer += "\r\n";
+	}
+
+	for (unsigned int i = 0; i < outuv.Size(); i++)
+	{
+		buffer += "vt ";
+		buffer += std::to_string(outuv[i].x);
+		buffer += " ";
+		buffer += std::to_string(1.0f - outuv[i].y);
+		buffer += "\r\n";
+	}
+
+	for (unsigned int i = 0; i < outface.Size(); i += 3)
+	{
+		std::string e0 = std::to_string(outface[i] + 1);
+		std::string e1 = std::to_string(outface[i + 1] + 1);
+		std::string e2 = std::to_string(outface[i + 2] + 1);
+		buffer += "f ";
+		buffer += e0;
+		buffer += "/";
+		buffer += e0;
+		buffer += "/";
+		buffer += e0;
+		buffer += " ";
+		buffer += e1;
+		buffer += "/";
+		buffer += e1;
+		buffer += "/";
+		buffer += e1;
+		buffer += " ";
+		buffer += e2;
+		buffer += "/";
+		buffer += e2;
+		buffer += "/";
+		buffer += e2;
+		buffer += "\r\n";
+	}
+
+	FILE* file = fopen(filename.c_str(), "wb");
+	if (file)
+	{
+		fwrite(buffer.data(), buffer.size(), 1, file);
+		fclose(file);
+	}
+
+	std::string mtl = R"(newmtl Textured
+   Ka 1.000 1.000 1.000
+   Kd 1.000 1.000 1.000
+   Ks 0.000 0.000 0.000
+   map_Ka lightmap0.png
+   map_Kd lightmap0.png
+)";
+
+	file = fopen(mtlfilename.c_str(), "wb");
+	if (file)
+	{
+		fwrite(mtl.data(), mtl.size(), 1, file);
+		fclose(file);
+	}
+
+#if 0
 	// Convert model mesh:
 
 	auto zmodel = std::make_unique<ZModel>();
@@ -678,4 +803,5 @@ void LevelMesh::Export(std::string filename)
 
 		fclose(file);
 	}
+#endif
 }
