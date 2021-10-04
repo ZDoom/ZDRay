@@ -91,7 +91,7 @@ void FLevel::SetupLights()
 		{
 			ThingLightProbes.Push(i);
 		}
-		else if (thing->type == 9876) // SunLight
+		else if (thing->type == 9876) // Sunlight
 		{
 			uint32_t lightcolor = 0xffffff;
 			Vec3 sundir(0.0f, 0.0f, 0.0f);

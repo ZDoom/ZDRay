@@ -8,14 +8,7 @@ Special thanks to Randi Heit, Samuel Villarreal, Christoph Oelckers and anyone e
 ## ZDRay UDMF properties
 
 <pre>
-linedef
-{
-	lightcolor = &lt;int&gt; (color, default: white)
-	lightintensity = &lt;float&gt; (default: 1)
-	lightdistance = &lt;float&gt; (default: 0, no light)
-}
-
-thing
+thing // StaticLight (point or spot light to be baked into the lightmap)
 {
 	lightcolor = &lt;int&gt; (color)
 	lightintensity = &lt;float&gt; (default: 1)
@@ -24,7 +17,28 @@ thing
 	lightouterangle = &lt;float&gt; (default: 180)
 }
 
-sector
+thing // LightProbe (light sampling point for actors)
+{
+	type = 9875;
+}
+
+thing // Sunlight (sunlight properties for the map)
+{
+	type = 9876;
+	suncolor = &lt;int&gt; (color)
+	sundirx = &lt;float&gt; (X direction for the sun)
+	sundiry = &lt;float&gt; (Y direction for the sun)
+	sundirz = &lt;float&gt; (Z direction for the sun)
+}
+
+linedef // Line surface emitting
+{
+	lightcolor = &lt;int&gt; (color, default: white)
+	lightintensity = &lt;float&gt; (default: 1)
+	lightdistance = &lt;float&gt; (default: 0, no light)
+}
+
+sector // Sector planes emitting light
 {
 	lightcolorfloor = &lt;int&gt; (color, default: white)
 	lightintensityfloor = &lt;float&gt; (default: 1)
