@@ -38,9 +38,6 @@
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
 
-static const Vec3 defaultSunColor(1, 1, 1);
-static const Vec3 defaultSunDirection(0.45f, 0.3f, 0.9f);
-
 void FLevel::SetupLights()
 {
 	CheckSkySectors();
@@ -90,9 +87,47 @@ void FLevel::SetupLights()
 	for (int i = 0; i < (int)Things.Size(); ++i)
 	{
 		IntThing* thing = &Things[i];
-		if (thing->type == 9875)
+		if (thing->type == 9875) // LightProbe
 		{
 			ThingLightProbes.Push(i);
+		}
+		else if (thing->type == 9876) // SunLight
+		{
+			uint32_t lightcolor = 0xffffff;
+			Vec3 sundir(0.0f, 0.0f, 0.0f);
+			Vec3 suncolor(1.0f, 1.0f, 1.0f);
+
+			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
+			{
+				const UDMFKey& key = thing->props[propIndex];
+				if (!stricmp(key.key, "suncolor"))
+				{
+					lightcolor = atoi(key.value);
+				}
+				else if (!stricmp(key.key, "sundirx"))
+				{
+					sundir.x = atof(key.value);
+				}
+				else if (!stricmp(key.key, "sundiry"))
+				{
+					sundir.y = atof(key.value);
+				}
+				else if (!stricmp(key.key, "sundirz"))
+				{
+					sundir.z = atof(key.value);
+				}
+			}
+
+			if (Vec3::Dot(sundir, sundir) > 0.01f)
+			{
+				sundir.Normalize();
+				suncolor.x = ((lightcolor >> 16) & 0xff) / 255.0f;
+				suncolor.y = ((lightcolor >> 8) & 0xff) / 255.0f;
+				suncolor.z = (lightcolor & 0xff) / 255.0f;
+
+				defaultSunColor = suncolor;
+				defaultSunDirection = sundir;
+			}
 		}
 	}
 
