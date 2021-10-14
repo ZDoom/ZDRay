@@ -65,7 +65,8 @@ if( MSVC )
 	# String pooling
 	# Function-level linking
 	# Disable run-time type information
-	set( ALL_C_FLAGS "/GF /Gy /GR-" )
+	# Enable C++ conformance mode
+	set( ALL_C_FLAGS "/GF /Gy /GR- /permissive-" )
 	
 	# Avoid CRT DLL dependancies in release builds
 	set( REL_C_FLAGS "/MT" )
@@ -154,6 +155,8 @@ set( SOURCES
 	src/lightmap/surfaces.cpp
 	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
+	src/lightmap/delauneytriangulator.cpp
+	src/lightmap/delauneytriangulator.h
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp
