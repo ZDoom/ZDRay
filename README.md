@@ -24,7 +24,7 @@ thing // LightProbe (light sampling point for actors)
 
 thing // Sunlight (sunlight properties for the map)
 {
-	type = 9876;
+	type = 9890;
 	suncolor = &lt;int&gt; (color)
 	sundirx = &lt;float&gt; (X direction for the sun)
 	sundiry = &lt;float&gt; (Y direction for the sun)
