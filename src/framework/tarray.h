@@ -262,6 +262,7 @@ public:
 	{
 		return Most;
 	}
+	void Reset() { Clear(); }
 	void Clear ()
 	{
 		if (Count > 0)
@@ -269,6 +270,11 @@ public:
 			DoDelete (0, Count-1);
 			Count = 0;
 		}
+	}
+	// returns address of first element
+	T* Data() const
+	{
+		return &Array[0];
 	}
 private:
 	T *Array;

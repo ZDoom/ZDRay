@@ -125,6 +125,7 @@ class Vec2
 {
 public:
 	Vec2();
+	Vec2(const float v);
 	Vec2(const float x, const float y);
 
 	void Set(const float x, const float y);
@@ -191,6 +192,7 @@ class Vec3
 {
 public:
 	Vec3();
+	Vec3(const float v);
 	Vec3(const float x, const float y, const float z);
 
 	void Set(const float x, const float y, const float z);
@@ -582,6 +584,11 @@ inline Vec2::Vec2()
 	Clear();
 }
 
+inline Vec2::Vec2(const float v)
+{
+	Set(v, v);
+}
+
 inline Vec2::Vec2(const float x, const float y)
 {
 	Set(x, y);
@@ -884,6 +891,11 @@ inline bool Vec2::operator==(const Vec2 &vec)
 inline Vec3::Vec3()
 {
 	Clear();
+}
+
+inline Vec3::Vec3(const float v)
+{
+	Set(v, v, v);
 }
 
 inline Vec3::Vec3(const float x, const float y, const float z)

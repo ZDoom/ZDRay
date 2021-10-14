@@ -138,6 +138,10 @@ set( SOURCES
 	src/commandline/getopt1.c
 	src/framework/halffloat.cpp
 	src/framework/binfile.cpp
+	src/framework/zstring.cpp
+	src/framework/zstrformat.cpp
+	src/framework/utf8.cpp
+	src/framework/utf8.h
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/level/level.cpp
 	src/level/level_udmf.cpp
@@ -164,6 +168,18 @@ set( SOURCES
 	src/math/plane.cpp
 	src/math/quaternion.cpp
 	src/math/vector.cpp
+	src/models/model.cpp
+	src/models/model.h
+	src/models/model_md2.h
+	src/models/model_md3.h
+	src/models/model_obj.h
+	src/models/model_ue1.h
+	src/models/modelrenderer.h
+	src/models/models_md2.cpp
+	src/models/models_md3.cpp
+	src/models/models_obj.cpp
+	src/models/models_ue1.cpp
+	src/models/tab_anorms.h
 )
 
 set( HEADERS
@@ -261,3 +277,4 @@ source_group("Sources\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_S
 source_group("Sources\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
 source_group("Sources\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
 source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
+source_group("Sources\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/models/.+")
