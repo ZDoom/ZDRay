@@ -70,11 +70,6 @@ enum class ETextureType : uint8_t
 class FTextureManager
 {
 public:
-	FGameTexture* GetGameTexture()
-	{
-		return nullptr;
-	}
-
 	FGameTexture* GetGameTexture(FTextureID, bool)
 	{
 		return nullptr;
