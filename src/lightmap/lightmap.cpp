@@ -46,6 +46,7 @@
 
 extern int Multisample;
 extern int LightBounce;
+extern float GridSize;
 
 LightmapBuilder::LightmapBuilder()
 {
@@ -644,16 +645,15 @@ void LightmapBuilder::CreateLightProbes()
 	float maxX = std::floor(map->MaxX / 65536.0f) + 1.0f;
 	float maxY = std::floor(map->MaxY / 65536.0f) + 1.0f;
 
-	float gridSize = 32.0f;
-	float halfGridSize = gridSize * 0.5f;
+	float halfGridSize = GridSize * 0.5f;
 
 	std::vector<std::vector<LightProbeSample>> probes; // order probes by subsector
 	probes.resize(map->NumGLSubsectors);
 	size_t totalProbes = 0;
 
-	for (float y = minY; y < maxY; y += gridSize)
+	for (float y = minY; y < maxY; y += GridSize)
 	{
-		for (float x = minX; x < maxX; x += gridSize)
+		for (float x = minX; x < maxX; x += GridSize)
 		{
 			MapSubsectorEx* ssec = map->PointInSubSector((int)x, (int)y);
 			IntSector* sec = ssec ? map->GetSectorFromSubSector(ssec) : nullptr;
@@ -662,7 +662,7 @@ void LightmapBuilder::CreateLightProbes()
 				float z0 = sec->floorplane.zAt(x, y);
 				float z1 = sec->ceilingplane.zAt(x, y);
 				float startZ = (z1 - z0 < halfGridSize) ? (z0 + z1) * 0.5f : z0 + halfGridSize;
-				for (float z = startZ; z < z1; z += gridSize)
+				for (float z = startZ; z < z1; z += GridSize)
 				{
 					LightProbeSample probe;
 					probe.Position.x = x;
