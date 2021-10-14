@@ -646,6 +646,7 @@ void LightmapBuilder::CreateLightProbes()
 	float maxY = std::floor(map->MaxY / 65536.0f) + 1.0f;
 
 	float halfGridSize = GridSize * 0.5f;
+	float doubleGridSize = GridSize * 2.0f;
 
 	std::vector<std::vector<LightProbeSample>> probes; // order probes by subsector
 	probes.resize(map->NumGLSubsectors);
@@ -661,13 +662,27 @@ void LightmapBuilder::CreateLightProbes()
 			{
 				float z0 = sec->floorplane.zAt(x, y);
 				float z1 = sec->ceilingplane.zAt(x, y);
-				float startZ = (z1 - z0 < halfGridSize) ? (z0 + z1) * 0.5f : z0 + halfGridSize;
-				for (float z = startZ; z < z1; z += GridSize)
+				float delta = z1 - z0;
+				if (delta > doubleGridSize)
+				{
+					LightProbeSample p[3];
+					p[0].Position = Vec3(x, y, z0 + halfGridSize);
+					p[1].Position = Vec3(x, y, z0 + (z1 - z0) * 0.5f);
+					p[2].Position = Vec3(x, y, z1 - halfGridSize);
+
+					for (int i = 0; i < 3; i++)
+					{
+						size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
+						probes[index].push_back(p[i]);
+						totalProbes++;
+					}
+				}
+				else if (delta > 0.0f)
 				{
 					LightProbeSample probe;
 					probe.Position.x = x;
 					probe.Position.y = y;
-					probe.Position.z = z;
+					probe.Position.z = z0 + (z1 - z0) * 0.5f;
 
 					size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
 					probes[index].push_back(probe);
