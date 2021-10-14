@@ -179,17 +179,3 @@ T clamp (const T in, const T min, const T max)
 {
 	return in <= min ? min : in >= max ? max : in;
 }
-
-//==========================================================================
-//
-// swap
-//
-// Swaps the values of a and b.
-//==========================================================================
-
-template<class T>
-inline
-void swap (T &a, T &b)
-{
-	T temp = a; a = b; b = temp;
-}

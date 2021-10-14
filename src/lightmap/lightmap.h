@@ -67,6 +67,13 @@ public:
 	static const int tasksize = 64;
 };
 
+class LightProbeSample
+{
+public:
+	Vec3 Position = Vec3(0.0f, 0.0f, 0.0f);
+	Vec3 Color = Vec3(0.0f, 0.0f, 0.0f);
+};
+
 class LightmapBuilder
 {
 public:
@@ -92,6 +99,7 @@ private:
 	void LightIndirect(const int taskid);
 
 	void CreateSurfaceLights();
+	void CreateLightProbes();
 
 	void SetupTaskProcessed(const char *name, int total);
 	void PrintTaskProcessed();
@@ -107,7 +115,8 @@ private:
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<TraceTask> traceTasks;
-	std::vector<Vec3> lightProbes;
+	std::vector<LightProbeSample> lightProbes;
+	std::vector<int> lightProbeSubsectorCounts;
 	int tracedTexels = 0;
 
 	std::mutex mutex;

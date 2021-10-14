@@ -66,15 +66,14 @@ void LightmapBuilder::CreateLightmaps(FLevel &doomMap, int sampleDistance, int t
 
 	CreateSurfaceLights();
 	CreateTraceTasks();
-
-	lightProbes.resize(map->ThingLightProbes.Size(), Vec3(0.0f, 0.0f, 0.0f));
+	CreateLightProbes();
 
 	SetupTaskProcessed("Tracing light probes", lightProbes.size());
 	Worker::RunJob(lightProbes.size(), [=](int id) {
 		LightProbe(id);
 		PrintTaskProcessed();
 	});
-	printf("Probes traced: %i \n\n", tracedTexels);
+	printf("Probes traced: %i \n\n", (int)lightProbes.size());
 
 	SetupTaskProcessed("Tracing surfaces", traceTasks.size());
 	Worker::RunJob(traceTasks.size(), [=](int id) {
@@ -638,6 +637,69 @@ void LightmapBuilder::CreateTraceTasks()
 	}
 }
 
+void LightmapBuilder::CreateLightProbes()
+{
+	float minX = std::floor(map->MinX / 65536.0f);
+	float minY = std::floor(map->MinY / 65536.0f);
+	float maxX = std::floor(map->MaxX / 65536.0f) + 1.0f;
+	float maxY = std::floor(map->MaxY / 65536.0f) + 1.0f;
+
+	float gridSize = 32.0f;
+	float halfGridSize = gridSize * 0.5f;
+
+	std::vector<std::vector<LightProbeSample>> probes; // order probes by subsector
+	probes.resize(map->NumGLSubsectors);
+	size_t totalProbes = 0;
+
+	for (float y = minY; y < maxY; y += gridSize)
+	{
+		for (float x = minX; x < maxX; x += gridSize)
+		{
+			MapSubsectorEx* ssec = map->PointInSubSector((int)x, (int)y);
+			IntSector* sec = ssec ? map->GetSectorFromSubSector(ssec) : nullptr;
+			if (sec)
+			{
+				float z0 = sec->floorplane.zAt(x, y);
+				float z1 = sec->ceilingplane.zAt(x, y);
+				float startZ = (z1 - z0 < halfGridSize) ? (z0 + z1) * 0.5f : z0 + halfGridSize;
+				for (float z = startZ; z < z1; z += gridSize)
+				{
+					LightProbeSample probe;
+					probe.Position.x = x;
+					probe.Position.y = y;
+					probe.Position.z = z;
+
+					size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
+					probes[index].push_back(probe);
+					totalProbes++;
+				}
+			}
+		}
+	}
+
+	for (unsigned int i = 0; i < map->ThingLightProbes.Size(); i++)
+	{
+		Vec3 pos = map->GetLightProbePosition(i);
+		MapSubsectorEx* ssec = map->PointInSubSector((int)pos.x, (int)pos.y);
+		if (ssec)
+		{
+			LightProbeSample probe;
+			probe.Position = pos;
+
+			size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
+			probes[index].push_back(probe);
+			totalProbes++;
+		}
+	}
+
+	lightProbes.reserve(totalProbes);
+	for (const std::vector<LightProbeSample>& ssprobes : probes)
+	{
+		lightProbes.insert(lightProbes.end(), ssprobes.begin(), ssprobes.cend());
+		lightProbeSubsectorCounts.push_back((int)ssprobes.size());
+	}
+}
+
 void LightmapBuilder::LightSurface(const int taskid)
 {
 	const TraceTask &task = traceTasks[taskid];
@@ -692,7 +754,7 @@ void LightmapBuilder::CreateSurfaceLights()
 
 void LightmapBuilder::LightProbe(int id)
 {
-	lightProbes[id] = LightTexelSample(map->GetLightProbePosition(id), nullptr);
+	lightProbes[id].Color = LightTexelSample(lightProbes[id].Position, nullptr);
 }
 
 void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
@@ -712,7 +774,7 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	}
 
 	int version = 0;
-	int headerSize = 4 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
+	int headerSize = 5 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
 	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
@@ -731,17 +793,22 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
 	lumpFile.Write32(lightProbes.size());
+	lumpFile.Write32(lightProbeSubsectorCounts.size());
 
 	// Write light probes
-	for (size_t i = 0; i < lightProbes.size(); i++)
+	for (const LightProbeSample& probe : lightProbes)
 	{
-		Vec3 pos = map->GetLightProbePosition(i);
-		lumpFile.WriteFloat(pos.x);
-		lumpFile.WriteFloat(pos.y);
-		lumpFile.WriteFloat(pos.z);
-		lumpFile.WriteFloat(lightProbes[i].x);
-		lumpFile.WriteFloat(lightProbes[i].y);
-		lumpFile.WriteFloat(lightProbes[i].z);
+		lumpFile.WriteFloat(probe.Position.x);
+		lumpFile.WriteFloat(probe.Position.y);
+		lumpFile.WriteFloat(probe.Position.z);
+		lumpFile.WriteFloat(probe.Color.x);
+		lumpFile.WriteFloat(probe.Color.y);
+		lumpFile.WriteFloat(probe.Color.z);
+	}
+
+	for (int count : lightProbeSubsectorCounts)
+	{
+		lumpFile.Write32(count);
 	}
 
 	// Write surfaces

@@ -234,7 +234,7 @@ void FBlockmapBuilder::BuildBlockmap ()
 		{
 			if (bx > bx2)
 			{
-				swap (block, endblock);
+				std::swap (block, endblock);
 			}
 			do
 			{
@@ -246,7 +246,7 @@ void FBlockmapBuilder::BuildBlockmap ()
 		{
 			if (by > by2)
 			{
-				swap (block, endblock);
+				std::swap (block, endblock);
 			}
 			do
 			{
