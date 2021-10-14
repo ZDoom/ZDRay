@@ -118,6 +118,7 @@ int				 LMDims = 1024;
 int				 Samples = 8;
 int				 Multisample = 1;
 int				 LightBounce = 0;
+float			 GridSize = 32.0f;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -157,6 +158,7 @@ static option long_opts[] =
 	{"size",			required_argument,	0,	'S'},
 	{"multisample",		required_argument,	0,	'M'},
 	{"bounce",			required_argument,	0,	'B'},
+	{"gridsize",		required_argument,	0,	'i'},
 	{0,0,0,0}
 };
 
@@ -457,6 +459,10 @@ static void ParseArgs(int argc, char **argv)
 			if (LightBounce < 0) LightBounce = 0;
 			if (LightBounce > 1) LightBounce = 1;
 			break;
+		case 'i':
+			GridSize = std::stof(optarg);
+			if (GridSize < 0.f) GridSize = 0.f;
+			break;
 		case 1000:
 			ShowUsage();
 			exit(0);
@@ -505,6 +511,9 @@ static void ShowUsage()
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"
 		"  -B, --bounce=NNN         Number of indirect light bounces (default %d, max 1)\n"
+		"  -i, --gridsize=NNN       Automatic light probe grid size, floating point\n"
+		"                           Lower values increase granularity at the expense of performance\n"
+		"                           Recommended: 32.0, 64.0, 128.0, etc (default %.1f)\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
 		"  -t, --no-timing          Suppress timing information\n"
@@ -520,6 +529,7 @@ static void ShowUsage()
 		, (int)std::thread::hardware_concurrency()
 		, Multisample
 		, LightBounce
+		, GridSize
 	);
 }
 
