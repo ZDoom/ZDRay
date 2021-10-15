@@ -648,10 +648,6 @@ void LightmapBuilder::CreateLightProbes()
 	float halfGridSize = GridSize * 0.5f;
 	float doubleGridSize = GridSize * 2.0f;
 
-	std::vector<std::vector<LightProbeSample>> probes; // order probes by subsector
-	probes.resize(map->NumGLSubsectors);
-	size_t totalProbes = 0;
-
 	for (float y = minY; y < maxY; y += GridSize)
 	{
 		for (float x = minX; x < maxX; x += GridSize)
@@ -672,9 +668,7 @@ void LightmapBuilder::CreateLightProbes()
 
 					for (int i = 0; i < 3; i++)
 					{
-						size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
-						probes[index].push_back(p[i]);
-						totalProbes++;
+						lightProbes.push_back(p[i]);
 					}
 				}
 				else if (delta > 0.0f)
@@ -683,10 +677,7 @@ void LightmapBuilder::CreateLightProbes()
 					probe.Position.x = x;
 					probe.Position.y = y;
 					probe.Position.z = z0 + (z1 - z0) * 0.5f;
-
-					size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
-					probes[index].push_back(probe);
-					totalProbes++;
+					lightProbes.push_back(probe);
 				}
 			}
 		}
@@ -694,24 +685,9 @@ void LightmapBuilder::CreateLightProbes()
 
 	for (unsigned int i = 0; i < map->ThingLightProbes.Size(); i++)
 	{
-		Vec3 pos = map->GetLightProbePosition(i);
-		MapSubsectorEx* ssec = map->PointInSubSector((int)pos.x, (int)pos.y);
-		if (ssec)
-		{
-			LightProbeSample probe;
-			probe.Position = pos;
-
-			size_t index = (ptrdiff_t)(ssec - map->GLSubsectors);
-			probes[index].push_back(probe);
-			totalProbes++;
-		}
-	}
-
-	lightProbes.reserve(totalProbes);
-	for (const std::vector<LightProbeSample>& ssprobes : probes)
-	{
-		lightProbes.insert(lightProbes.end(), ssprobes.begin(), ssprobes.cend());
-		lightProbeSubsectorCounts.push_back((int)ssprobes.size());
+		LightProbeSample probe;
+		probe.Position = map->GetLightProbePosition(i);
+		lightProbes.push_back(probe);
 	}
 }
 
@@ -808,7 +784,7 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
 	lumpFile.Write32(lightProbes.size());
-	lumpFile.Write32(lightProbeSubsectorCounts.size());
+	lumpFile.Write32(map->NumGLSubsectors);
 
 	// Write light probes
 	for (const LightProbeSample& probe : lightProbes)
@@ -819,11 +795,6 @@ void LightmapBuilder::AddLightmapLump(FWadWriter &wadFile)
 		lumpFile.WriteFloat(probe.Color.x);
 		lumpFile.WriteFloat(probe.Color.y);
 		lumpFile.WriteFloat(probe.Color.z);
-	}
-
-	for (int count : lightProbeSubsectorCounts)
-	{
-		lumpFile.Write32(count);
 	}
 
 	// Write surfaces

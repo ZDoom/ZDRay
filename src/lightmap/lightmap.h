@@ -116,7 +116,6 @@ private:
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<TraceTask> traceTasks;
 	std::vector<LightProbeSample> lightProbes;
-	std::vector<int> lightProbeSubsectorCounts;
 	int tracedTexels = 0;
 
 	std::mutex mutex;
