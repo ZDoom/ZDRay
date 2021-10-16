@@ -463,6 +463,37 @@ void LightmapBuilder::FinishSurface(Surface *surface)
 		surface->lightmapOffs[0] = x;
 		surface->lightmapOffs[1] = y;
 
+#if 1
+		// store results to lightmap texture
+		float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
+		for (int y = 0; y < sampleHeight; y++)
+		{
+			Vec3* src = &colorSamples[y * sampleWidth];
+			for (int x = 0; x < sampleWidth; x++)
+			{
+				// gaussian blur with a 3x3 kernel
+				Vec3 color = { 0.0f };
+				for (int yy = -1; yy <= 1; yy++)
+				{
+					int yyy = clamp(y + yy, 0, sampleHeight - 1) - y;
+					for (int xx = -1; xx <= 1; xx++)
+					{
+						int xxx = clamp(x + xx, 0, sampleWidth - 1);
+						color += src[yyy * sampleWidth + xxx] * weights[4 + xx + yy * 3];
+					}
+				}
+				color *= 0.5f;
+
+				// get texture offset
+				int offs = (((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+
+				// convert RGB to bytes
+				currentTexture[offs + x * 3 + 0] = floatToHalf(colorSamples[y * sampleWidth + x].x);
+				currentTexture[offs + x * 3 + 1] = floatToHalf(colorSamples[y * sampleWidth + x].y);
+				currentTexture[offs + x * 3 + 2] = floatToHalf(colorSamples[y * sampleWidth + x].z);
+			}
+		}
+#else
 		// store results to lightmap texture
 		for (int i = 0; i < sampleHeight; i++)
 		{
@@ -477,6 +508,7 @@ void LightmapBuilder::FinishSurface(Surface *surface)
 				currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * sampleWidth + j].z);
 			}
 		}
+#endif
 	}
 }
 
