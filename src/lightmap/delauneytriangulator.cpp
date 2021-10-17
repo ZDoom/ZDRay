@@ -54,6 +54,7 @@ std::vector<DelauneyTriangulator::Vertex*> DelauneyTriangulator::remove_duplicat
 
 		prev = v;
 	}
+	return filtered_vertices;
 }
 
 void DelauneyTriangulator::calculate_supertriangle(std::vector<Vertex*>& vertices, Triangle& super_triangle)
