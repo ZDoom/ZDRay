@@ -7,7 +7,7 @@
 #include "framework/tarray.h"
 #include "nodebuilder/nodebuild.h"
 #include "blockmapbuilder/blockmapbuilder.h"
-#include "lightmap/lightmap.h"
+#include "lightmap/surfaces.h"
 #include <zlib.h>
 
 #define DEFINE_SPECIAL(name, num, min, max, map) name = num,
@@ -147,6 +147,5 @@ private:
 	int Lump;
 
 	bool NodesBuilt = false;
-	bool LightmapsBuilt = false;
-	LightmapBuilder LMBuilder;
+	std::unique_ptr<LevelMesh> LightmapMesh;
 };

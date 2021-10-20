@@ -26,17 +26,28 @@
 //
 
 #include "math/mathlib.h"
+#include "framework/templates.h"
+#include "framework/halffloat.h"
+#include "framework/binfile.h"
 #include "level/level.h"
 #include "surfaces.h"
+#include "pngwriter.h"
 #include <map>
+
+extern float GridSize;
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 #endif
 
-LevelMesh::LevelMesh(FLevel &doomMap)
+LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 {
+	map = &doomMap;
+	samples = sampleDistance;
+	textureWidth = textureSize;
+	textureHeight = textureSize;
+
 	printf("------------- Building side surfaces -------------\n");
 
 	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
@@ -98,6 +109,335 @@ LevelMesh::LevelMesh(FLevel &doomMap)
 	}
 
 	CollisionMesh = std::make_unique<TriangleMeshShape>(&MeshVertices[0], MeshVertices.Size(), &MeshElements[0], MeshElements.Size());
+
+	CreateLightProbes(doomMap);
+
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		BuildSurfaceParams(surfaces[i].get());
+	}
+}
+
+// Determines a lightmap block in which to map to the lightmap texture.
+// Width and height of the block is calcuated and steps are computed to determine where each texel will be positioned on the surface
+void LevelMesh::BuildSurfaceParams(Surface* surface)
+{
+	Plane* plane;
+	BBox bounds;
+	Vec3 roundedSize;
+	int i;
+	Plane::PlaneAxis axis;
+	Vec3 tCoords[2];
+	Vec3 tOrigin;
+	int width;
+	int height;
+	float d;
+
+	plane = &surface->plane;
+	bounds = GetBoundsFromSurface(surface);
+
+	// round off dimentions
+	for (i = 0; i < 3; i++)
+	{
+		bounds.min[i] = samples * Math::Floor(bounds.min[i] / samples);
+		bounds.max[i] = samples * Math::Ceil(bounds.max[i] / samples);
+
+		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples + 1;
+	}
+
+	tCoords[0].Clear();
+	tCoords[1].Clear();
+
+	axis = plane->BestAxis();
+
+	switch (axis)
+	{
+	case Plane::AXIS_YZ:
+		width = (int)roundedSize.y;
+		height = (int)roundedSize.z;
+		tCoords[0].y = 1.0f / samples;
+		tCoords[1].z = 1.0f / samples;
+		break;
+
+	case Plane::AXIS_XZ:
+		width = (int)roundedSize.x;
+		height = (int)roundedSize.z;
+		tCoords[0].x = 1.0f / samples;
+		tCoords[1].z = 1.0f / samples;
+		break;
+
+	case Plane::AXIS_XY:
+		width = (int)roundedSize.x;
+		height = (int)roundedSize.y;
+		tCoords[0].x = 1.0f / samples;
+		tCoords[1].y = 1.0f / samples;
+		break;
+	}
+
+	// clamp width
+	if (width > textureWidth)
+	{
+		tCoords[0] *= ((float)textureWidth / (float)width);
+		width = textureWidth;
+	}
+
+	// clamp height
+	if (height > textureHeight)
+	{
+		tCoords[1] *= ((float)textureHeight / (float)height);
+		height = textureHeight;
+	}
+
+	surface->lightmapCoords.resize(surface->numVerts * 2);
+
+	surface->textureCoords[0] = tCoords[0];
+	surface->textureCoords[1] = tCoords[1];
+
+	tOrigin = bounds.min;
+
+	// project tOrigin and tCoords so they lie on the plane
+	d = (plane->Distance(bounds.min) - plane->d) / plane->Normal()[axis];
+	tOrigin[axis] -= d;
+
+	for (i = 0; i < 2; i++)
+	{
+		tCoords[i].Normalize();
+		d = plane->Distance(tCoords[i]) / plane->Normal()[axis];
+		tCoords[i][axis] -= d;
+	}
+
+	surface->bounds = bounds;
+	surface->lightmapDims[0] = width;
+	surface->lightmapDims[1] = height;
+	surface->lightmapOrigin = tOrigin;
+	surface->lightmapSteps[0] = tCoords[0] * (float)samples;
+	surface->lightmapSteps[1] = tCoords[1] * (float)samples;
+
+	int sampleWidth = surface->lightmapDims[0];
+	int sampleHeight = surface->lightmapDims[1];
+	surface->samples.resize(sampleWidth * sampleHeight);
+	surface->indirect.resize(sampleWidth * sampleHeight);
+}
+
+BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
+{
+	Vec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
+	Vec3 hi(-M_INFINITY, -M_INFINITY, -M_INFINITY);
+
+	BBox bounds;
+	bounds.Clear();
+
+	for (int i = 0; i < surface->numVerts; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (surface->verts[i][j] < low[j])
+			{
+				low[j] = surface->verts[i][j];
+			}
+			if (surface->verts[i][j] > hi[j])
+			{
+				hi[j] = surface->verts[i][j];
+			}
+		}
+	}
+
+	bounds.min = low;
+	bounds.max = hi;
+
+	return bounds;
+}
+
+void LevelMesh::CreateTextures()
+{
+	for (auto& surf : surfaces)
+	{
+		FinishSurface(surf.get());
+	}
+}
+
+void LevelMesh::FinishSurface(Surface* surface)
+{
+	int sampleWidth = surface->lightmapDims[0];
+	int sampleHeight = surface->lightmapDims[1];
+	Vec3* colorSamples = surface->samples.data();
+
+	if (!surface->indirect.empty())
+	{
+		Vec3* indirect = surface->indirect.data();
+		for (int i = 0; i < sampleHeight; i++)
+		{
+			for (int j = 0; j < sampleWidth; j++)
+			{
+				colorSamples[i * sampleWidth + j] += indirect[i * sampleWidth + j] * 0.5f;
+			}
+		}
+	}
+
+	// SVE redraws the scene for lightmaps, so for optimizations,
+	// tell the engine to ignore this surface if completely black
+	bool bShouldLookupTexture = false;
+	for (int i = 0; i < sampleHeight; i++)
+	{
+		for (int j = 0; j < sampleWidth; j++)
+		{
+			const auto& c = colorSamples[i * sampleWidth + j];
+			if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
+			{
+				bShouldLookupTexture = true;
+				break;
+			}
+		}
+	}
+
+	if (bShouldLookupTexture == false)
+	{
+		surface->lightmapNum = -1;
+	}
+	else
+	{
+		int x = 0, y = 0;
+		uint16_t* currentTexture = AllocTextureRoom(surface, &x, &y);
+
+		// calculate texture coordinates
+		for (int i = 0; i < surface->numVerts; i++)
+		{
+			Vec3 tDelta = surface->verts[i] - surface->bounds.min;
+			surface->lightmapCoords[i * 2 + 0] = (tDelta.Dot(surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
+			surface->lightmapCoords[i * 2 + 1] = (tDelta.Dot(surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
+		}
+
+		surface->lightmapOffs[0] = x;
+		surface->lightmapOffs[1] = y;
+
+#if 1
+		// store results to lightmap texture
+		float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
+		for (int y = 0; y < sampleHeight; y++)
+		{
+			Vec3* src = &colorSamples[y * sampleWidth];
+			for (int x = 0; x < sampleWidth; x++)
+			{
+				// gaussian blur with a 3x3 kernel
+				Vec3 color = { 0.0f };
+				for (int yy = -1; yy <= 1; yy++)
+				{
+					int yyy = clamp(y + yy, 0, sampleHeight - 1) - y;
+					for (int xx = -1; xx <= 1; xx++)
+					{
+						int xxx = clamp(x + xx, 0, sampleWidth - 1);
+						color += src[yyy * sampleWidth + xxx] * weights[4 + xx + yy * 3];
+					}
+				}
+				color *= 0.5f;
+
+				// get texture offset
+				int offs = (((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+
+				// convert RGB to bytes
+				currentTexture[offs + x * 3 + 0] = floatToHalf(colorSamples[y * sampleWidth + x].x);
+				currentTexture[offs + x * 3 + 1] = floatToHalf(colorSamples[y * sampleWidth + x].y);
+				currentTexture[offs + x * 3 + 2] = floatToHalf(colorSamples[y * sampleWidth + x].z);
+			}
+		}
+#else
+		// store results to lightmap texture
+		for (int i = 0; i < sampleHeight; i++)
+		{
+			for (int j = 0; j < sampleWidth; j++)
+			{
+				// get texture offset
+				int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+
+				// convert RGB to bytes
+				currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * sampleWidth + j].x);
+				currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * sampleWidth + j].y);
+				currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * sampleWidth + j].z);
+			}
+		}
+#endif
+	}
+}
+
+uint16_t* LevelMesh::AllocTextureRoom(Surface* surface, int* x, int* y)
+{
+	int width = surface->lightmapDims[0];
+	int height = surface->lightmapDims[1];
+	int numTextures = textures.size();
+
+	int k;
+	for (k = 0; k < numTextures; ++k)
+	{
+		if (textures[k]->MakeRoomForBlock(width, height, x, y))
+		{
+			break;
+		}
+	}
+
+	if (k == numTextures)
+	{
+		textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
+		if (!textures[k]->MakeRoomForBlock(width, height, x, y))
+		{
+			throw std::runtime_error("Lightmap allocation failed");
+		}
+	}
+
+	surface->lightmapNum = k;
+	return textures[surface->lightmapNum]->Pixels();
+}
+
+void LevelMesh::CreateLightProbes(FLevel& map)
+{
+	float minX = std::floor(map.MinX / 65536.0f);
+	float minY = std::floor(map.MinY / 65536.0f);
+	float maxX = std::floor(map.MaxX / 65536.0f) + 1.0f;
+	float maxY = std::floor(map.MaxY / 65536.0f) + 1.0f;
+
+	float halfGridSize = GridSize * 0.5f;
+	float doubleGridSize = GridSize * 2.0f;
+
+	for (float y = minY; y < maxY; y += GridSize)
+	{
+		for (float x = minX; x < maxX; x += GridSize)
+		{
+			MapSubsectorEx* ssec = map.PointInSubSector((int)x, (int)y);
+			IntSector* sec = ssec ? map.GetSectorFromSubSector(ssec) : nullptr;
+			if (sec)
+			{
+				float z0 = sec->floorplane.zAt(x, y);
+				float z1 = sec->ceilingplane.zAt(x, y);
+				float delta = z1 - z0;
+				if (delta > doubleGridSize)
+				{
+					LightProbeSample p[3];
+					p[0].Position = Vec3(x, y, z0 + halfGridSize);
+					p[1].Position = Vec3(x, y, z0 + (z1 - z0) * 0.5f);
+					p[2].Position = Vec3(x, y, z1 - halfGridSize);
+
+					for (int i = 0; i < 3; i++)
+					{
+						lightProbes.push_back(p[i]);
+					}
+				}
+				else if (delta > 0.0f)
+				{
+					LightProbeSample probe;
+					probe.Position.x = x;
+					probe.Position.y = y;
+					probe.Position.z = z0 + (z1 - z0) * 0.5f;
+					lightProbes.push_back(probe);
+				}
+			}
+		}
+	}
+
+	for (unsigned int i = 0; i < map.ThingLightProbes.Size(); i++)
+	{
+		LightProbeSample probe;
+		probe.Position = map.GetLightProbePosition(i);
+		lightProbes.push_back(probe);
+	}
 }
 
 void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
@@ -500,6 +840,126 @@ bool LevelMesh::IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
 	return crosslengthsqr <= 1.e-6f;
 }
 
+void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
+{
+	// Calculate size of lump
+	int numTexCoords = 0;
+	int numSurfaces = 0;
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		if (surfaces[i]->lightmapNum != -1)
+		{
+			numTexCoords += surfaces[i]->numVerts;
+			numSurfaces++;
+		}
+	}
+
+	int version = 0;
+	int headerSize = 5 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
+	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
+	int texCoordsSize = numTexCoords * 2 * sizeof(float);
+	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
+	int lightProbesSize = lightProbes.size() * 6 * sizeof(float);
+	int lumpSize = headerSize + lightProbesSize + surfacesSize + texCoordsSize + texDataSize;
+
+	// Setup buffer
+	std::vector<uint8_t> buffer(lumpSize);
+	BinFile lumpFile;
+	lumpFile.SetBuffer(buffer.data());
+
+	// Write header
+	lumpFile.Write32(version);
+	lumpFile.Write16(textureWidth);
+	lumpFile.Write16(textures.size());
+	lumpFile.Write32(numSurfaces);
+	lumpFile.Write32(numTexCoords);
+	lumpFile.Write32(lightProbes.size());
+	lumpFile.Write32(map->NumGLSubsectors);
+
+	// Write light probes
+	for (const LightProbeSample& probe : lightProbes)
+	{
+		lumpFile.WriteFloat(probe.Position.x);
+		lumpFile.WriteFloat(probe.Position.y);
+		lumpFile.WriteFloat(probe.Position.z);
+		lumpFile.WriteFloat(probe.Color.x);
+		lumpFile.WriteFloat(probe.Color.y);
+		lumpFile.WriteFloat(probe.Color.z);
+	}
+
+	// Write surfaces
+	int coordOffsets = 0;
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		if (surfaces[i]->lightmapNum == -1)
+			continue;
+
+		lumpFile.Write32(surfaces[i]->type);
+		lumpFile.Write32(surfaces[i]->typeIndex);
+		lumpFile.Write32(surfaces[i]->controlSector ? (uint32_t)(surfaces[i]->controlSector - &map->Sectors[0]) : 0xffffffff);
+		lumpFile.Write32(surfaces[i]->lightmapNum);
+		lumpFile.Write32(coordOffsets);
+		coordOffsets += surfaces[i]->numVerts;
+	}
+
+	// Write texture coordinates
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		if (surfaces[i]->lightmapNum == -1)
+			continue;
+
+		int count = surfaces[i]->numVerts;
+		if (surfaces[i]->type == ST_FLOOR)
+		{
+			for (int j = count - 1; j >= 0; j--)
+			{
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2]);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2 + 1]);
+			}
+		}
+		else if (surfaces[i]->type == ST_CEILING)
+		{
+			for (int j = 0; j < count; j++)
+			{
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2]);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2 + 1]);
+			}
+		}
+		else
+		{
+			// zdray uses triangle strip internally, lump/gzd uses triangle fan
+
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1]);
+
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[4]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[5]);
+
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[6]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[7]);
+
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3]);
+		}
+	}
+
+	// Write lightmap textures
+	for (size_t i = 0; i < textures.size(); i++)
+	{
+		unsigned int count = (textureWidth * textureHeight) * 3;
+		uint16_t* pixels = textures[i]->Pixels();
+		for (unsigned int j = 0; j < count; j++)
+		{
+			lumpFile.Write16(pixels[j]);
+		}
+	}
+
+	// Compress and store in lump
+	ZLibOut zout(wadFile);
+	wadFile.StartWritingLump("LIGHTMAP");
+	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
+}
+
 void LevelMesh::Export(std::string filename)
 {
 	// This is so ugly! I had nothing to do with it! ;)
@@ -626,182 +1086,34 @@ void LevelMesh::Export(std::string filename)
 		fclose(file);
 	}
 
-#if 0
-	// Convert model mesh:
-
-	auto zmodel = std::make_unique<ZModel>();
-
-	zmodel->Vertices.resize(MeshVertices.Size());
-	for (unsigned int i = 0; i < MeshVertices.Size(); i++)
+	int index = 0;
+	for (const auto& texture : textures)
 	{
-		ZModelVertex &vertex = zmodel->Vertices[i];
-		vertex.Pos.X = MeshVertices[i].x;
-		vertex.Pos.Y = MeshVertices[i].z;
-		vertex.Pos.Z = MeshVertices[i].y;
-		vertex.BoneWeights.X = 0.0f;
-		vertex.BoneWeights.Y = 0.0f;
-		vertex.BoneWeights.Z = 0.0f;
-		vertex.BoneWeights.W = 0.0f;
-		vertex.BoneIndices.X = 0;
-		vertex.BoneIndices.Y = 0;
-		vertex.BoneIndices.Z = 0;
-		vertex.BoneIndices.W = 0;
-		vertex.Normal.X = 0.0f;
-		vertex.Normal.Y = 0.0f;
-		vertex.Normal.Z = 0.0f;
-		vertex.TexCoords.X = 0.0f;
-		vertex.TexCoords.Y = 0.0f;
-	}
-
-	std::map<std::string, std::vector<uint32_t>> materialRanges;
-
-	for (unsigned int surfidx = 0; surfidx < MeshElements.Size() / 3; surfidx++)
-	{
-		Surface *surface = surfaces[MeshSurfaces[surfidx]].get();
-		for (int i = 0; i < 3; i++)
+		int w = texture->Width();
+		int h = texture->Height();
+		uint16_t* p = texture->Pixels();
+#if 1
+		std::vector<uint8_t> buf(w * h * 4);
+		uint8_t* buffer = buf.data();
+		for (int i = 0; i < w * h; i++)
 		{
-			int elementidx = surfidx * 3 + i;
-			int vertexidx = MeshElements[elementidx];
-			int uvindex = MeshUVIndex[vertexidx];
-
-			ZModelVertex &vertex = zmodel->Vertices[vertexidx];
-			vertex.Normal.X = surface->plane.Normal().x;
-			vertex.Normal.Y = surface->plane.Normal().z;
-			vertex.Normal.Z = surface->plane.Normal().y;
-			vertex.TexCoords.X = surface->uvs[uvindex].x;
-			vertex.TexCoords.Y = surface->uvs[uvindex].y;
-			vertex.TexCoords2.X = surface->lightmapCoords[uvindex * 2];
-			vertex.TexCoords2.Y = surface->lightmapCoords[uvindex * 2 + 1];
-			vertex.TexCoords2.Z = surface->lightmapNum;
-
-			std::string matname = surface->material;
-
-			size_t lastslash = matname.find_last_of('/');
-			if (lastslash != std::string::npos)
-				matname = matname.substr(lastslash + 1);
-
-			size_t lastdot = matname.find_last_of('.');
-			if (lastdot != 0 && lastdot != std::string::npos)
-				matname = matname.substr(0, lastdot);
-
-			for (auto &c : matname)
-			{
-				if (c >= 'A' && c <= 'Z') c = 'a' + (c - 'A');
-			}
-
-			matname = "materials/" + matname;
-
-			materialRanges[matname].push_back(vertexidx);
+			buffer[i * 4] = (uint8_t)(int)clamp(halfToFloat(p[i * 3]) * 255.0f, 0.0f, 255.0f);
+			buffer[i * 4 + 1] = (uint8_t)(int)clamp(halfToFloat(p[i * 3 + 1]) * 255.0f, 0.0f, 255.0f);
+			buffer[i * 4 + 2] = (uint8_t)(int)clamp(halfToFloat(p[i * 3 + 2]) * 255.0f, 0.0f, 255.0f);
+			buffer[i * 4 + 3] = 0xff;
 		}
-	}
-
-	zmodel->Elements.reserve(MeshElements.Size());
-
-	for (const auto &it : materialRanges)
-	{
-		uint32_t startElement = (uint32_t)zmodel->Elements.size();
-		for (uint32_t vertexidx : it.second)
-			zmodel->Elements.push_back(vertexidx);
-		uint32_t vertexCount = (uint32_t)zmodel->Elements.size() - startElement;
-
-		ZModelMaterial mat;
-		mat.Name = it.first;
-		mat.Flags = 0;
-		mat.Renderstyle = 0;
-		mat.StartElement = startElement;
-		mat.VertexCount = vertexCount;
-		zmodel->Materials.push_back(mat);
-	}
-
-	// Save mesh
-
-	ZChunkStream zmdl, zdat;
-
-	// zmdl
-	{
-		ZChunkStream &s = zmdl;
-		s.Uint32(zmodel->Version);
-
-		s.Uint32(zmodel->Materials.size());
-		for (const ZModelMaterial &mat : zmodel->Materials)
+		PNGWriter::save("lightmap" + std::to_string(index++) + ".png", w, h, 4, buffer);
+#else
+		std::vector<uint16_t> buf(w * h * 4);
+		uint16_t* buffer = buf.data();
+		for (int i = 0; i < w * h; i++)
 		{
-			s.String(mat.Name);
-			s.Uint32(mat.Flags);
-			s.Uint32(mat.Renderstyle);
-			s.Uint32(mat.StartElement);
-			s.Uint32(mat.VertexCount);
+			buffer[i * 4] = (uint16_t)(int)clamp(halfToFloat(p[i * 3]) * 65535.0f, 0.0f, 65535.0f);
+			buffer[i * 4 + 1] = (uint16_t)(int)clamp(halfToFloat(p[i * 3 + 1]) * 65535.0f, 0.0f, 65535.0f);
+			buffer[i * 4 + 2] = (uint16_t)(int)clamp(halfToFloat(p[i * 3 + 2]) * 65535.0f, 0.0f, 65535.0f);
+			buffer[i * 4 + 3] = 0xffff;
 		}
-
-		s.Uint32(zmodel->Bones.size());
-		for (const ZModelBone &bone : zmodel->Bones)
-		{
-			s.String(bone.Name);
-			s.Uint32((uint32_t)bone.Type);
-			s.Uint32(bone.ParentBone);
-			s.Vec3f(bone.Pivot);
-		}
-
-		s.Uint32(zmodel->Animations.size());
-		for (const ZModelAnimation &anim : zmodel->Animations)
-		{
-			s.String(anim.Name);
-			s.Float(anim.Duration);
-			s.Vec3f(anim.AabbMin);
-			s.Vec3f(anim.AabbMax);
-			s.Uint32(anim.Bones.size());
-			for (const ZModelBoneAnim &bone : anim.Bones)
-			{
-				s.FloatArray(bone.Translation.Timestamps);
-				s.Vec3fArray(bone.Translation.Values);
-				s.FloatArray(bone.Rotation.Timestamps);
-				s.QuaternionfArray(bone.Rotation.Values);
-				s.FloatArray(bone.Scale.Timestamps);
-				s.Vec3fArray(bone.Scale.Values);
-			}
-			s.Uint32(anim.Materials.size());
-			for (const ZModelMaterialAnim &mat : anim.Materials)
-			{
-				s.FloatArray(mat.Translation.Timestamps);
-				s.Vec3fArray(mat.Translation.Values);
-				s.FloatArray(mat.Rotation.Timestamps);
-				s.QuaternionfArray(mat.Rotation.Values);
-				s.FloatArray(mat.Scale.Timestamps);
-				s.Vec3fArray(mat.Scale.Values);
-			}
-		}
-
-		s.Uint32(zmodel->Attachments.size());
-		for (const ZModelAttachment &attach : zmodel->Attachments)
-		{
-			s.String(attach.Name);
-			s.Uint32(attach.Bone);
-			s.Vec3f(attach.Position);
-		}
-	}
-
-	// zdat
-	{
-		ZChunkStream &s = zdat;
-
-		s.VertexArray(zmodel->Vertices);
-		s.Uint32Array(zmodel->Elements);
-	}
-
-	FILE *file = fopen(filename.c_str(), "wb");
-	if (file)
-	{
-		uint32_t chunkhdr[2];
-		memcpy(chunkhdr, "ZMDL", 4);
-		chunkhdr[1] = zmdl.ChunkLength();
-		fwrite(chunkhdr, 8, 1, file);
-		fwrite(zmdl.ChunkData(), zmdl.ChunkLength(), 1, file);
-
-		memcpy(chunkhdr, "ZDAT", 4);
-		chunkhdr[1] = zdat.ChunkLength();
-		fwrite(chunkhdr, 8, 1, file);
-		fwrite(zdat.ChunkData(), zdat.ChunkLength(), 1, file);
-
-		fclose(file);
-	}
+		PNGWriter::save("lightmap" + std::to_string(index++) + ".png", w, h, 8, buffer);
 #endif
+	}
 }

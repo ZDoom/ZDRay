@@ -31,29 +31,8 @@
 #include "framework/tarray.h"
 #include <mutex>
 
-#define LIGHTCELL_SIZE 64
-#define LIGHTCELL_BLOCK_SIZE 16
-
 class FWadWriter;
 class SurfaceLight;
-
-class LightmapTexture
-{
-public:
-	LightmapTexture(int width, int height);
-
-	bool MakeRoomForBlock(const int width, const int height, int *x, int *y);
-
-	int Width() const { return textureWidth; }
-	int Height() const { return textureHeight; }
-	uint16_t *Pixels() { return mPixels.data(); }
-
-private:
-	int textureWidth;
-	int textureHeight;
-	std::vector<uint16_t> mPixels;
-	std::vector<int> allocBlocks;
-};
 
 class TraceTask
 {
@@ -67,55 +46,33 @@ public:
 	static const int tasksize = 64;
 };
 
-class LightProbeSample
+class DLightRaytracer
 {
 public:
-	Vec3 Position = Vec3(0.0f, 0.0f, 0.0f);
-	Vec3 Color = Vec3(0.0f, 0.0f, 0.0f);
-};
+	DLightRaytracer();
+	~DLightRaytracer();
 
-class LightmapBuilder
-{
-public:
-	LightmapBuilder();
-	~LightmapBuilder();
-
-	void CreateLightmaps(FLevel &doomMap, int sampleDistance, int textureSize);
-	void AddLightmapLump(FWadWriter &wadFile);
-	void ExportMesh(std::string filename);
+	void Raytrace(LevelMesh* level);
 
 private:
-	BBox GetBoundsFromSurface(const Surface *surface);
 	Vec3 LightTexelSample(const Vec3 &origin, Surface *surface);
 	bool EmitFromCeiling(const Surface *surface, const Vec3 &origin, const Vec3 &normal, Vec3 &color);
 
-	void BuildSurfaceParams(Surface *surface);
 	void TraceSurface(Surface *surface, int offset);
 	void TraceIndirectLight(Surface *surface, int offset);
-	void FinishSurface(Surface *surface);
 	void LightProbe(int probeid);
 	void CreateTraceTasks();
 	void LightSurface(const int taskid);
 	void LightIndirect(const int taskid);
 
 	void CreateSurfaceLights();
-	void CreateLightProbes();
 
 	void SetupTaskProcessed(const char *name, int total);
 	void PrintTaskProcessed();
 
-	uint16_t *AllocTextureRoom(Surface *surface, int *x, int *y);
-
-	FLevel *map;
-	int samples = 16;
-	int textureWidth = 128;
-	int textureHeight = 128;
-
-	std::unique_ptr<LevelMesh> mesh;
+	LevelMesh* mesh = nullptr;
 	std::vector<std::unique_ptr<SurfaceLight>> surfaceLights;
-	std::vector<std::unique_ptr<LightmapTexture>> textures;
 	std::vector<TraceTask> traceTasks;
-	std::vector<LightProbeSample> lightProbes;
 	int tracedTexels = 0;
 
 	std::mutex mutex;

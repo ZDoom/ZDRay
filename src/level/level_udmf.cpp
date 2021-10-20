@@ -887,10 +887,10 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 		}
 	}
 
-	if (LightmapsBuilt)
+	if (LightmapMesh)
 	{
-		LMBuilder.AddLightmapLump(out);
-		// LMBuilder.ExportMesh("level.obj");
+		LightmapMesh->AddLightmapLump(out);
+		// LightmapMesh->ExportMesh("level.obj");
 	}
 
 	out.CreateLabel("ENDMAP");

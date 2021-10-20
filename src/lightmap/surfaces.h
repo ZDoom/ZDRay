@@ -39,6 +39,7 @@ struct MapSubsectorEx;
 struct IntSector;
 struct IntSideDef;
 struct FLevel;
+class FWadWriter;
 
 enum SurfaceType
 {
@@ -84,17 +85,100 @@ struct LevelTraceHit
 	float b, c;
 };
 
+class LightmapTexture
+{
+public:
+	LightmapTexture(int width, int height) : textureWidth(width), textureHeight(height)
+	{
+		mPixels.resize(width * height * 3);
+		allocBlocks.resize(width);
+	}
+
+	bool MakeRoomForBlock(const int width, const int height, int* x, int* y)
+	{
+		int bestRow1 = textureHeight;
+
+		for (int i = 0; i <= textureWidth - width; i++)
+		{
+			int bestRow2 = 0;
+
+			int j;
+			for (j = 0; j < width; j++)
+			{
+				if (allocBlocks[i + j] >= bestRow1)
+				{
+					break;
+				}
+
+				if (allocBlocks[i + j] > bestRow2)
+				{
+					bestRow2 = allocBlocks[i + j];
+				}
+			}
+
+			// found a free block
+			if (j == width)
+			{
+				*x = i;
+				*y = bestRow1 = bestRow2;
+			}
+		}
+
+		if (bestRow1 + height > textureHeight)
+		{
+			// no room
+			return false;
+		}
+
+		// store row offset
+		for (int i = 0; i < width; i++)
+		{
+			allocBlocks[*x + i] = bestRow1 + height;
+		}
+
+		return true;
+	}
+
+	int Width() const { return textureWidth; }
+	int Height() const { return textureHeight; }
+	uint16_t* Pixels() { return mPixels.data(); }
+
+private:
+	int textureWidth;
+	int textureHeight;
+	std::vector<uint16_t> mPixels;
+	std::vector<int> allocBlocks;
+};
+
+class LightProbeSample
+{
+public:
+	Vec3 Position = Vec3(0.0f, 0.0f, 0.0f);
+	Vec3 Color = Vec3(0.0f, 0.0f, 0.0f);
+};
+
 class LevelMesh
 {
 public:
-	LevelMesh(FLevel &doomMap);
+	LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize);
 
+	void CreateTextures();
+	void AddLightmapLump(FWadWriter& wadFile);
 	void Export(std::string filename);
 
 	LevelTraceHit Trace(const Vec3 &startVec, const Vec3 &endVec);
 	bool TraceAnyHit(const Vec3 &startVec, const Vec3 &endVec);
 
+	FLevel* map = nullptr;
+
 	std::vector<std::unique_ptr<Surface>> surfaces;
+	std::vector<LightProbeSample> lightProbes;
+
+	std::vector<std::unique_ptr<LightmapTexture>> textures;
+
+	int samples = 16;
+	int textureWidth = 128;
+	int textureHeight = 128;
 
 	TArray<Vec3> MeshVertices;
 	TArray<int> MeshUVIndex;
@@ -106,8 +190,13 @@ private:
 	void CreateSubsectorSurfaces(FLevel &doomMap);
 	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
 	void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
-
 	void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side);
+	void CreateLightProbes(FLevel& doomMap);
+
+	void BuildSurfaceParams(Surface* surface);
+	BBox GetBoundsFromSurface(const Surface* surface);
+	void FinishSurface(Surface* surface);
+	uint16_t* AllocTextureRoom(Surface* surface, int* x, int* y);
 
 	static bool IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2);
 };

@@ -154,6 +154,8 @@ set( SOURCES
 	src/nodebuilder/nodebuild_gl.cpp
 	src/nodebuilder/nodebuild_utility.cpp
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
+	src/lightmap/pngwriter.cpp
+	src/lightmap/raytracer.cpp
 	src/lightmap/lightmap.cpp
 	src/lightmap/surfacelight.cpp
 	src/lightmap/surfaces.cpp
@@ -198,6 +200,8 @@ set( HEADERS
 	src/framework/xs_Float.h
 	src/framework/halffloat.h
 	src/framework/binfile.h
+	src/lightmap/pngwriter.h
+	src/lightmap/raytracer.h
 	src/lightmap/lightmap.h
 	src/lightmap/surfacelight.h
 	src/lightmap/surfaces.h

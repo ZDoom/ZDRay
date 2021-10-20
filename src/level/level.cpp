@@ -19,6 +19,7 @@
 */
 
 #include "level/level.h"
+#include "lightmap/lightmap.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
@@ -688,8 +689,10 @@ void FProcessor::BuildNodes()
 void FProcessor::BuildLightmaps()
 {
 	Level.SetupLights();
-	LMBuilder.CreateLightmaps(Level, Samples, LMDims);
-	LightmapsBuilt = true;
+	LightmapMesh = std::make_unique<LevelMesh>(Level, Samples, LMDims);
+	DLightRaytracer raytracer;
+	raytracer.Raytrace(LightmapMesh.get());
+	LightmapMesh->CreateTextures();
 }
 
 void FProcessor::Write (FWadWriter &out)
@@ -886,9 +889,9 @@ void FProcessor::Write (FWadWriter &out)
 			out.CopyLump (Wad, Wad.FindMapLump ("BEHAVIOR", Lump));
 			out.CopyLump (Wad, Wad.FindMapLump ("SCRIPTS", Lump));
 		}
-		/*if (LightmapsBuilt)
+		/*if (LightmapMesh)
 		{
-			LMBuilder.AddLightmapLump(out);
+			LightmapMesh->AddLightmapLump(out);
 		}*/
 		if (Level.GLNodes != nullptr && !compressGL)
 		{
