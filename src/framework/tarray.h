@@ -274,8 +274,14 @@ public:
 	// returns address of first element
 	T* Data() const
 	{
-		return &Array[0];
+		return Array;
 	}
+
+	T* begin() { return Array; }
+	T* end() { return Array + Count; }
+	const T* begin() const { return Array; }
+	const T* end() const { return Array + Count; }
+
 private:
 	T *Array;
 	unsigned int Most;

@@ -20,6 +20,7 @@
 
 #include "level/level.h"
 #include "lightmap/lightmap.h"
+#include "lightmap/raytracer.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
@@ -690,8 +691,13 @@ void FProcessor::BuildLightmaps()
 {
 	Level.SetupLights();
 	LightmapMesh = std::make_unique<LevelMesh>(Level, Samples, LMDims);
+#if 1
 	DLightRaytracer raytracer;
 	raytracer.Raytrace(LightmapMesh.get());
+#else
+	Raytracer raytracer;
+	raytracer.Raytrace(LightmapMesh.get());
+#endif
 	LightmapMesh->CreateTextures();
 }
 

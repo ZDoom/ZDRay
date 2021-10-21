@@ -2,10 +2,14 @@
 #pragma once
 
 #include "framework/tarray.h"
+#include "framework/templates.h"
 #include "math/mathlib.h"
 #include <memory>
+#include <cmath>
 #undef MIN
 #undef MAX
+#undef min
+#undef max
 
 enum
 {
@@ -271,6 +275,44 @@ struct ThingLight
 	bool            bCeiling;
 	IntSector       *sector;
 	MapSubsectorEx  *ssect;
+
+	Vec3 LightOrigin() const
+	{
+		float originZ;
+		if (!bCeiling)
+			originZ = sector->floorplane.zAt(origin.x, origin.y) + height;
+		else
+			originZ = sector->ceilingplane.zAt(origin.x, origin.y) - height;
+		return Vec3(origin.x, origin.y, originZ);
+	}
+
+	float LightRadius() const
+	{
+		return radius + radius; // 2.0 because gzdoom's dynlights do this and we want them to match
+	}
+
+	float SpotAttenuation(const Vec3& dir) const
+	{
+		float spotAttenuation = 1.0f;
+		if (outerAngleCos > -1.0f)
+		{
+			float negPitch = -radians(mapThing->pitch);
+			float xyLen = std::cos(negPitch);
+			Vec3 spotDir;
+			spotDir.x = -std::cos(radians(mapThing->angle)) * xyLen;
+			spotDir.y = -std::sin(radians(mapThing->angle)) * xyLen;
+			spotDir.z = -std::sin(negPitch);
+			float cosDir = Vec3::Dot(dir, spotDir);
+			spotAttenuation = smoothstep(outerAngleCos, innerAngleCos, cosDir);
+			spotAttenuation = std::max(spotAttenuation, 0.0f);
+		}
+		return spotAttenuation;
+	}
+
+	float DistAttenuation(float distance) const
+	{
+		return std::max(1.0f - (distance / LightRadius()), 0.0f);
+	}
 };
 
 struct SurfaceLightDef

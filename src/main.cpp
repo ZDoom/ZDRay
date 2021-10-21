@@ -457,7 +457,7 @@ static void ParseArgs(int argc, char **argv)
 		case 'B':
 			LightBounce = atoi(optarg);
 			if (LightBounce < 0) LightBounce = 0;
-			if (LightBounce > 1) LightBounce = 1;
+			if (LightBounce > 8) LightBounce = 8;
 			break;
 		case 'i':
 			GridSize = std::stof(optarg);
@@ -510,7 +510,7 @@ static void ShowUsage()
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"
-		"  -B, --bounce=NNN         Number of indirect light bounces (default %d, max 1)\n"
+		"  -B, --bounce=NNN         Number of indirect light bounces (default %d, max 8)\n"
 		"  -i, --gridsize=NNN       Automatic light probe grid size, floating point\n"
 		"                           Lower values increase granularity at the expense of performance\n"
 		"                           Recommended: 32.0, 64.0, 128.0, etc (default %.1f)\n"

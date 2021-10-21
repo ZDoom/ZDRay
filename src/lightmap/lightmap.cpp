@@ -121,18 +121,6 @@ bool DLightRaytracer::EmitFromCeiling(const Surface *surface, const Vec3 &origin
 	return true;
 }
 
-template<class T>
-T smoothstep(const T edge0, const T edge1, const T x)
-{
-	auto t = clamp<T>((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-	return t * t * (3.0 - 2.0 * t);
-}
-
-static float radians(float degrees)
-{
-	return degrees * 3.14159265359f / 180.0f;
-}
-
 // Traces a line from the texel's origin to the sunlight direction and against all nearby thing lights
 Vec3 DLightRaytracer::LightTexelSample(const Vec3 &origin, Surface *surface)
 {
@@ -147,13 +135,7 @@ Vec3 DLightRaytracer::LightTexelSample(const Vec3 &origin, Surface *surface)
 	{
 		ThingLight *tl = &mesh->map->ThingLights[i];
 
-		float originZ;
-		if (!tl->bCeiling)
-			originZ = tl->sector->floorplane.zAt(tl->origin.x, tl->origin.y) + tl->height;
-		else
-			originZ = tl->sector->ceilingplane.zAt(tl->origin.x, tl->origin.y) - tl->height;
-
-		Vec3 lightOrigin(tl->origin.x, tl->origin.y, originZ);
+		Vec3 lightOrigin = tl->LightOrigin();
 
 		if (surface && plane.Distance(lightOrigin) - plane.d < 0)
 		{
@@ -161,8 +143,7 @@ Vec3 DLightRaytracer::LightTexelSample(const Vec3 &origin, Surface *surface)
 			continue;
 		}
 
-		float radius = tl->radius * 2.0f; // 2.0 because gzdoom's dynlights do this and we want them to match
-		float intensity = tl->intensity;
+		float radius = tl->LightRadius();
 
 		if (origin.DistanceSq(lightOrigin) > (radius*radius))
 		{
@@ -174,23 +155,9 @@ Vec3 DLightRaytracer::LightTexelSample(const Vec3 &origin, Surface *surface)
 		float dist = dir.Unit();
 		dir.Normalize();
 
-		float spotAttenuation = 1.0f;
-		if (tl->outerAngleCos > -1.0f)
-		{
-			float negPitch = -radians(tl->mapThing->pitch);
-			float xyLen = std::cos(negPitch);
-			Vec3 spotDir;
-			spotDir.x = -std::cos(radians(tl->mapThing->angle)) * xyLen;
-			spotDir.y = -std::sin(radians(tl->mapThing->angle)) * xyLen;
-			spotDir.z = -std::sin(negPitch);
-			float cosDir = Vec3::Dot(dir, spotDir);
-			spotAttenuation = smoothstep(tl->outerAngleCos, tl->innerAngleCos, cosDir);
-			if (spotAttenuation <= 0.0f)
-			{
-				// outside spot light
-				continue;
-			}
-		}
+		float spotAttenuation = tl->SpotAttenuation(dir);
+		if (spotAttenuation == 0.0f)
+			continue;
 
 		if (mesh->TraceAnyHit(lightOrigin, origin))
 		{
@@ -202,7 +169,7 @@ Vec3 DLightRaytracer::LightTexelSample(const Vec3 &origin, Surface *surface)
 		attenuation *= spotAttenuation;
 		if (surface)
 			attenuation *= plane.Normal().Dot(dir);
-		attenuation *= intensity;
+		attenuation *= tl->intensity;
 
 		// accumulate results
 		color += tl->rgb * attenuation;
