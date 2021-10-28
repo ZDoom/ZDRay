@@ -21,6 +21,7 @@
 #include "level/level.h"
 #include "lightmap/lightmap.h"
 #include "lightmap/raytracer.h"
+#include "lightmap/gpuraytracer.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
@@ -687,15 +688,21 @@ void FProcessor::BuildNodes()
 	}
 }
 
+//#define USE_GPU_RAYTRACER
+//#define USE_CPU_RAYTRACER
+
 void FProcessor::BuildLightmaps()
 {
 	Level.SetupLights();
 	LightmapMesh = std::make_unique<LevelMesh>(Level, Samples, LMDims);
-#if 1
-	DLightRaytracer raytracer;
+#if defined(USE_GPU_RAYTRACER)
+	GPURaytracer raytracer;
+	raytracer.Raytrace(LightmapMesh.get());
+#elif defined(USE_CPU_RAYTRACER)
+	Raytracer raytracer;
 	raytracer.Raytrace(LightmapMesh.get());
 #else
-	Raytracer raytracer;
+	DLightRaytracer raytracer;
 	raytracer.Raytrace(LightmapMesh.get());
 #endif
 	LightmapMesh->CreateTextures();
