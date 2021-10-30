@@ -131,10 +131,10 @@ private:
 	int stage;
 };
 
-class AccelerationStructureBuilder
+class AccelerationStructureBuilderNV
 {
 public:
-	AccelerationStructureBuilder();
+	AccelerationStructureBuilderNV();
 
 	void setUsage(VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags = 0);
 
@@ -148,7 +148,7 @@ public:
 
 	void addAABBs(VulkanBuffer *aabbData, size_t numAABBs, size_t stride, size_t offset, VkBuildAccelerationStructureFlagsNV flags = 0);
 
-	std::unique_ptr<VulkanAccelerationStructure> create(VulkanDevice *device);
+	std::unique_ptr<VulkanAccelerationStructureNV> create(VulkanDevice *device);
 
 private:
 	VkAccelerationStructureCreateInfoNV createInfo = {};
@@ -156,12 +156,12 @@ private:
 	std::vector<VkGeometryNV> geometries;
 };
 
-class ScratchBufferBuilder
+class ScratchBufferBuilderNV
 {
 public:
-	ScratchBufferBuilder();
+	ScratchBufferBuilderNV();
 
-	void setAccelerationStruct(VulkanAccelerationStructure *accelstruct);
+	void setAccelerationStruct(VulkanAccelerationStructureNV *accelstruct);
 	void setUpdateType();
 
 	std::unique_ptr<VulkanBuffer> create(VulkanDevice *device);
@@ -417,7 +417,7 @@ public:
 	void addBuffer(VulkanDescriptorSet *descriptorSet, int binding, VkDescriptorType type, VulkanBuffer *buffer, size_t offset, size_t range);
 	void addStorageImage(VulkanDescriptorSet *descriptorSet, int binding, VulkanImageView *view, VkImageLayout imageLayout);
 	void addCombinedImageSampler(VulkanDescriptorSet *descriptorSet, int binding, VulkanImageView *view, VulkanSampler *sampler, VkImageLayout imageLayout);
-	void addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructure *accelStruct);
+	void addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructureNV *accelStruct);
 
 	void updateSets(VulkanDevice *device);
 
@@ -653,30 +653,30 @@ inline std::unique_ptr<VulkanBuffer> BufferBuilder::create(VulkanDevice *device)
 
 /////////////////////////////////////////////////////////////////////////////
 
-inline AccelerationStructureBuilder::AccelerationStructureBuilder()
+inline AccelerationStructureBuilderNV::AccelerationStructureBuilderNV()
 {
 	createInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV;
 	createInfo.info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV;
 }
 
-inline void AccelerationStructureBuilder::setUsage(VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags)
+inline void AccelerationStructureBuilderNV::setUsage(VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags)
 {
 	allocInfo.usage = memoryUsage;
 	allocInfo.flags = allocFlags;
 }
 
-inline void AccelerationStructureBuilder::setType(VkAccelerationStructureTypeNV type, VkBuildAccelerationStructureFlagsNV flags)
+inline void AccelerationStructureBuilderNV::setType(VkAccelerationStructureTypeNV type, VkBuildAccelerationStructureFlagsNV flags)
 {
 	createInfo.info.type = type;
 	createInfo.info.flags = flags;
 }
 
-inline void AccelerationStructureBuilder::setInstanceCount(int instanceCount)
+inline void AccelerationStructureBuilderNV::setInstanceCount(int instanceCount)
 {
 	createInfo.info.instanceCount = instanceCount;
 }
 
-inline void AccelerationStructureBuilder::addTriangles(VkGeometryFlagsNV flags)
+inline void AccelerationStructureBuilderNV::addTriangles(VkGeometryFlagsNV flags)
 {
 	VkGeometryNV g = {};
 	g.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
@@ -689,7 +689,7 @@ inline void AccelerationStructureBuilder::addTriangles(VkGeometryFlagsNV flags)
 	createInfo.info.geometryCount = (uint32_t)geometries.size();
 }
 
-inline void AccelerationStructureBuilder::setVertices(VulkanBuffer *vertexData, size_t vertexOffset, size_t vertexCount, size_t vertexStride, VkFormat vertexFormat)
+inline void AccelerationStructureBuilderNV::setVertices(VulkanBuffer *vertexData, size_t vertexOffset, size_t vertexCount, size_t vertexStride, VkFormat vertexFormat)
 {
 	auto &g = geometries.back();
 	g.geometry.triangles.vertexData = vertexData->buffer;
@@ -699,7 +699,7 @@ inline void AccelerationStructureBuilder::setVertices(VulkanBuffer *vertexData, 
 	g.geometry.triangles.vertexFormat = vertexFormat;
 }
 
-inline void AccelerationStructureBuilder::setIndices(VulkanBuffer *indexData, size_t indexOffset, size_t indexCount, VkIndexType indexType)
+inline void AccelerationStructureBuilderNV::setIndices(VulkanBuffer *indexData, size_t indexOffset, size_t indexCount, VkIndexType indexType)
 {
 	auto &g = geometries.back();
 	g.geometry.triangles.indexData = indexData->buffer;
@@ -708,14 +708,14 @@ inline void AccelerationStructureBuilder::setIndices(VulkanBuffer *indexData, si
 	g.geometry.triangles.indexType = indexType;
 }
 
-inline void AccelerationStructureBuilder::setTransforms(VulkanBuffer *transformData, size_t transformOffset)
+inline void AccelerationStructureBuilderNV::setTransforms(VulkanBuffer *transformData, size_t transformOffset)
 {
 	auto &g = geometries.back();
 	g.geometry.triangles.transformData = transformData->buffer;
 	g.geometry.triangles.transformOffset = transformOffset;
 }
 
-inline void AccelerationStructureBuilder::addAABBs(VulkanBuffer *aabbData, size_t numAABBs, size_t stride, size_t offset, VkGeometryFlagsNV flags)
+inline void AccelerationStructureBuilderNV::addAABBs(VulkanBuffer *aabbData, size_t numAABBs, size_t stride, size_t offset, VkGeometryFlagsNV flags)
 {
 	VkGeometryNV g = {};
 	g.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
@@ -731,7 +731,7 @@ inline void AccelerationStructureBuilder::addAABBs(VulkanBuffer *aabbData, size_
 	createInfo.info.geometryCount = (uint32_t)geometries.size();
 }
 
-inline std::unique_ptr<VulkanAccelerationStructure> AccelerationStructureBuilder::create(VulkanDevice *device)
+inline std::unique_ptr<VulkanAccelerationStructureNV> AccelerationStructureBuilderNV::create(VulkanDevice *device)
 {
 	VkAccelerationStructureNV accelstruct;
 	VkResult result = vkCreateAccelerationStructureNV(device->device, &createInfo, nullptr, &accelstruct);
@@ -769,12 +769,12 @@ inline std::unique_ptr<VulkanAccelerationStructure> AccelerationStructureBuilder
 		throw std::runtime_error("could not bind memory to vulkan acceleration structure");
 	}
 
-	return std::make_unique<VulkanAccelerationStructure>(device, accelstruct, allocation, std::move(createInfo.info), std::move(geometries));
+	return std::make_unique<VulkanAccelerationStructureNV>(device, accelstruct, allocation, std::move(createInfo.info), std::move(geometries));
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-inline ScratchBufferBuilder::ScratchBufferBuilder()
+inline ScratchBufferBuilderNV::ScratchBufferBuilderNV()
 {
 	reqInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV;
 	reqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_NV;
@@ -782,17 +782,17 @@ inline ScratchBufferBuilder::ScratchBufferBuilder()
 	allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 }
 
-inline void ScratchBufferBuilder::setAccelerationStruct(VulkanAccelerationStructure *accelstruct)
+inline void ScratchBufferBuilderNV::setAccelerationStruct(VulkanAccelerationStructureNV *accelstruct)
 {
 	reqInfo.accelerationStructure = accelstruct->accelstruct;
 }
 
-inline void ScratchBufferBuilder::setUpdateType()
+inline void ScratchBufferBuilderNV::setUpdateType()
 {
 	reqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_NV;
 }
 
-inline std::unique_ptr<VulkanBuffer> ScratchBufferBuilder::create(VulkanDevice *device)
+inline std::unique_ptr<VulkanBuffer> ScratchBufferBuilderNV::create(VulkanDevice *device)
 {
 	VkMemoryRequirements2KHR memoryRequirements2 = {};
 	memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR;
@@ -1721,7 +1721,7 @@ inline void WriteDescriptors::addCombinedImageSampler(VulkanDescriptorSet *descr
 	writeExtras.push_back(std::move(extra));
 }
 
-inline void WriteDescriptors::addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructure *accelStruct)
+inline void WriteDescriptors::addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructureNV *accelStruct)
 {
 	auto extra = std::make_unique<WriteExtra>();
 	extra->accelStruct = {};

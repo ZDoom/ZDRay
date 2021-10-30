@@ -222,8 +222,24 @@ private:
 class VulkanAccelerationStructure
 {
 public:
-	VulkanAccelerationStructure(VulkanDevice *device, VkAccelerationStructureNV accelstruct, VmaAllocation allocation, VkAccelerationStructureInfoNV &&info, std::vector<VkGeometryNV> &&geometries);
+	VulkanAccelerationStructure(VulkanDevice* device, VkAccelerationStructureKHR accelstruct);
 	~VulkanAccelerationStructure();
+
+	void SetDebugName(const char* name) { device->setDebugObjectName(name, (uint64_t)accelstruct, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR); }
+
+	VulkanDevice* device;
+	VkAccelerationStructureKHR accelstruct;
+
+private:
+	VulkanAccelerationStructure(const VulkanAccelerationStructure&) = delete;
+	VulkanAccelerationStructure& operator=(const VulkanAccelerationStructure&) = delete;
+};
+
+class VulkanAccelerationStructureNV
+{
+public:
+	VulkanAccelerationStructureNV(VulkanDevice *device, VkAccelerationStructureNV accelstruct, VmaAllocation allocation, VkAccelerationStructureInfoNV &&info, std::vector<VkGeometryNV> &&geometries);
+	~VulkanAccelerationStructureNV();
 
 	void SetDebugName(const char *name) { device->setDebugObjectName(name, (uint64_t)accelstruct, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV); }
 
@@ -235,8 +251,8 @@ public:
 	std::vector<VkGeometryNV> geometries;
 
 private:
-	VulkanAccelerationStructure(const VulkanAccelerationStructure &) = delete;
-	VulkanAccelerationStructure &operator=(const VulkanAccelerationStructure &) = delete;
+	VulkanAccelerationStructureNV(const VulkanAccelerationStructureNV &) = delete;
+	VulkanAccelerationStructureNV &operator=(const VulkanAccelerationStructureNV &) = delete;
 };
 
 class VulkanPipeline
@@ -373,9 +389,9 @@ public:
 	void endRenderPass();
 	void executeCommands(uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
 
-	void buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VulkanBuffer *instanceData, VkDeviceSize instanceOffset, VkBool32 update, VulkanAccelerationStructure *dst, VulkanAccelerationStructure *src, VulkanBuffer *scratch, VkDeviceSize scratchOffset);
+	void buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VulkanBuffer *instanceData, VkDeviceSize instanceOffset, VkBool32 update, VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VulkanBuffer *scratch, VkDeviceSize scratchOffset);
 	void buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VkBuffer instanceData, VkDeviceSize instanceOffset, VkBool32 update, VkAccelerationStructureNV dst, VkAccelerationStructureNV src, VkBuffer scratch, VkDeviceSize scratchOffset);
-	void copyAccelerationStructure(VulkanAccelerationStructure *dst, VulkanAccelerationStructure *src, VkCopyAccelerationStructureModeNV mode);
+	void copyAccelerationStructure(VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VkCopyAccelerationStructureModeNV mode);
 	void copyAccelerationStructure(VkAccelerationStructureNV dst, VkAccelerationStructureNV src, VkCopyAccelerationStructureModeNV mode);
 	void traceRays(VulkanBuffer *raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, VulkanBuffer *missShaderBindingTableBuffer, VkDeviceSize missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VulkanBuffer *hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, VkDeviceSize hitShaderBindingStride, VulkanBuffer *callableShaderBindingTableBuffer, VkDeviceSize callableShaderBindingOffset, VkDeviceSize callableShaderBindingStride, uint32_t width, uint32_t height, uint32_t depth);
 	void traceRays(VkBuffer raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, VkBuffer missShaderBindingTableBuffer, VkDeviceSize missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VkBuffer hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, VkDeviceSize hitShaderBindingStride, VkBuffer callableShaderBindingTableBuffer, VkDeviceSize callableShaderBindingOffset, VkDeviceSize callableShaderBindingStride, uint32_t width, uint32_t height, uint32_t depth);
@@ -911,7 +927,7 @@ inline void VulkanCommandBuffer::executeCommands(uint32_t commandBufferCount, co
 	vkCmdExecuteCommands(buffer, commandBufferCount, pCommandBuffers);
 }
 
-inline void VulkanCommandBuffer::buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VulkanBuffer *instanceData, VkDeviceSize instanceOffset, VkBool32 update, VulkanAccelerationStructure *dst, VulkanAccelerationStructure *src, VulkanBuffer *scratch, VkDeviceSize scratchOffset)
+inline void VulkanCommandBuffer::buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VulkanBuffer *instanceData, VkDeviceSize instanceOffset, VkBool32 update, VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VulkanBuffer *scratch, VkDeviceSize scratchOffset)
 {
 	buildAccelerationStructure(pInfo, instanceData->buffer, instanceOffset, update, dst->accelstruct, src->accelstruct, scratch->buffer, scratchOffset);
 }
@@ -921,7 +937,7 @@ inline void VulkanCommandBuffer::buildAccelerationStructure(const VkAcceleration
 	vkCmdBuildAccelerationStructureNV(buffer, pInfo, instanceData, instanceOffset, update, dst, src, scratch, scratchOffset);
 }
 
-inline void VulkanCommandBuffer::copyAccelerationStructure(VulkanAccelerationStructure *dst, VulkanAccelerationStructure *src, VkCopyAccelerationStructureModeNV mode)
+inline void VulkanCommandBuffer::copyAccelerationStructure(VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VkCopyAccelerationStructureModeNV mode)
 {
 	copyAccelerationStructure(dst->accelstruct, src->accelstruct, mode);
 }
@@ -1093,12 +1109,24 @@ inline VulkanSampler::~VulkanSampler()
 
 /////////////////////////////////////////////////////////////////////////////
 
-inline VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanDevice *device, VkAccelerationStructureNV accelstruct, VmaAllocation allocation, VkAccelerationStructureInfoNV &&info, std::vector<VkGeometryNV> &&geometries)
-	: device(device), accelstruct(accelstruct), allocation(allocation), info(std::move(info)), geometries(std::move(geometries))
+inline VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanDevice* device, VkAccelerationStructureKHR accelstruct)
+	: device(device), accelstruct(accelstruct)
 {
 }
 
 inline VulkanAccelerationStructure::~VulkanAccelerationStructure()
+{
+	vkDestroyAccelerationStructureKHR(device->device, accelstruct, nullptr);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+inline VulkanAccelerationStructureNV::VulkanAccelerationStructureNV(VulkanDevice *device, VkAccelerationStructureNV accelstruct, VmaAllocation allocation, VkAccelerationStructureInfoNV &&info, std::vector<VkGeometryNV> &&geometries)
+	: device(device), accelstruct(accelstruct), allocation(allocation), info(std::move(info)), geometries(std::move(geometries))
+{
+}
+
+inline VulkanAccelerationStructureNV::~VulkanAccelerationStructureNV()
 {
 	vkDestroyAccelerationStructureNV(device->device, accelstruct, nullptr);
 	vmaFreeMemory(device->allocator, allocation);
