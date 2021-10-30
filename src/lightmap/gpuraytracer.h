@@ -2,6 +2,7 @@
 #pragma once
 
 #include "vulkandevice.h"
+#include "vulkanobjects.h"
 
 class LevelMesh;
 
@@ -14,6 +15,10 @@ public:
 	void Raytrace(LevelMesh* level);
 
 private:
+	void CreateVertexAndIndexBuffers();
+	void CreateBottomLevelAccelerationStructure();
+	void CreateTopLevelAccelerationStructure();
+
 	void RaytraceProbeSample(LightProbeSample* probe);
 	void RaytraceSurfaceSample(Surface* surface, int x, int y);
 	Vec3 TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, int depth = 0);
@@ -30,4 +35,20 @@ private:
 	LevelMesh* mesh = nullptr;
 
 	std::unique_ptr<VulkanDevice> device;
+
+	std::unique_ptr<VulkanBuffer> vertexBuffer;
+	std::unique_ptr<VulkanBuffer> indexBuffer;
+	std::unique_ptr<VulkanBuffer> transferBuffer;
+
+	std::unique_ptr<VulkanBuffer> blScratchBuffer;
+	std::unique_ptr<VulkanBuffer> blAccelStructBuffer;
+	std::unique_ptr<VulkanAccelerationStructure> blAccelStruct;
+
+	std::unique_ptr<VulkanBuffer> tlTransferBuffer;
+	std::unique_ptr<VulkanBuffer> tlScratchBuffer;
+	std::unique_ptr<VulkanBuffer> tlInstanceBuffer;
+	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
+
+	std::unique_ptr<VulkanCommandPool> cmdpool;
+	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
 };
