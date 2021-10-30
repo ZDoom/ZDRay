@@ -329,6 +329,10 @@ set(THIRDPARTY_SOURCES
 	../thirdparty/vulkan/vulkan_mir.h
 	../thirdparty/vulkan/vulkan_xlib_xrandr.h
 	../thirdparty/vulkan/vulkan_xlib.h
+	../thirdparty/vulkan/vk_enum_string_helper.h
+	../thirdparty/vulkan/vulkan_beta.h
+	../thirdparty/vulkan/vulkan_directfb.h
+	../thirdparty/vulkan/vulkan_screen.h
 )
 
 set(THIRDPARTY_WIN32_SOURCES
