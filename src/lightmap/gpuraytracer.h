@@ -18,6 +18,7 @@ private:
 	void CreateVertexAndIndexBuffers();
 	void CreateBottomLevelAccelerationStructure();
 	void CreateTopLevelAccelerationStructure();
+	void CreateShaders();
 
 	void RaytraceProbeSample(LightProbeSample* probe);
 	void RaytraceSurfaceSample(Surface* surface, int x, int y);
@@ -49,6 +50,8 @@ private:
 	std::unique_ptr<VulkanBuffer> tlInstanceBuffer;
 	std::unique_ptr<VulkanBuffer> tlAccelStructBuffer;
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
+
+	std::unique_ptr<VulkanShader> shaderRayGen;
 
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;

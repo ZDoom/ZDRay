@@ -263,8 +263,12 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	printf("Creating top level acceleration structure\n");
 	CreateTopLevelAccelerationStructure();
 
+	printf("Creating shaders\n");
+	CreateShaders();
+
 	cmdbuffer->end();
 
+#if 0
 	printf("Tracing light probes\n");
 
 	Worker::RunJob((int)mesh->lightProbes.size(), [=](int id) {
@@ -301,6 +305,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		const SurfaceTask& task = tasks[id];
 		RaytraceSurfaceSample(mesh->surfaces[task.surf].get(), task.x, task.y);
 	});
+#endif
 
 	printf("Raytrace complete\n");
 }
@@ -520,8 +525,8 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	memcpy(data + indexoffset, mesh->MeshElements.Data(), indexbuffersize);
 	transferBuffer->Unmap();
 
-	//cmdbuffer->copyBuffer(transferBuffer.get(), vertexBuffer.get(), vertexoffset);
-	//cmdbuffer->copyBuffer(transferBuffer.get(), indexBuffer.get(), indexoffset);
+	cmdbuffer->copyBuffer(transferBuffer.get(), vertexBuffer.get(), vertexoffset);
+	cmdbuffer->copyBuffer(transferBuffer.get(), indexBuffer.get(), indexoffset);
 
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -689,4 +694,52 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 
 	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
 	vkCmdBuildAccelerationStructuresKHR(cmdbuffer->buffer, 1, &buildInfo, rangeInfos);
+}
+
+void GPURaytracer::CreateShaders()
+{
+	std::string code = R"(
+		#version 460
+		#extension GL_EXT_ray_tracing : require
+
+		struct hitPayload
+		{
+			vec3 hitValue;
+		};
+
+		layout(location = 0) rayPayloadEXT hitPayload prd;
+		layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
+		layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+		layout(set = 0, binding = 2) uniform Uniforms
+		{
+			mat4 viewInverse;
+			mat4 projInverse;
+		};
+
+		void main()
+		{
+			const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+			const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+			vec2 d = inUV * 2.0 - 1.0;
+
+			vec4 origin = viewInverse * vec4(0, 0, 0, 1);
+			vec4 target = projInverse * vec4(d.x, d.y, 1, 1);
+			vec4 direction = viewInverse * vec4(normalize(target.xyz), 0);
+
+			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, 0.001, direction.xyz, 10000.0, 0);
+
+			imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(prd.hitValue, 1.0));
+		}
+	)";
+
+	static bool firstCall = true;
+	if (firstCall)
+	{
+		ShaderBuilder::init();
+		firstCall = false;
+	}
+
+	ShaderBuilder builder;
+	builder.setRayGenShader(code);
+	shaderRayGen = builder.create(device.get());
 }
