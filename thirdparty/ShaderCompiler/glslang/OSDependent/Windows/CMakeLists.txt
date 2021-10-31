@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Copyright (C) 2020 The Khronos Group Inc.
 #
 # All rights reserved.
@@ -33,17 +31,24 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-if [ "$1" = 'web' ]
-then
-    m4 -P -DGLSLANG_WEB MachineIndependent/glslang.m4 > MachineIndependent/glslang.y
-elif [ "$#" -eq 0 ]
-then
-    m4 -P MachineIndependent/glslang.m4 > MachineIndependent/glslang.y
-else
-    echo usage:
-    echo $0 web
-    echo $0
-    exit
-fi
+set(SOURCES ossource.cpp ../osinclude.h)
 
-bison --defines=MachineIndependent/glslang_tab.cpp.h -t MachineIndependent/glslang.y -o MachineIndependent/glslang_tab.cpp
+add_library(OSDependent STATIC ${SOURCES})
+set_property(TARGET OSDependent PROPERTY FOLDER glslang)
+set_property(TARGET OSDependent PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# MinGW GCC complains about function pointer casts to void*.
+# Turn that off with -fpermissive.
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+    target_compile_options(OSDependent PRIVATE -fpermissive)
+endif()
+
+if(WIN32)
+    source_group("Source" FILES ${SOURCES})
+endif(WIN32)
+
+if(ENABLE_GLSLANG_INSTALL)
+    install(TARGETS OSDependent EXPORT OSDependentTargets
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	install(EXPORT OSDependentTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+endif(ENABLE_GLSLANG_INSTALL)

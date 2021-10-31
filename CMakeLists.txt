@@ -267,6 +267,8 @@ set(THIRDPARTY_SOURCES
 	../thirdparty/ShaderCompiler/glslang/MachineIndependent/Scan.h
 	../thirdparty/ShaderCompiler/glslang/MachineIndependent/reflection.h
 	../thirdparty/ShaderCompiler/glslang/MachineIndependent/ScanContext.h
+	../thirdparty/ShaderCompiler/glslang/MachineIndependent/pch.h
+	../thirdparty/ShaderCompiler/glslang/MachineIndependent/SpirvIntrinsics.cpp
 	../thirdparty/ShaderCompiler/glslang/OSDependent/osinclude.h
 	../thirdparty/ShaderCompiler/glslang/GenericCodeGen/Link.cpp
 	../thirdparty/ShaderCompiler/glslang/GenericCodeGen/CodeGen.cpp
@@ -280,9 +282,9 @@ set(THIRDPARTY_SOURCES
 	../thirdparty/ShaderCompiler/glslang/Include/InfoSink.h
 	../thirdparty/ShaderCompiler/glslang/Include/ResourceLimits.h
 	../thirdparty/ShaderCompiler/glslang/Include/Types.h
-	../thirdparty/ShaderCompiler/glslang/Include/revision.h
 	../thirdparty/ShaderCompiler/glslang/Include/BaseTypes.h
 	../thirdparty/ShaderCompiler/glslang/Include/intermediate.h
+	../thirdparty/ShaderCompiler/glslang/Include/SpirvIntrinsics.h
 	../thirdparty/ShaderCompiler/spirv/Logger.h
 	../thirdparty/ShaderCompiler/spirv/GlslangToSpv.cpp
 	../thirdparty/ShaderCompiler/spirv/SPVRemapper.h

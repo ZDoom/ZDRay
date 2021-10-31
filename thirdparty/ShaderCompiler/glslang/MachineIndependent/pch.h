@@ -1,5 +1,7 @@
+#ifndef _PCH_H
+#define _PCH_H
 //
-// Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
+// Copyright (C) 2018 The Khronos Group Inc.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,44 +33,17 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
+#include <sstream>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <climits>
+#include <iostream>
+#include <sstream>
+#include <memory>
+#include "SymbolTable.h"
+#include "ParseHelper.h"
+#include "Scan.h"
+#include "ScanContext.h"
 
-#include "InitializeDll.h"
-
-#define STRICT
-#define VC_EXTRALEAN 1
-#include <windows.h>
-#include <assert.h>
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
-{
-	switch (fdwReason)
-	{
-		case DLL_PROCESS_ATTACH:
-
-            if (! glslang::InitProcess())
-                return FALSE;
-            break;
-		case DLL_THREAD_ATTACH:
-
-            if (! glslang::InitThread())
-                return FALSE;
-            break;
-
-		case DLL_THREAD_DETACH:
-
-			if (! glslang::DetachThread())
-				return FALSE;
-			break;
-
-		case DLL_PROCESS_DETACH:
-
-			glslang::DetachProcess();
-			break;
-
-		default:
-			assert(0 && "DllMain(): Reason for calling DLL Main is unknown");
-			return FALSE;
-	}
-
-	return TRUE;
-}
+#endif /* _PCH_H */
