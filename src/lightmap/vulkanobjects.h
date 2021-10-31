@@ -2,6 +2,9 @@
 
 #include "VulkanDevice.h"
 
+#include <memory>
+#include <stdexcept>
+
 class VulkanCommandPool;
 class VulkanDescriptorPool;
 

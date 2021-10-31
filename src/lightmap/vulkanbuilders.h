@@ -121,8 +121,8 @@ public:
     void setClosestHitShader(const std::string &code);
     void setMissShader(const std::string &code);
     void setCallableShader(const std::string &code);
-    void setTaskShader(const std::string &code);
-    void setMeshShader(const std::string &code);
+    //void setTaskShader(const std::string &code);
+    //void setMeshShader(const std::string &code);
 
 	std::unique_ptr<VulkanShader> create(VulkanDevice *device);
 
