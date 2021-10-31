@@ -52,6 +52,8 @@ private:
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
 
 	std::unique_ptr<VulkanShader> shaderRayGen;
+	std::unique_ptr<VulkanShader> shaderMiss;
+	std::unique_ptr<VulkanShader> shaderClosestHit;
 
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;

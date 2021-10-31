@@ -135,8 +135,6 @@ void ShaderBuilder::setAnyHitShader(const std::string &c) { code = c; stage = ES
 void ShaderBuilder::setClosestHitShader(const std::string &c) { code = c; stage = EShLanguage::EShLangClosestHit; }
 void ShaderBuilder::setMissShader(const std::string &c) { code = c; stage = EShLanguage::EShLangMiss; }
 void ShaderBuilder::setCallableShader(const std::string &c) { code = c; stage = EShLanguage::EShLangCallable; }
-//void ShaderBuilder::setTaskShader(const std::string &c) { code = c; stage = EShLanguage::EShLangTaskNV; }
-//void ShaderBuilder::setMeshShader(const std::string &c) { code = c; stage = EShLanguage::EShLangMeshNV; }
 
 std::unique_ptr<VulkanShader> ShaderBuilder::create(VulkanDevice *device)
 {

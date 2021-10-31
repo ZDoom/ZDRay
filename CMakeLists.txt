@@ -168,6 +168,8 @@ set( SOURCES
 	src/lightmap/vulkanobjects.h
 	src/lightmap/vulkanbuilders.cpp
 	src/lightmap/vulkanbuilders.h
+	src/lightmap/stacktrace.cpp
+	src/lightmap/stacktrace.h
 	src/lightmap/gpuraytracer.cpp
 	src/lightmap/gpuraytracer.h
 	src/math/angle.cpp

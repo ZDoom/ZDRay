@@ -9,197 +9,15 @@
 #include "framework/templates.h"
 #include "framework/halffloat.h"
 #include "vulkanbuilders.h"
+#include "stacktrace.h"
 #include <map>
 #include <vector>
 #include <algorithm>
 #include <zlib.h>
 
-#ifdef WIN32
-#include <DbgHelp.h>
-#else
-#include <execinfo.h>
-#include <cxxabi.h>
-#include <cstring>
-#include <cstdlib>
-#include <memory>
-#endif
-
 extern int Multisample;
 extern int LightBounce;
 extern float GridSize;
-
-#ifdef WIN32
-#pragma comment(lib, "dbghelp.lib")
-class NativeSymbolResolver
-{
-public:
-	NativeSymbolResolver() { SymInitialize(GetCurrentProcess(), nullptr, TRUE); }
-	~NativeSymbolResolver() { SymCleanup(GetCurrentProcess()); }
-
-	std::string GetName(void* frame)
-	{
-		std::string s;
-
-		unsigned char buffer[sizeof(IMAGEHLP_SYMBOL64) + 128];
-		IMAGEHLP_SYMBOL64* symbol64 = reinterpret_cast<IMAGEHLP_SYMBOL64*>(buffer);
-		memset(symbol64, 0, sizeof(IMAGEHLP_SYMBOL64) + 128);
-		symbol64->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL64);
-		symbol64->MaxNameLength = 128;
-
-		DWORD64 displacement = 0;
-		BOOL result = SymGetSymFromAddr64(GetCurrentProcess(), (DWORD64)frame, &displacement, symbol64);
-		if (result)
-		{
-			IMAGEHLP_LINE64 line64;
-			DWORD displacement = 0;
-			memset(&line64, 0, sizeof(IMAGEHLP_LINE64));
-			line64.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-			result = SymGetLineFromAddr64(GetCurrentProcess(), (DWORD64)frame, &displacement, &line64);
-			if (result)
-			{
-				s = std::string("Called from ") + symbol64->Name + " at " + line64.FileName + ", line " + std::to_string(line64.LineNumber) + "\n", symbol64->Name;
-			}
-			else
-			{
-				s = std::string("Called from ") + symbol64->Name + "\n";
-			}
-		}
-
-		return s;
-	}
-};
-#else
-class NativeSymbolResolver
-{
-public:
-	std::string GetName(void* frame)
-	{
-		std::string s;
-		char** strings;
-		void* frames[1] = { frame };
-		strings = backtrace_symbols(frames, 1);
-
-		// Decode the strings
-		char* ptr = strings[0];
-		char* filename = ptr;
-		const char* function = "";
-
-		// Find function name
-		while (*ptr)
-		{
-			if (*ptr == '(')	// Found function name
-			{
-				*(ptr++) = 0;
-				function = ptr;
-				break;
-			}
-			ptr++;
-		}
-
-		// Find offset
-		if (function[0])	// Only if function was found
-		{
-			while (*ptr)
-			{
-				if (*ptr == '+')	// Found function offset
-				{
-					*(ptr++) = 0;
-					break;
-				}
-				if (*ptr == ')')	// Not found function offset, but found, end of function
-				{
-					*(ptr++) = 0;
-					break;
-				}
-				ptr++;
-			}
-		}
-
-		int status;
-		char* new_function = abi::__cxa_demangle(function, nullptr, nullptr, &status);
-		if (new_function)	// Was correctly decoded
-		{
-			function = new_function;
-		}
-
-		s = std::string("Called from ") + function + " at " + filename + "\n";
-
-		if (new_function)
-		{
-			free(new_function);
-		}
-
-		free(strings);
-		return s;
-	}
-};
-#endif
-
-static int CaptureStackTrace(int max_frames, void** out_frames)
-{
-	memset(out_frames, 0, sizeof(void*) * max_frames);
-
-#ifdef _WIN64
-	// RtlCaptureStackBackTrace doesn't support RtlAddFunctionTable..
-
-	CONTEXT context;
-	RtlCaptureContext(&context);
-
-	UNWIND_HISTORY_TABLE history;
-	memset(&history, 0, sizeof(UNWIND_HISTORY_TABLE));
-
-	ULONG64 establisherframe = 0;
-	PVOID handlerdata = nullptr;
-
-	int frame;
-	for (frame = 0; frame < max_frames; frame++)
-	{
-		ULONG64 imagebase;
-		PRUNTIME_FUNCTION rtfunc = RtlLookupFunctionEntry(context.Rip, &imagebase, &history);
-
-		KNONVOLATILE_CONTEXT_POINTERS nvcontext;
-		memset(&nvcontext, 0, sizeof(KNONVOLATILE_CONTEXT_POINTERS));
-		if (!rtfunc)
-		{
-			// Leaf function
-			context.Rip = (ULONG64)(*(PULONG64)context.Rsp);
-			context.Rsp += 8;
-		}
-		else
-		{
-			RtlVirtualUnwind(UNW_FLAG_NHANDLER, imagebase, context.Rip, rtfunc, &context, &handlerdata, &establisherframe, &nvcontext);
-		}
-
-		if (!context.Rip)
-			break;
-
-		out_frames[frame] = (void*)context.Rip;
-	}
-	return frame;
-
-#elif defined(WIN32)
-	return 0;//return RtlCaptureStackBackTrace(0, MIN(max_frames, 32), out_frames, nullptr);
-#else
-	return backtrace(out_frames, max_frames);
-#endif
-}
-
-std::string CaptureStackTraceText(int framesToSkip, bool includeNativeFrames)
-{
-	void* frames[32];
-	int numframes = CaptureStackTrace(32, frames);
-
-	std::unique_ptr<NativeSymbolResolver> nativeSymbols;
-	if (includeNativeFrames)
-		nativeSymbols.reset(new NativeSymbolResolver());
-
-	std::string s;
-	for (int i = framesToSkip + 1; i < numframes; i++)
-	{
-		s += nativeSymbols->GetName(frames[i]);
-	}
-	return s;
-}
 
 GPURaytracer::GPURaytracer()
 {
@@ -207,7 +25,7 @@ GPURaytracer::GPURaytracer()
 	{
 		printf("\n[%s] %s\n", typestr, msg.c_str());
 
-		std::string callstack = CaptureStackTraceText(0, true);
+		std::string callstack = CaptureStackTraceText(0);
 		if (!callstack.empty())
 			printf("%s\n", callstack.c_str());
 	};
@@ -615,7 +433,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	instance.instanceCustomIndex = 0;
 	instance.accelerationStructureReference = blAccelStructAddress;
 	instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-	instance.mask = 0xffffffff;
+	instance.mask = 0xff;
 	instance.instanceShaderBindingTableRecordOffset = 0;
 
 	BufferBuilder tbuilder;
@@ -698,40 +516,6 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 
 void GPURaytracer::CreateShaders()
 {
-	std::string code = R"(
-		#version 460
-		#extension GL_EXT_ray_tracing : require
-
-		struct hitPayload
-		{
-			vec3 hitValue;
-		};
-
-		layout(location = 0) rayPayloadEXT hitPayload prd;
-		layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
-		layout(set = 0, binding = 1, rgba32f) uniform image2D image;
-		layout(set = 0, binding = 2) uniform Uniforms
-		{
-			mat4 viewInverse;
-			mat4 projInverse;
-		};
-
-		void main()
-		{
-			const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-			const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
-			vec2 d = inUV * 2.0 - 1.0;
-
-			vec4 origin = viewInverse * vec4(0, 0, 0, 1);
-			vec4 target = projInverse * vec4(d.x, d.y, 1, 1);
-			vec4 direction = viewInverse * vec4(normalize(target.xyz), 0);
-
-			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, 0.001, direction.xyz, 10000.0, 0);
-
-			imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(prd.hitValue, 1.0));
-		}
-	)";
-
 	static bool firstCall = true;
 	if (firstCall)
 	{
@@ -739,7 +523,91 @@ void GPURaytracer::CreateShaders()
 		firstCall = false;
 	}
 
-	ShaderBuilder builder;
-	builder.setRayGenShader(code);
-	shaderRayGen = builder.create(device.get());
+	{
+		std::string code = R"(
+			#version 460
+			#extension GL_EXT_ray_tracing : require
+
+			struct hitPayload
+			{
+				vec3 hitValue;
+			};
+
+			layout(location = 0) rayPayloadEXT hitPayload payload;
+
+			layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
+			layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+
+			layout(set = 0, binding = 2) uniform Uniforms
+			{
+				mat4 viewInverse;
+				mat4 projInverse;
+			};
+
+			void main()
+			{
+				const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+				const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+				vec2 d = inUV * 2.0 - 1.0;
+
+				vec4 origin = viewInverse * vec4(0, 0, 0, 1);
+				vec4 target = projInverse * vec4(d.x, d.y, 1, 1);
+				vec4 direction = viewInverse * vec4(normalize(target.xyz), 0);
+
+				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, 0.001, direction.xyz, 10000.0, 0);
+
+				imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(payload.hitValue, 1.0));
+			}
+		)";
+
+		ShaderBuilder builder;
+		builder.setRayGenShader(code);
+		shaderRayGen = builder.create(device.get());
+	}
+
+	{
+		std::string code = R"(
+			#version 460
+			#extension GL_EXT_ray_tracing : require
+
+			struct hitPayload
+			{
+				vec3 hitValue;
+			};
+
+			layout(location = 0) rayPayloadEXT hitPayload payload;
+
+			void main()
+			{
+				payload.hitValue = vec3(1.0);
+			}
+		)";
+
+		ShaderBuilder builder;
+		builder.setMissShader(code);
+		shaderMiss = builder.create(device.get());
+	}
+
+	{
+		std::string code = R"(
+			#version 460
+			#extension GL_EXT_ray_tracing : require
+
+			struct hitPayload
+			{
+				vec3 hitValue;
+			};
+
+			layout(location = 0) rayPayloadEXT hitPayload payload;
+
+			void main()
+			{
+				payload.hitValue = vec3(0.0);
+			}
+		)";
+
+		ShaderBuilder builder;
+		builder.setClosestHitShader(code);
+		shaderClosestHit = builder.create(device.get());
+	}
 }
