@@ -47,6 +47,7 @@ private:
 	std::unique_ptr<VulkanBuffer> tlTransferBuffer;
 	std::unique_ptr<VulkanBuffer> tlScratchBuffer;
 	std::unique_ptr<VulkanBuffer> tlInstanceBuffer;
+	std::unique_ptr<VulkanBuffer> tlAccelStructBuffer;
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
 
 	std::unique_ptr<VulkanCommandPool> cmdpool;

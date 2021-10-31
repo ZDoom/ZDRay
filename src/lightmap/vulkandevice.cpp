@@ -156,11 +156,14 @@ bool VulkanDevice::supportsDeviceExtension(const char *ext) const
 void VulkanDevice::createAllocator()
 {
 	VmaAllocatorCreateInfo allocinfo = {};
+	allocinfo.vulkanApiVersion = VK_API_VERSION_1_2;
 	if (supportsDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) && supportsDeviceExtension(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
 		allocinfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+	allocinfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 	allocinfo.physicalDevice = physicalDevice.device;
 	allocinfo.device = device;
 	allocinfo.preferredLargeHeapBlockSize = 64 * 1024 * 1024;
+	allocinfo.instance = instance;
 	if (vmaCreateAllocator(&allocinfo, &allocator) != VK_SUCCESS)
 		throw std::runtime_error("Unable to create allocator");
 }
@@ -185,11 +188,28 @@ void VulkanDevice::createDevice()
 		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+	raytracingFeatures.rayTracingPipeline = true;
+	raytracingFeatures.rayTraversalPrimitiveCulling = true;
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR deviceAccelFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+	deviceAccelFeatures.accelerationStructure = true;
+	deviceAccelFeatures.pNext = &raytracingFeatures;
+
+	VkPhysicalDeviceBufferDeviceAddressFeatures deviceAddressFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES };
+	deviceAddressFeatures.bufferDeviceAddress = true;
+	deviceAddressFeatures.pNext = &deviceAccelFeatures;
+
+	VkPhysicalDeviceFeatures2 deviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+	deviceFeatures2.features = enabledDeviceFeatures;
+	deviceFeatures2.pNext = &deviceAddressFeatures;
+
 	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.pNext = &deviceFeatures2;
 	deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
 	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-	deviceCreateInfo.pEnabledFeatures = &enabledDeviceFeatures;
+	//deviceCreateInfo.pEnabledFeatures = &enabledDeviceFeatures;
 	deviceCreateInfo.enabledExtensionCount = (uint32_t)enabledDeviceExtensions.size();
 	deviceCreateInfo.ppEnabledExtensionNames = enabledDeviceExtensions.data();
 	deviceCreateInfo.enabledLayerCount = 0;
@@ -255,16 +275,20 @@ void VulkanDevice::createInstance()
 	extensions = getExtensions();
 	enabledExtensions = getPlatformExtensions();
 
-	std::string debugLayer = "VK_LAYER_LUNARG_standard_validation";
+	std::string debugLayer = "VK_LAYER_KHRONOS_validation";
 	bool wantDebugLayer = vk_debug;
 	bool debugLayerFound = false;
-	for (const VkLayerProperties &layer : availableLayers)
+	if (wantDebugLayer)
 	{
-		if (layer.layerName == debugLayer && wantDebugLayer)
+		for (const VkLayerProperties& layer : availableLayers)
 		{
-			enabledValidationLayers.push_back(debugLayer.c_str());
-			enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-			debugLayerFound = true;
+			if (layer.layerName == debugLayer)
+			{
+				enabledValidationLayers.push_back(layer.layerName);
+				enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+				debugLayerFound = true;
+				break;
+			}
 		}
 	}
 
