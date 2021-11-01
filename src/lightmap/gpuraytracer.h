@@ -19,6 +19,7 @@ private:
 	void CreateBottomLevelAccelerationStructure();
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
+	void CreatePipeline();
 
 	void RaytraceProbeSample(LightProbeSample* probe);
 	void RaytraceSurfaceSample(Surface* surface, int x, int y);
@@ -54,6 +55,13 @@ private:
 	std::unique_ptr<VulkanShader> shaderRayGen;
 	std::unique_ptr<VulkanShader> shaderMiss;
 	std::unique_ptr<VulkanShader> shaderClosestHit;
+
+	std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+
+	std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
+	std::unique_ptr<VulkanPipeline> pipeline;
+	std::unique_ptr<VulkanBuffer> shaderBindingTable;
+	std::unique_ptr<VulkanBuffer> sbtTransferBuffer;
 
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;

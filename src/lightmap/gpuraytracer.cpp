@@ -84,6 +84,9 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	printf("Creating shaders\n");
 	CreateShaders();
 
+	printf("Creating pipeline\n");
+	CreatePipeline();
+
 	cmdbuffer->end();
 
 #if 0
@@ -325,12 +328,12 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	size_t indexoffset = vertexoffset + vertexbuffersize;
 
 	BufferBuilder vbuilder;
-	vbuilder.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+	vbuilder.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	vbuilder.setSize(vertexbuffersize);
 	vertexBuffer = vbuilder.create(device.get());
 
 	BufferBuilder ibuilder;
-	ibuilder.setUsage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+	ibuilder.setUsage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	ibuilder.setSize(indexbuffersize);
 	indexBuffer = ibuilder.create(device.get());
 
@@ -610,4 +613,40 @@ void GPURaytracer::CreateShaders()
 		builder.setClosestHitShader(code);
 		shaderClosestHit = builder.create(device.get());
 	}
+}
+
+void GPURaytracer::CreatePipeline()
+{
+	DescriptorSetLayoutBuilder setbuilder;
+	setbuilder.addBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	setbuilder.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	setbuilder.addBinding(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	descriptorSetLayout = setbuilder.create(device.get());
+
+	PipelineLayoutBuilder layoutbuilder;
+	layoutbuilder.addSetLayout(descriptorSetLayout.get());
+	pipelineLayout = layoutbuilder.create(device.get());
+
+	RayTracingPipelineBuilder builder;
+	builder.setLayout(pipelineLayout.get());
+	builder.setMaxPipelineRayRecursionDepth(1);
+	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, shaderRayGen.get());
+	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, shaderClosestHit.get());
+	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, shaderMiss.get());
+	pipeline = builder.create(device.get());
+
+	BufferBuilder bufbuilder;
+	bufbuilder.setUsage(VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	bufbuilder.setSize(pipeline->shaderGroupHandles.size());
+	shaderBindingTable = bufbuilder.create(device.get());
+
+	BufferBuilder tbuilder;
+	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	tbuilder.setSize(pipeline->shaderGroupHandles.size());
+	sbtTransferBuffer = tbuilder.create(device.get());
+	auto data = sbtTransferBuffer->Map(0, pipeline->shaderGroupHandles.size());
+	memcpy(data, pipeline->shaderGroupHandles.data(), pipeline->shaderGroupHandles.size());
+	sbtTransferBuffer->Unmap();
+
+	cmdbuffer->copyBuffer(sbtTransferBuffer.get(), shaderBindingTable.get());
 }
