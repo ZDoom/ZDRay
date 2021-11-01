@@ -139,7 +139,7 @@ public:
 	void addShader(VkShaderStageFlagBits stage, VulkanShader *shader);
 	void addRayGenGroup(int rayGenShader);
 	void addMissGroup(int missShader);
-	void addTrianglesHitGroup(int closestHitShader, int anyHitShader);
+	void addTrianglesHitGroup(int closestHitShader, int anyHitShader = VK_SHADER_UNUSED_KHR);
 	void addProceduralHitGroup(int intersectionShader, int closestHitShader, int anyHitShader);
 
 	std::unique_ptr<VulkanPipeline> create(VulkanDevice *device);
@@ -628,7 +628,7 @@ inline void RayTracingPipelineBuilder::setMaxPipelineRayRecursionDepth(int depth
 
 inline void RayTracingPipelineBuilder::addShader(VkShaderStageFlagBits stage, VulkanShader *shader)
 {
-	VkPipelineShaderStageCreateInfo stageInfo = {};
+	VkPipelineShaderStageCreateInfo stageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 	stageInfo.stage = stage;
 	stageInfo.module = shader->module;
 	stageInfo.pName = "main";

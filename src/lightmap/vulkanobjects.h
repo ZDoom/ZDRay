@@ -372,6 +372,7 @@ public:
 	void endRenderPass();
 	void executeCommands(uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
 
+	void buildAccelerationStructures(uint32_t infoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos);
 	void traceRays(const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pCallableShaderBindingTable, uint32_t width, uint32_t height, uint32_t depth);
 	void writeAccelerationStructuresProperties(uint32_t accelerationStructureCount, const VkAccelerationStructureKHR* pAccelerationStructures, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery);
 
@@ -903,6 +904,11 @@ inline void VulkanCommandBuffer::endRenderPass()
 inline void VulkanCommandBuffer::executeCommands(uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers)
 {
 	vkCmdExecuteCommands(buffer, commandBufferCount, pCommandBuffers);
+}
+
+inline void VulkanCommandBuffer::buildAccelerationStructures(uint32_t infoCount, const VkAccelerationStructureBuildGeometryInfoKHR* pInfos, const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos)
+{
+	vkCmdBuildAccelerationStructuresKHR(buffer, infoCount, pInfos, ppBuildRangeInfos);
 }
 
 inline void VulkanCommandBuffer::traceRays(const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pCallableShaderBindingTable, uint32_t width, uint32_t height, uint32_t depth)

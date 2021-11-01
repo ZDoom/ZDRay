@@ -352,7 +352,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-	vkCmdPipelineBarrier(cmdbuffer->buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+	cmdbuffer->pipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
 }
 
 void GPURaytracer::CreateBottomLevelAccelerationStructure()
@@ -420,7 +420,7 @@ void GPURaytracer::CreateBottomLevelAccelerationStructure()
 	buildInfo.dstAccelerationStructure = blAccelStruct->accelstruct;
 	buildInfo.scratchData.deviceAddress = scratchAddress;
 	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
-	vkCmdBuildAccelerationStructuresKHR(cmdbuffer->buffer, 1, &buildInfo, rangeInfos);
+	cmdbuffer->buildAccelerationStructures(1, &buildInfo, rangeInfos);
 }
 
 void GPURaytracer::CreateTopLevelAccelerationStructure()
@@ -457,7 +457,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-	vkCmdPipelineBarrier(cmdbuffer->buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+	cmdbuffer->pipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
 
 	VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
 	info.buffer = tlInstanceBuffer->buffer;
@@ -514,7 +514,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	buildInfo.scratchData.deviceAddress = scratchAddress;
 
 	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
-	vkCmdBuildAccelerationStructuresKHR(cmdbuffer->buffer, 1, &buildInfo, rangeInfos);
+	cmdbuffer->buildAccelerationStructures(1, &buildInfo, rangeInfos);
 }
 
 void GPURaytracer::CreateShaders()
@@ -633,6 +633,9 @@ void GPURaytracer::CreatePipeline()
 	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, shaderRayGen.get());
 	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, shaderClosestHit.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, shaderMiss.get());
+	builder.addRayGenGroup(0);
+	builder.addTrianglesHitGroup(1);
+	builder.addMissGroup(2);
 	pipeline = builder.create(device.get());
 
 	BufferBuilder bufbuilder;
