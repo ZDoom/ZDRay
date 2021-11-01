@@ -129,53 +129,13 @@ private:
 	int stage = 0;
 };
 
-class AccelerationStructureBuilderNV
-{
-public:
-	AccelerationStructureBuilderNV();
-
-	void setUsage(VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags = 0);
-
-	void setType(VkAccelerationStructureTypeNV type, VkBuildAccelerationStructureFlagsNV flags = 0);
-	void setInstanceCount(int instanceCount);
-
-	void addTriangles(VkGeometryFlagsNV flags = 0);
-	void setVertices(VulkanBuffer *vertexData, size_t vertexOffset, size_t vertexCount, size_t vertexStride, VkFormat vertexFormat);
-	void setIndices(VulkanBuffer *indexData, size_t indexOffset, size_t indexCount, VkIndexType indexType);
-	void setTransforms(VulkanBuffer *transformData, size_t transformOffset);
-
-	void addAABBs(VulkanBuffer *aabbData, size_t numAABBs, size_t stride, size_t offset, VkBuildAccelerationStructureFlagsNV flags = 0);
-
-	std::unique_ptr<VulkanAccelerationStructureNV> create(VulkanDevice *device);
-
-private:
-	VkAccelerationStructureCreateInfoNV createInfo = {};
-	VmaAllocationCreateInfo allocInfo = {};
-	std::vector<VkGeometryNV> geometries;
-};
-
-class ScratchBufferBuilderNV
-{
-public:
-	ScratchBufferBuilderNV();
-
-	void setAccelerationStruct(VulkanAccelerationStructureNV *accelstruct);
-	void setUpdateType();
-
-	std::unique_ptr<VulkanBuffer> create(VulkanDevice *device);
-
-private:
-	VkAccelerationStructureMemoryRequirementsInfoNV reqInfo;
-	VmaAllocationCreateInfo allocInfo = {};
-};
-
 class RayTracingPipelineBuilder
 {
 public:
 	RayTracingPipelineBuilder();
 
 	void setLayout(VulkanPipelineLayout *layout);
-	void setMaxRecursionDepth(int depth);
+	void setMaxPipelineRayRecursionDepth(int depth);
 	void addShader(VkShaderStageFlagBits stage, VulkanShader *shader);
 	void addRayGenGroup(int rayGenShader);
 	void addMissGroup(int missShader);
@@ -185,9 +145,9 @@ public:
 	std::unique_ptr<VulkanPipeline> create(VulkanDevice *device);
 
 private:
-	VkRayTracingPipelineCreateInfoNV pipelineInfo = {};
+	VkRayTracingPipelineCreateInfoKHR pipelineInfo = {};
 	std::vector<VkPipelineShaderStageCreateInfo> stages;
-	std::vector<VkRayTracingShaderGroupCreateInfoNV> groups;
+	std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
 };
 
 class ComputePipelineBuilder
@@ -415,7 +375,7 @@ public:
 	void addBuffer(VulkanDescriptorSet *descriptorSet, int binding, VkDescriptorType type, VulkanBuffer *buffer, size_t offset, size_t range);
 	void addStorageImage(VulkanDescriptorSet *descriptorSet, int binding, VulkanImageView *view, VkImageLayout imageLayout);
 	void addCombinedImageSampler(VulkanDescriptorSet *descriptorSet, int binding, VulkanImageView *view, VulkanSampler *sampler, VkImageLayout imageLayout);
-	void addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructureNV *accelStruct);
+	void addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructure *accelStruct);
 
 	void updateSets(VulkanDevice *device);
 
@@ -425,7 +385,7 @@ private:
 		VkDescriptorImageInfo imageInfo;
 		VkDescriptorBufferInfo bufferInfo;
 		VkBufferView bufferView;
-		VkWriteDescriptorSetAccelerationStructureNV accelStruct;
+		VkWriteDescriptorSetAccelerationStructureKHR accelStruct;
 	};
 
 	std::vector<VkWriteDescriptorSet> writes;
@@ -651,182 +611,9 @@ inline std::unique_ptr<VulkanBuffer> BufferBuilder::create(VulkanDevice *device)
 
 /////////////////////////////////////////////////////////////////////////////
 
-inline AccelerationStructureBuilderNV::AccelerationStructureBuilderNV()
-{
-	createInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV;
-	createInfo.info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV;
-}
-
-inline void AccelerationStructureBuilderNV::setUsage(VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags)
-{
-	allocInfo.usage = memoryUsage;
-	allocInfo.flags = allocFlags;
-}
-
-inline void AccelerationStructureBuilderNV::setType(VkAccelerationStructureTypeNV type, VkBuildAccelerationStructureFlagsNV flags)
-{
-	createInfo.info.type = type;
-	createInfo.info.flags = flags;
-}
-
-inline void AccelerationStructureBuilderNV::setInstanceCount(int instanceCount)
-{
-	createInfo.info.instanceCount = instanceCount;
-}
-
-inline void AccelerationStructureBuilderNV::addTriangles(VkGeometryFlagsNV flags)
-{
-	VkGeometryNV g = {};
-	g.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
-	g.flags = flags;
-	g.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV;
-	g.geometry.triangles.indexType = VK_INDEX_TYPE_NONE_NV;
-	geometries.push_back(g);
-
-	createInfo.info.pGeometries = geometries.data();
-	createInfo.info.geometryCount = (uint32_t)geometries.size();
-}
-
-inline void AccelerationStructureBuilderNV::setVertices(VulkanBuffer *vertexData, size_t vertexOffset, size_t vertexCount, size_t vertexStride, VkFormat vertexFormat)
-{
-	auto &g = geometries.back();
-	g.geometry.triangles.vertexData = vertexData->buffer;
-	g.geometry.triangles.vertexOffset = vertexOffset;
-	g.geometry.triangles.vertexCount = (uint32_t)vertexCount;
-	g.geometry.triangles.vertexStride = (uint32_t)vertexStride;
-	g.geometry.triangles.vertexFormat = vertexFormat;
-}
-
-inline void AccelerationStructureBuilderNV::setIndices(VulkanBuffer *indexData, size_t indexOffset, size_t indexCount, VkIndexType indexType)
-{
-	auto &g = geometries.back();
-	g.geometry.triangles.indexData = indexData->buffer;
-	g.geometry.triangles.indexOffset = indexOffset;
-	g.geometry.triangles.indexCount = (uint32_t)indexCount;
-	g.geometry.triangles.indexType = indexType;
-}
-
-inline void AccelerationStructureBuilderNV::setTransforms(VulkanBuffer *transformData, size_t transformOffset)
-{
-	auto &g = geometries.back();
-	g.geometry.triangles.transformData = transformData->buffer;
-	g.geometry.triangles.transformOffset = transformOffset;
-}
-
-inline void AccelerationStructureBuilderNV::addAABBs(VulkanBuffer *aabbData, size_t numAABBs, size_t stride, size_t offset, VkGeometryFlagsNV flags)
-{
-	VkGeometryNV g = {};
-	g.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
-	g.flags = flags;
-	g.geometryType = VK_GEOMETRY_TYPE_AABBS_NV;
-	g.geometry.aabbs.aabbData = aabbData->buffer;
-	g.geometry.aabbs.numAABBs = (uint32_t)numAABBs;
-	g.geometry.aabbs.stride = (uint32_t)stride;
-	g.geometry.aabbs.offset = offset;
-	geometries.push_back(g);
-
-	createInfo.info.pGeometries = geometries.data();
-	createInfo.info.geometryCount = (uint32_t)geometries.size();
-}
-
-inline std::unique_ptr<VulkanAccelerationStructureNV> AccelerationStructureBuilderNV::create(VulkanDevice *device)
-{
-	VkAccelerationStructureNV accelstruct;
-	VkResult result = vkCreateAccelerationStructureNV(device->device, &createInfo, nullptr, &accelstruct);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("could not create vulkan acceleration structure");
-
-	VkAccelerationStructureMemoryRequirementsInfoNV reqInfo = {};
-	reqInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV;
-	reqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV;
-	reqInfo.accelerationStructure = accelstruct;
-
-	VkMemoryRequirements2KHR memoryRequirements2 = {};
-	memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR;
-	vkGetAccelerationStructureMemoryRequirementsNV(device->device, &reqInfo, &memoryRequirements2);
-
-	VmaAllocation allocation;
-	VmaAllocationInfo allocResultInfo = {};
-	result = vmaAllocateMemory(device->allocator, &memoryRequirements2.memoryRequirements, &allocInfo, &allocation, &allocResultInfo);
-	if (result != VK_SUCCESS)
-	{
-		vkDestroyAccelerationStructureNV(device->device, accelstruct, nullptr);
-		throw std::runtime_error("could not allocate memory for vulkan acceleration structure");
-	}
-
-	VkBindAccelerationStructureMemoryInfoNV bindInfo = {};
-	bindInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
-	bindInfo.accelerationStructure = accelstruct;
-	bindInfo.memory = allocResultInfo.deviceMemory;
-	bindInfo.memoryOffset = allocResultInfo.offset;
-	result = vkBindAccelerationStructureMemoryNV(device->device, 1, &bindInfo);
-	if (result != VK_SUCCESS)
-	{
-		vmaFreeMemory(device->allocator, allocation);
-		vkDestroyAccelerationStructureNV(device->device, accelstruct, nullptr);
-		throw std::runtime_error("could not bind memory to vulkan acceleration structure");
-	}
-
-	return std::make_unique<VulkanAccelerationStructureNV>(device, accelstruct, allocation, std::move(createInfo.info), std::move(geometries));
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-inline ScratchBufferBuilderNV::ScratchBufferBuilderNV()
-{
-	reqInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV;
-	reqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_NV;
-
-	allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-}
-
-inline void ScratchBufferBuilderNV::setAccelerationStruct(VulkanAccelerationStructureNV *accelstruct)
-{
-	reqInfo.accelerationStructure = accelstruct->accelstruct;
-}
-
-inline void ScratchBufferBuilderNV::setUpdateType()
-{
-	reqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_NV;
-}
-
-inline std::unique_ptr<VulkanBuffer> ScratchBufferBuilderNV::create(VulkanDevice *device)
-{
-	VkMemoryRequirements2KHR memoryRequirements2 = {};
-	memoryRequirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR;
-	vkGetAccelerationStructureMemoryRequirementsNV(device->device, &reqInfo, &memoryRequirements2);
-
-	VmaAllocation allocation;
-	VmaAllocationInfo allocResultInfo = {};
-	VkResult result = vmaAllocateMemory(device->allocator, &memoryRequirements2.memoryRequirements, &allocInfo, &allocation, &allocResultInfo);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("could not allocate memory for vulkan scratch buffer");
-
-	VkBufferCreateInfo bufferInfo = {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	bufferInfo.size = memoryRequirements2.memoryRequirements.size;
-	bufferInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
-
-	VkBuffer buffer;
-	result = vkCreateBuffer(device->device, &bufferInfo, nullptr, &buffer);
-
-	result = vkBindBufferMemory(device->device, buffer, allocResultInfo.deviceMemory, allocResultInfo.offset);
-	if (result != VK_SUCCESS)
-	{
-		vmaFreeMemory(device->allocator, allocation);
-		vkDestroyBuffer(device->device, buffer, nullptr);
-		throw std::runtime_error("could not bind memory to vulkan scratch buffer");
-	}
-
-	return std::make_unique<VulkanBuffer>(device, buffer, allocation, (size_t)bufferInfo.size);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
 inline RayTracingPipelineBuilder::RayTracingPipelineBuilder()
 {
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV;
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
 }
 
 inline void RayTracingPipelineBuilder::setLayout(VulkanPipelineLayout *layout)
@@ -834,9 +621,9 @@ inline void RayTracingPipelineBuilder::setLayout(VulkanPipelineLayout *layout)
 	pipelineInfo.layout = layout->layout;
 }
 
-inline void RayTracingPipelineBuilder::setMaxRecursionDepth(int depth)
+inline void RayTracingPipelineBuilder::setMaxPipelineRayRecursionDepth(int depth)
 {
-	pipelineInfo.maxRecursionDepth = depth;
+	pipelineInfo.maxPipelineRayRecursionDepth = depth;
 }
 
 inline void RayTracingPipelineBuilder::addShader(VkShaderStageFlagBits stage, VulkanShader *shader)
@@ -853,13 +640,13 @@ inline void RayTracingPipelineBuilder::addShader(VkShaderStageFlagBits stage, Vu
 
 inline void RayTracingPipelineBuilder::addRayGenGroup(int rayGenShader)
 {
-	VkRayTracingShaderGroupCreateInfoNV group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV;
+	VkRayTracingShaderGroupCreateInfoKHR group = {};
+	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
 	group.generalShader = rayGenShader;
-	group.closestHitShader = VK_SHADER_UNUSED_NV;
-	group.anyHitShader = VK_SHADER_UNUSED_NV;
-	group.intersectionShader = VK_SHADER_UNUSED_NV;
+	group.closestHitShader = VK_SHADER_UNUSED_KHR;
+	group.anyHitShader = VK_SHADER_UNUSED_KHR;
+	group.intersectionShader = VK_SHADER_UNUSED_KHR;
 	groups.push_back(group);
 
 	pipelineInfo.pGroups = groups.data();
@@ -868,13 +655,13 @@ inline void RayTracingPipelineBuilder::addRayGenGroup(int rayGenShader)
 
 inline void RayTracingPipelineBuilder::addMissGroup(int missShader)
 {
-	VkRayTracingShaderGroupCreateInfoNV group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV;
+	VkRayTracingShaderGroupCreateInfoKHR group = {};
+	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
 	group.generalShader = missShader;
-	group.closestHitShader = VK_SHADER_UNUSED_NV;
-	group.anyHitShader = VK_SHADER_UNUSED_NV;
-	group.intersectionShader = VK_SHADER_UNUSED_NV;
+	group.closestHitShader = VK_SHADER_UNUSED_KHR;
+	group.anyHitShader = VK_SHADER_UNUSED_KHR;
+	group.intersectionShader = VK_SHADER_UNUSED_KHR;
 	groups.push_back(group);
 
 	pipelineInfo.pGroups = groups.data();
@@ -883,13 +670,13 @@ inline void RayTracingPipelineBuilder::addMissGroup(int missShader)
 
 inline void RayTracingPipelineBuilder::addTrianglesHitGroup(int closestHitShader, int anyHitShader)
 {
-	VkRayTracingShaderGroupCreateInfoNV group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV;
-	group.generalShader = VK_SHADER_UNUSED_NV;
+	VkRayTracingShaderGroupCreateInfoKHR group = {};
+	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+	group.generalShader = VK_SHADER_UNUSED_KHR;
 	group.closestHitShader = closestHitShader;
 	group.anyHitShader = anyHitShader;
-	group.intersectionShader = VK_SHADER_UNUSED_NV;
+	group.intersectionShader = VK_SHADER_UNUSED_KHR;
 	groups.push_back(group);
 
 	pipelineInfo.pGroups = groups.data();
@@ -898,10 +685,10 @@ inline void RayTracingPipelineBuilder::addTrianglesHitGroup(int closestHitShader
 
 inline void RayTracingPipelineBuilder::addProceduralHitGroup(int intersectionShader, int closestHitShader, int anyHitShader)
 {
-	VkRayTracingShaderGroupCreateInfoNV group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV;
-	group.generalShader = VK_SHADER_UNUSED_NV;
+	VkRayTracingShaderGroupCreateInfoKHR group = {};
+	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
+	group.generalShader = VK_SHADER_UNUSED_KHR;
 	group.closestHitShader = closestHitShader;
 	group.anyHitShader = anyHitShader;
 	group.intersectionShader = intersectionShader;
@@ -914,18 +701,18 @@ inline void RayTracingPipelineBuilder::addProceduralHitGroup(int intersectionSha
 inline std::unique_ptr<VulkanPipeline> RayTracingPipelineBuilder::create(VulkanDevice *device)
 {
 	VkPipeline pipeline;
-	VkResult result = vkCreateRayTracingPipelinesNV(device->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+	VkResult result = vkCreateRayTracingPipelinesKHR(device->device, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 	if (result != VK_SUCCESS)
-		throw std::runtime_error("vkCreateRayTracingPipelinesNV failed");
+		throw std::runtime_error("vkCreateRayTracingPipelinesKHR failed");
 
 	std::vector<uint8_t> shaderGroupHandles(device->physicalDevice.rayTracingProperties.shaderGroupHandleSize * groups.size());
 	if (!groups.empty())
 	{
-		result = vkGetRayTracingShaderGroupHandlesNV(device->device, pipeline, 0, (uint32_t)groups.size(), shaderGroupHandles.size(), shaderGroupHandles.data());
+		result = vkGetRayTracingShaderGroupHandlesKHR(device->device, pipeline, 0, (uint32_t)groups.size(), shaderGroupHandles.size(), shaderGroupHandles.data());
 		if (result != VK_SUCCESS)
 		{
 			vkDestroyPipeline(device->device, pipeline, nullptr);
-			throw std::runtime_error("vkGetRayTracingShaderGroupHandlesNV failed");
+			throw std::runtime_error("vkGetRayTracingShaderGroupHandlesKHR failed");
 		}
 	}
 
@@ -1719,11 +1506,11 @@ inline void WriteDescriptors::addCombinedImageSampler(VulkanDescriptorSet *descr
 	writeExtras.push_back(std::move(extra));
 }
 
-inline void WriteDescriptors::addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructureNV *accelStruct)
+inline void WriteDescriptors::addAccelerationStructure(VulkanDescriptorSet *descriptorSet, int binding, VulkanAccelerationStructure *accelStruct)
 {
 	auto extra = std::make_unique<WriteExtra>();
 	extra->accelStruct = {};
-	extra->accelStruct.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV;
+	extra->accelStruct.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
 	extra->accelStruct.accelerationStructureCount = 1;
 	extra->accelStruct.pAccelerationStructures = &accelStruct->accelstruct;
 
@@ -1732,7 +1519,7 @@ inline void WriteDescriptors::addAccelerationStructure(VulkanDescriptorSet *desc
 	descriptorWrite.dstSet = descriptorSet->set;
 	descriptorWrite.dstBinding = binding;
 	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	descriptorWrite.descriptorCount = 1;
 	descriptorWrite.pNext = &extra->accelStruct;
 	writes.push_back(descriptorWrite);

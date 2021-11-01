@@ -238,26 +238,6 @@ private:
 	VulkanAccelerationStructure& operator=(const VulkanAccelerationStructure&) = delete;
 };
 
-class VulkanAccelerationStructureNV
-{
-public:
-	VulkanAccelerationStructureNV(VulkanDevice *device, VkAccelerationStructureNV accelstruct, VmaAllocation allocation, VkAccelerationStructureInfoNV &&info, std::vector<VkGeometryNV> &&geometries);
-	~VulkanAccelerationStructureNV();
-
-	void SetDebugName(const char *name) { device->setDebugObjectName(name, (uint64_t)accelstruct, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV); }
-
-	VulkanDevice *device;
-	VkAccelerationStructureNV accelstruct;
-	VmaAllocation allocation;
-
-	VkAccelerationStructureInfoNV info;
-	std::vector<VkGeometryNV> geometries;
-
-private:
-	VulkanAccelerationStructureNV(const VulkanAccelerationStructureNV &) = delete;
-	VulkanAccelerationStructureNV &operator=(const VulkanAccelerationStructureNV &) = delete;
-};
-
 class VulkanPipeline
 {
 public:
@@ -392,13 +372,8 @@ public:
 	void endRenderPass();
 	void executeCommands(uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
 
-	void buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VulkanBuffer *instanceData, VkDeviceSize instanceOffset, VkBool32 update, VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VulkanBuffer *scratch, VkDeviceSize scratchOffset);
-	void buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VkBuffer instanceData, VkDeviceSize instanceOffset, VkBool32 update, VkAccelerationStructureNV dst, VkAccelerationStructureNV src, VkBuffer scratch, VkDeviceSize scratchOffset);
-	void copyAccelerationStructure(VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VkCopyAccelerationStructureModeNV mode);
-	void copyAccelerationStructure(VkAccelerationStructureNV dst, VkAccelerationStructureNV src, VkCopyAccelerationStructureModeNV mode);
-	void traceRays(VulkanBuffer *raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, VulkanBuffer *missShaderBindingTableBuffer, VkDeviceSize missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VulkanBuffer *hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, VkDeviceSize hitShaderBindingStride, VulkanBuffer *callableShaderBindingTableBuffer, VkDeviceSize callableShaderBindingOffset, VkDeviceSize callableShaderBindingStride, uint32_t width, uint32_t height, uint32_t depth);
-	void traceRays(VkBuffer raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, VkBuffer missShaderBindingTableBuffer, VkDeviceSize missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VkBuffer hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, VkDeviceSize hitShaderBindingStride, VkBuffer callableShaderBindingTableBuffer, VkDeviceSize callableShaderBindingOffset, VkDeviceSize callableShaderBindingStride, uint32_t width, uint32_t height, uint32_t depth);
-	void writeAccelerationStructuresProperties(uint32_t accelerationStructureCount, const VkAccelerationStructureNV* pAccelerationStructures, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery);
+	void traceRays(const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pCallableShaderBindingTable, uint32_t width, uint32_t height, uint32_t depth);
+	void writeAccelerationStructuresProperties(uint32_t accelerationStructureCount, const VkAccelerationStructureKHR* pAccelerationStructures, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery);
 
 	void debugFullPipelineBarrier();
 
@@ -930,44 +905,14 @@ inline void VulkanCommandBuffer::executeCommands(uint32_t commandBufferCount, co
 	vkCmdExecuteCommands(buffer, commandBufferCount, pCommandBuffers);
 }
 
-inline void VulkanCommandBuffer::buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VulkanBuffer *instanceData, VkDeviceSize instanceOffset, VkBool32 update, VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VulkanBuffer *scratch, VkDeviceSize scratchOffset)
+inline void VulkanCommandBuffer::traceRays(const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable, const VkStridedDeviceAddressRegionKHR* pCallableShaderBindingTable, uint32_t width, uint32_t height, uint32_t depth)
 {
-	buildAccelerationStructure(pInfo, instanceData->buffer, instanceOffset, update, dst->accelstruct, src->accelstruct, scratch->buffer, scratchOffset);
+	vkCmdTraceRaysKHR(buffer, pRaygenShaderBindingTable, pMissShaderBindingTable, pHitShaderBindingTable, pCallableShaderBindingTable, width, height, depth);
 }
 
-inline void VulkanCommandBuffer::buildAccelerationStructure(const VkAccelerationStructureInfoNV* pInfo, VkBuffer instanceData, VkDeviceSize instanceOffset, VkBool32 update, VkAccelerationStructureNV dst, VkAccelerationStructureNV src, VkBuffer scratch, VkDeviceSize scratchOffset)
+inline void VulkanCommandBuffer::writeAccelerationStructuresProperties(uint32_t accelerationStructureCount, const VkAccelerationStructureKHR* pAccelerationStructures, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery)
 {
-	vkCmdBuildAccelerationStructureNV(buffer, pInfo, instanceData, instanceOffset, update, dst, src, scratch, scratchOffset);
-}
-
-inline void VulkanCommandBuffer::copyAccelerationStructure(VulkanAccelerationStructureNV *dst, VulkanAccelerationStructureNV *src, VkCopyAccelerationStructureModeNV mode)
-{
-	copyAccelerationStructure(dst->accelstruct, src->accelstruct, mode);
-}
-
-inline void VulkanCommandBuffer::copyAccelerationStructure(VkAccelerationStructureNV dst, VkAccelerationStructureNV src, VkCopyAccelerationStructureModeNV mode)
-{
-	vkCmdCopyAccelerationStructureNV(buffer, dst, src, mode);
-}
-
-inline void VulkanCommandBuffer::traceRays(VulkanBuffer *raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, VulkanBuffer *missShaderBindingTableBuffer, VkDeviceSize missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VulkanBuffer *hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, VkDeviceSize hitShaderBindingStride, VulkanBuffer *callableShaderBindingTableBuffer, VkDeviceSize callableShaderBindingOffset, VkDeviceSize callableShaderBindingStride, uint32_t width, uint32_t height, uint32_t depth)
-{
-	traceRays(
-		raygenShaderBindingTableBuffer->buffer, raygenShaderBindingOffset,
-		missShaderBindingTableBuffer ? missShaderBindingTableBuffer->buffer : VK_NULL_HANDLE, missShaderBindingOffset, missShaderBindingStride,
-		hitShaderBindingTableBuffer ? hitShaderBindingTableBuffer->buffer : VK_NULL_HANDLE, hitShaderBindingOffset, hitShaderBindingStride,
-		callableShaderBindingTableBuffer ? callableShaderBindingTableBuffer->buffer : VK_NULL_HANDLE, callableShaderBindingOffset, callableShaderBindingStride,
-		width, height, depth);
-}
-
-inline void VulkanCommandBuffer::traceRays(VkBuffer raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, VkBuffer missShaderBindingTableBuffer, VkDeviceSize missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VkBuffer hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, VkDeviceSize hitShaderBindingStride, VkBuffer callableShaderBindingTableBuffer, VkDeviceSize callableShaderBindingOffset, VkDeviceSize callableShaderBindingStride, uint32_t width, uint32_t height, uint32_t depth)
-{
-	vkCmdTraceRaysNV(buffer, raygenShaderBindingTableBuffer, raygenShaderBindingOffset, missShaderBindingTableBuffer, missShaderBindingOffset, missShaderBindingStride, hitShaderBindingTableBuffer, hitShaderBindingOffset, hitShaderBindingStride, callableShaderBindingTableBuffer, callableShaderBindingOffset, callableShaderBindingStride, width, height, depth);
-}
-
-inline void VulkanCommandBuffer::writeAccelerationStructuresProperties(uint32_t accelerationStructureCount, const VkAccelerationStructureNV* pAccelerationStructures, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery)
-{
-	vkCmdWriteAccelerationStructuresPropertiesNV(buffer, accelerationStructureCount, pAccelerationStructures, queryType, queryPool, firstQuery);
+	vkCmdWriteAccelerationStructuresPropertiesKHR(buffer, accelerationStructureCount, pAccelerationStructures, queryType, queryPool, firstQuery);
 }
 
 inline void VulkanCommandBuffer::SetDebugName(const char *name)
@@ -1120,19 +1065,6 @@ inline VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanDevice* de
 inline VulkanAccelerationStructure::~VulkanAccelerationStructure()
 {
 	vkDestroyAccelerationStructureKHR(device->device, accelstruct, nullptr);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-inline VulkanAccelerationStructureNV::VulkanAccelerationStructureNV(VulkanDevice *device, VkAccelerationStructureNV accelstruct, VmaAllocation allocation, VkAccelerationStructureInfoNV &&info, std::vector<VkGeometryNV> &&geometries)
-	: device(device), accelstruct(accelstruct), allocation(allocation), info(std::move(info)), geometries(std::move(geometries))
-{
-}
-
-inline VulkanAccelerationStructureNV::~VulkanAccelerationStructureNV()
-{
-	vkDestroyAccelerationStructureNV(device->device, accelstruct, nullptr);
-	vmaFreeMemory(device->allocator, allocation);
 }
 
 /////////////////////////////////////////////////////////////////////////////
