@@ -688,7 +688,7 @@ void FProcessor::BuildNodes()
 	}
 }
 
-#define USE_GPU_RAYTRACER
+//#define USE_GPU_RAYTRACER
 //#define USE_CPU_RAYTRACER
 
 void FProcessor::BuildLightmaps()
