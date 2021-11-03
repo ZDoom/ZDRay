@@ -29,7 +29,7 @@ public:
 	std::vector<VkExtensionProperties> extensions;
 	std::vector<VkQueueFamilyProperties> queueFamilies;
 	VkPhysicalDeviceProperties properties = {};
-	VkPhysicalDeviceRayTracingPropertiesNV rayTracingProperties = {};
+	VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingProperties = {};
 	VkPhysicalDeviceFeatures features = {};
 	VkPhysicalDeviceMemoryProperties memoryProperties = {};
 };

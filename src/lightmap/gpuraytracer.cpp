@@ -87,7 +87,42 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	printf("Creating pipeline\n");
 	CreatePipeline();
 
+	printf("Creating descriptor set\n");
+	CreateDescriptorSet();
+
+	printf("Creating render setup\n");
+
+	Uniforms uniforms;
+	uniforms.viewInverse.Identity();
+	uniforms.projInverse.Identity();
+
+	auto data = uniformTransferBuffer->Map(0, sizeof(Uniforms));
+	memcpy(data, &uniforms, sizeof(Uniforms));
+	uniformTransferBuffer->Unmap();
+	cmdbuffer->copyBuffer(uniformTransferBuffer.get(), uniformBuffer.get());
+
+	PipelineBarrier barrier;
+	barrier.addBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+	barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+
+	printf("Starting render\n");
+
+	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline.get());
+	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get());
+	cmdbuffer->traceRays(&rgenRegion, &missRegion, &hitRegion, &callRegion, 1024, 1024, 1);
 	cmdbuffer->end();
+
+	auto submitFence = std::make_unique<VulkanFence>(device.get());
+
+	QueueSubmit submit;
+	submit.addCommandBuffer(cmdbuffer.get());
+	submit.execute(device.get(), device->graphicsQueue, submitFence.get());
+
+	vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(device->device, 1, &submitFence->fence);
+
+	printf("Render complete\n");
+
 
 #if 0
 	printf("Tracing light probes\n");
@@ -631,25 +666,115 @@ void GPURaytracer::CreatePipeline()
 	builder.setLayout(pipelineLayout.get());
 	builder.setMaxPipelineRayRecursionDepth(1);
 	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, shaderRayGen.get());
-	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, shaderClosestHit.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, shaderMiss.get());
+	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, shaderClosestHit.get());
 	builder.addRayGenGroup(0);
-	builder.addTrianglesHitGroup(1);
-	builder.addMissGroup(2);
+	builder.addMissGroup(1);
+	builder.addTrianglesHitGroup(2);
 	pipeline = builder.create(device.get());
 
+	// OK, this is by far the WORST idea I've seen in vulkan yet. And that's saying a lot.
+	// 
+	// Each shader type has its own table, which needs to be aligned.
+	// That means we can't just copy the shader table pointers directly. Each group needs to be sized up and copied individually.
+
+	const auto& rtProperties = device->physicalDevice.rayTracingProperties;
+
+	auto align_up = [](VkDeviceSize value, VkDeviceSize alignment)
+	{
+		if (alignment != 0)
+			return (value + alignment - 1) / alignment * alignment;
+		else
+			return value;
+	};
+
+	VkDeviceSize missCount = 1;
+	VkDeviceSize hitCount = 1;
+
+	VkDeviceSize handleSize = rtProperties.shaderGroupHandleSize;
+	VkDeviceSize handleSizeAligned = align_up(handleSize, rtProperties.shaderGroupHandleAlignment);
+
+	rgenRegion.stride = align_up(handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+	missRegion.stride = handleSizeAligned;
+	hitRegion.stride = handleSizeAligned;
+
+	rgenRegion.size = align_up(handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+	missRegion.size = align_up(missCount * handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+	hitRegion.size = align_up(hitCount * handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+
+	VkDeviceSize rgenOffset = 0;
+	VkDeviceSize missOffset = rgenOffset + rgenRegion.size;
+	VkDeviceSize hitOffset = missOffset + missRegion.size;
+
+	VkDeviceSize sbtBufferSize = rgenRegion.size + missRegion.size + hitRegion.size;
+
 	BufferBuilder bufbuilder;
-	bufbuilder.setUsage(VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-	bufbuilder.setSize(pipeline->shaderGroupHandles.size());
+	bufbuilder.setUsage(VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	bufbuilder.setSize(sbtBufferSize);
 	shaderBindingTable = bufbuilder.create(device.get());
 
 	BufferBuilder tbuilder;
 	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-	tbuilder.setSize(pipeline->shaderGroupHandles.size());
+	tbuilder.setSize(sbtBufferSize);
 	sbtTransferBuffer = tbuilder.create(device.get());
-	auto data = sbtTransferBuffer->Map(0, pipeline->shaderGroupHandles.size());
-	memcpy(data, pipeline->shaderGroupHandles.data(), pipeline->shaderGroupHandles.size());
+	uint8_t* src = (uint8_t*)pipeline->shaderGroupHandles.data();
+	uint8_t* dest = (uint8_t*)sbtTransferBuffer->Map(0, sbtBufferSize);
+	memcpy(dest + rgenOffset, src, handleSize);
+	for (VkDeviceSize i = 0; i < missCount; i++)
+		memcpy(dest + missOffset + i * missRegion.stride, src + (1 + i) * handleSize, handleSize);
+	for (VkDeviceSize i = 0; i < hitCount; i++)
+		memcpy(dest + hitOffset, src + (1 + missCount + i) * handleSize, handleSize);
 	sbtTransferBuffer->Unmap();
 
 	cmdbuffer->copyBuffer(sbtTransferBuffer.get(), shaderBindingTable.get());
+
+	VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+	info.buffer = shaderBindingTable->buffer;
+	VkDeviceAddress sbtAddress = vkGetBufferDeviceAddress(device->device, &info);
+
+	rgenRegion.deviceAddress = sbtAddress + rgenOffset;
+	missRegion.deviceAddress = sbtAddress + missOffset;
+	hitRegion.deviceAddress = sbtAddress + hitOffset;
+}
+
+void GPURaytracer::CreateDescriptorSet()
+{
+	BufferBuilder uniformbuilder;
+	uniformbuilder.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	uniformbuilder.setSize(sizeof(Uniforms));
+	uniformBuffer = uniformbuilder.create(device.get());
+
+	BufferBuilder uniformtransferbuilder;
+	uniformtransferbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	uniformtransferbuilder.setSize(sizeof(Uniforms));
+	uniformTransferBuffer = uniformtransferbuilder.create(device.get());
+
+	ImageBuilder builder;
+	builder.setUsage(VK_IMAGE_USAGE_STORAGE_BIT);
+	builder.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
+	builder.setSize(1024, 1024);
+	outputImage = builder.create(device.get());
+
+	ImageViewBuilder viewbuilder;
+	viewbuilder.setImage(outputImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
+	outputImageView = viewbuilder.create(device.get());
+
+	PipelineBarrier barrier;
+	barrier.addImage(outputImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+	barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+
+	DescriptorPoolBuilder poolbuilder;
+	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1);
+	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1);
+	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+	poolbuilder.setMaxSets(1);
+	descriptorPool = poolbuilder.create(device.get());
+
+	descriptorSet = descriptorPool->allocate(descriptorSetLayout.get());
+
+	WriteDescriptors write;
+	write.addAccelerationStructure(descriptorSet.get(), 0, tlAccelStruct.get());
+	write.addStorageImage(descriptorSet.get(), 1, outputImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
+	write.addBuffer(descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get());
+	write.updateSets(device.get());
 }

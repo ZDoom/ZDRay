@@ -441,11 +441,9 @@ std::vector<VulkanPhysicalDevice> VulkanDevice::getPhysicalDevices(VkInstance in
 		auto &dev = devinfo[i];
 		dev.device = devices[i];
 
-		VkPhysicalDeviceProperties2 props = {};
-		VkPhysicalDeviceRayTracingPropertiesNV rayprops = {};
-		props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+		VkPhysicalDeviceProperties2 props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+		VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayprops = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
 		props.pNext = &rayprops;
-		rayprops.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
 		vkGetPhysicalDeviceProperties2(dev.device, &props);
 		dev.properties = props.properties;
 		dev.rayTracingProperties = rayprops;

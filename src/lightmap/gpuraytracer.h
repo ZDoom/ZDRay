@@ -6,6 +6,12 @@
 
 class LevelMesh;
 
+struct Uniforms
+{
+	Mat4 viewInverse;
+	Mat4 projInverse;
+};
+
 class GPURaytracer
 {
 public:
@@ -20,6 +26,7 @@ private:
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
 	void CreatePipeline();
+	void CreateDescriptorSet();
 
 	void RaytraceProbeSample(LightProbeSample* probe);
 	void RaytraceSurfaceSample(Surface* surface, int x, int y);
@@ -62,6 +69,20 @@ private:
 	std::unique_ptr<VulkanPipeline> pipeline;
 	std::unique_ptr<VulkanBuffer> shaderBindingTable;
 	std::unique_ptr<VulkanBuffer> sbtTransferBuffer;
+
+	VkStridedDeviceAddressRegionKHR rgenRegion = {};
+	VkStridedDeviceAddressRegionKHR missRegion = {};
+	VkStridedDeviceAddressRegionKHR hitRegion = {};
+	VkStridedDeviceAddressRegionKHR callRegion = {};
+
+	std::unique_ptr<VulkanImage> outputImage;
+	std::unique_ptr<VulkanImageView> outputImageView;
+
+	std::unique_ptr<VulkanBuffer> uniformBuffer;
+	std::unique_ptr<VulkanBuffer> uniformTransferBuffer;
+
+	std::unique_ptr<VulkanDescriptorPool> descriptorPool;
+	std::unique_ptr<VulkanDescriptorSet> descriptorSet;
 
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
