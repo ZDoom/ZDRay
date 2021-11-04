@@ -689,7 +689,7 @@ void GPURaytracer::CreateShaders()
 				vec3 hitValue;
 			};
 
-			layout(location = 0) rayPayloadEXT hitPayload payload;
+			layout(location = 0) rayPayloadInEXT hitPayload payload;
 
 			void main()
 			{
@@ -713,7 +713,7 @@ void GPURaytracer::CreateShaders()
 				vec3 hitValue;
 			};
 
-			layout(location = 0) rayPayloadEXT hitPayload payload;
+			layout(location = 0) rayPayloadInEXT hitPayload payload;
 
 			void main()
 			{
