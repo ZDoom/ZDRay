@@ -14,6 +14,7 @@
 #include <vector>
 #include <algorithm>
 #include <zlib.h>
+#include "renderdoc_app.h"
 
 extern int Multisample;
 extern int LightBounce;
@@ -68,63 +69,6 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 {
 	mesh = level;
 
-	cmdpool = std::make_unique<VulkanCommandPool>(device.get(), device->graphicsFamily);
-	cmdbuffer = cmdpool->createBuffer();
-	cmdbuffer->begin();
-
-	printf("Creating vertex and index buffers\n");
-	CreateVertexAndIndexBuffers();
-
-	printf("Creating bottom level acceleration structure\n");
-	CreateBottomLevelAccelerationStructure();
-
-	printf("Creating top level acceleration structure\n");
-	CreateTopLevelAccelerationStructure();
-
-	printf("Creating shaders\n");
-	CreateShaders();
-
-	printf("Creating pipeline\n");
-	CreatePipeline();
-
-	printf("Creating descriptor set\n");
-	CreateDescriptorSet();
-
-	printf("Creating render setup\n");
-
-	Uniforms uniforms;
-	uniforms.viewInverse.Identity();
-	uniforms.projInverse.Identity();
-
-	auto data = uniformTransferBuffer->Map(0, sizeof(Uniforms));
-	memcpy(data, &uniforms, sizeof(Uniforms));
-	uniformTransferBuffer->Unmap();
-	cmdbuffer->copyBuffer(uniformTransferBuffer.get(), uniformBuffer.get());
-
-	PipelineBarrier barrier;
-	barrier.addBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-	barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
-
-	printf("Starting render\n");
-
-	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline.get());
-	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get());
-	cmdbuffer->traceRays(&rgenRegion, &missRegion, &hitRegion, &callRegion, 1024, 1024, 1);
-	cmdbuffer->end();
-
-	auto submitFence = std::make_unique<VulkanFence>(device.get());
-
-	QueueSubmit submit;
-	submit.addCommandBuffer(cmdbuffer.get());
-	submit.execute(device.get(), device->graphicsQueue, submitFence.get());
-
-	vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device->device, 1, &submitFence->fence);
-
-	printf("Render complete\n");
-
-
-#if 0
 	printf("Tracing light probes\n");
 
 	Worker::RunJob((int)mesh->lightProbes.size(), [=](int id) {
@@ -157,11 +101,134 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		}
 	}
 
-	Worker::RunJob((int)tasks.size(), [=](int id) {
-		const SurfaceTask& task = tasks[id];
-		RaytraceSurfaceSample(mesh->surfaces[task.surf].get(), task.x, task.y);
-	});
-#endif
+	RENDERDOC_API_1_4_2* renderdoc = nullptr;
+	if (HMODULE mod = GetModuleHandle(TEXT("renderdoc.dll")))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&renderdoc);
+		if (ret == 1)
+			printf("Renderdoc detected!\n");
+		else
+			renderdoc = nullptr;
+	}
+
+	if (renderdoc)
+		renderdoc->StartFrameCapture(0, 0);
+
+	cmdpool = std::make_unique<VulkanCommandPool>(device.get(), device->graphicsFamily);
+	cmdbuffer = cmdpool->createBuffer();
+	cmdbuffer->begin();
+
+	CreateVertexAndIndexBuffers();
+	CreateBottomLevelAccelerationStructure();
+	CreateTopLevelAccelerationStructure();
+	CreateShaders();
+	CreatePipeline();
+	CreateDescriptorSet();
+
+	PipelineBarrier finishbuildbarrier;
+	finishbuildbarrier.addMemory(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR);
+	finishbuildbarrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+
+	Uniforms uniforms;
+	uniforms.viewInverse.Identity();
+	uniforms.projInverse.Identity();
+
+	size_t imageSize = sizeof(Vec4) * rayTraceImageSize * rayTraceImageSize;
+	uint8_t* imageData = (uint8_t*)imageTransferBuffer->Map(0, imageSize);
+	Vec4* positions = (Vec4*)imageData;
+	Vec4* normals = (Vec4*)(imageData + imageSize);
+	for (size_t i = 0; i < tasks.size(); i++)
+	{
+		SurfaceTask& task = tasks[i];
+		Surface* surface = mesh->surfaces[task.surf].get();
+
+		Vec3 normal = surface->plane.Normal();
+		Vec3 pos = surface->lightmapOrigin + normal + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+
+		positions[i] = Vec4(pos, 1.0f);
+		normals[i] = Vec4(normal, 1.0f);
+	}
+	imageTransferBuffer->Unmap();
+
+	auto data = uniformTransferBuffer->Map(0, sizeof(Uniforms));
+	memcpy(data, &uniforms, sizeof(Uniforms));
+	uniformTransferBuffer->Unmap();
+
+	PipelineBarrier barrier1;
+	barrier1.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
+	barrier1.addImage(normalsImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
+	barrier1.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	cmdbuffer->copyBuffer(uniformTransferBuffer.get(), uniformBuffer.get());
+
+	VkBufferImageCopy region = {};
+	region.bufferOffset = 0;
+	region.imageExtent.width = rayTraceImageSize;
+	region.imageExtent.height = rayTraceImageSize;
+	region.imageExtent.depth = 1;
+	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	cmdbuffer->copyBufferToImage(imageTransferBuffer->buffer, positionsImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	region = {};
+	region.bufferOffset = imageSize;
+	region.imageExtent.width = rayTraceImageSize;
+	region.imageExtent.height = rayTraceImageSize;
+	region.imageExtent.depth = 1;
+	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	cmdbuffer->copyBufferToImage(imageTransferBuffer->buffer, normalsImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	PipelineBarrier barrier2;
+	barrier2.addBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+	barrier2.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+	barrier2.addImage(normalsImage.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+	barrier2.addImage(outputImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+	barrier2.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+
+	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline.get());
+	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get());
+	cmdbuffer->traceRays(&rgenRegion, &missRegion, &hitRegion, &callRegion, rayTraceImageSize, rayTraceImageSize, 1);
+
+	PipelineBarrier barrier3;
+	barrier3.addImage(outputImage.get(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+	barrier3.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	region = {};
+	region.bufferOffset = 0;
+	region.imageExtent.width = rayTraceImageSize;
+	region.imageExtent.height = rayTraceImageSize;
+	region.imageExtent.depth = 1;
+	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	cmdbuffer->copyImageToBuffer(outputImage->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, imageTransferBuffer->buffer, 1, &region);
+
+	cmdbuffer->end();
+
+	auto submitFence = std::make_unique<VulkanFence>(device.get());
+
+	QueueSubmit submit;
+	submit.addCommandBuffer(cmdbuffer.get());
+	submit.execute(device.get(), device->graphicsQueue, submitFence.get());
+
+	vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+	vkResetFences(device->device, 1, &submitFence->fence);
+
+	imageData = (uint8_t*)imageTransferBuffer->Map(0, imageSize);
+	Vec4* output = (Vec4*)imageData;
+	for (size_t i = 0; i < tasks.size(); i++)
+	{
+		SurfaceTask& task = tasks[i];
+		Surface* surface = mesh->surfaces[task.surf].get();
+
+		size_t sampleWidth = surface->lightmapDims[0];
+		surface->samples[task.x + task.y * sampleWidth] = Vec3(output[i].x, output[i].y, output[i].z);
+	}
+	imageTransferBuffer->Unmap();
+
+	if (renderdoc)
+		renderdoc->EndFrameCapture(0, 0);
 
 	printf("Raytrace complete\n");
 }
@@ -366,16 +433,19 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	vbuilder.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	vbuilder.setSize(vertexbuffersize);
 	vertexBuffer = vbuilder.create(device.get());
+	vertexBuffer->SetDebugName("vertexBuffer");
 
 	BufferBuilder ibuilder;
 	ibuilder.setUsage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	ibuilder.setSize(indexbuffersize);
 	indexBuffer = ibuilder.create(device.get());
+	indexBuffer->SetDebugName("indexBuffer");
 
 	BufferBuilder tbuilder;
 	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 	tbuilder.setSize(transferbuffersize);
 	transferBuffer = tbuilder.create(device.get());
+	transferBuffer->SetDebugName("transferBuffer");
 	uint8_t* data = (uint8_t*)transferBuffer->Map(0, transferbuffersize);
 	memcpy(data + vertexoffset, mesh->MeshVertices.Data(), vertexbuffersize);
 	memcpy(data + indexoffset, mesh->MeshElements.Data(), indexbuffersize);
@@ -432,6 +502,7 @@ void GPURaytracer::CreateBottomLevelAccelerationStructure()
 	blbufbuilder.setUsage(VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
 	blbufbuilder.setSize(sizeInfo.accelerationStructureSize);
 	blAccelStructBuffer = blbufbuilder.create(device.get());
+	blAccelStructBuffer->SetDebugName("blAccelStructBuffer");
 
 	VkAccelerationStructureKHR blAccelStructHandle = {};
 	VkAccelerationStructureCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
@@ -447,6 +518,7 @@ void GPURaytracer::CreateBottomLevelAccelerationStructure()
 	sbuilder.setUsage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	sbuilder.setSize(sizeInfo.buildScratchSize);
 	blScratchBuffer = sbuilder.create(device.get());
+	blScratchBuffer->SetDebugName("blScratchBuffer");
 
 	info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
 	info.buffer = blScratchBuffer->buffer;
@@ -478,6 +550,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 	tbuilder.setSize(sizeof(VkAccelerationStructureInstanceKHR));
 	tlTransferBuffer = tbuilder.create(device.get());
+	tlTransferBuffer->SetDebugName("tlTransferBuffer");
 	auto data = (uint8_t*)tlTransferBuffer->Map(0, sizeof(VkAccelerationStructureInstanceKHR));
 	memcpy(data, &instance, sizeof(VkAccelerationStructureInstanceKHR));
 	tlTransferBuffer->Unmap();
@@ -486,6 +559,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	instbufbuilder.setUsage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 	instbufbuilder.setSize(sizeof(VkAccelerationStructureInstanceKHR));
 	tlInstanceBuffer = instbufbuilder.create(device.get());
+	tlInstanceBuffer->SetDebugName("tlInstanceBuffer");
 
 	cmdbuffer->copyBuffer(tlTransferBuffer.get(), tlInstanceBuffer.get());
 
@@ -525,6 +599,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	tlbufbuilder.setUsage(VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
 	tlbufbuilder.setSize(sizeInfo.accelerationStructureSize);
 	tlAccelStructBuffer = tlbufbuilder.create(device.get());
+	tlAccelStructBuffer->SetDebugName("tlAccelStructBuffer");
 
 	VkAccelerationStructureKHR tlAccelStructHandle = {};
 	VkAccelerationStructureCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
@@ -540,6 +615,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	sbuilder.setUsage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	sbuilder.setSize(sizeInfo.buildScratchSize);
 	tlScratchBuffer = sbuilder.create(device.get());
+	tlScratchBuffer->SetDebugName("tlScratchBuffer");
 
 	info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
 	info.buffer = tlScratchBuffer->buffer;
@@ -574,9 +650,11 @@ void GPURaytracer::CreateShaders()
 			layout(location = 0) rayPayloadEXT hitPayload payload;
 
 			layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
-			layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+			layout(set = 0, binding = 1, rgba32f) uniform image2D positions;
+			layout(set = 0, binding = 2, rgba32f) uniform image2D normals;
+			layout(set = 0, binding = 3, rgba32f) uniform image2D outputs;
 
-			layout(set = 0, binding = 2) uniform Uniforms
+			layout(set = 0, binding = 4) uniform Uniforms
 			{
 				mat4 viewInverse;
 				mat4 projInverse;
@@ -584,46 +662,21 @@ void GPURaytracer::CreateShaders()
 
 			void main()
 			{
-				const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-				const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
-				vec2 d = inUV * 2.0 - 1.0;
+				ivec2 texelPos = ivec2(gl_LaunchIDEXT.xy);
+				vec3 origin = imageLoad(positions, texelPos).xyz;
+				vec3 normal = imageLoad(normals, texelPos).xyz;
 
-				vec4 origin = viewInverse * vec4(0, 0, 0, 1);
-				vec4 target = projInverse * vec4(d.x, d.y, 1, 1);
-				vec4 direction = viewInverse * vec4(normalize(target.xyz), 0);
+				vec3 direction = normal;
+				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, 1.0, direction.xyz, 10000.0, 0);
 
-				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, 0.001, direction.xyz, 10000.0, 0);
-
-				imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(payload.hitValue, 1.0));
+				imageStore(outputs, texelPos, vec4(payload.hitValue, 42.0));
 			}
 		)";
 
 		ShaderBuilder builder;
 		builder.setRayGenShader(code);
 		shaderRayGen = builder.create(device.get());
-	}
-
-	{
-		std::string code = R"(
-			#version 460
-			#extension GL_EXT_ray_tracing : require
-
-			struct hitPayload
-			{
-				vec3 hitValue;
-			};
-
-			layout(location = 0) rayPayloadEXT hitPayload payload;
-
-			void main()
-			{
-				payload.hitValue = vec3(1.0);
-			}
-		)";
-
-		ShaderBuilder builder;
-		builder.setMissShader(code);
-		shaderMiss = builder.create(device.get());
+		shaderRayGen->SetDebugName("shaderRayGen");
 	}
 
 	{
@@ -645,8 +698,33 @@ void GPURaytracer::CreateShaders()
 		)";
 
 		ShaderBuilder builder;
+		builder.setMissShader(code);
+		shaderMiss = builder.create(device.get());
+		shaderMiss->SetDebugName("shaderMiss");
+	}
+
+	{
+		std::string code = R"(
+			#version 460
+			#extension GL_EXT_ray_tracing : require
+
+			struct hitPayload
+			{
+				vec3 hitValue;
+			};
+
+			layout(location = 0) rayPayloadEXT hitPayload payload;
+
+			void main()
+			{
+				payload.hitValue = vec3(1.0);
+			}
+		)";
+
+		ShaderBuilder builder;
 		builder.setClosestHitShader(code);
 		shaderClosestHit = builder.create(device.get());
+		shaderClosestHit->SetDebugName("shaderClosestHit");
 	}
 }
 
@@ -655,12 +733,16 @@ void GPURaytracer::CreatePipeline()
 	DescriptorSetLayoutBuilder setbuilder;
 	setbuilder.addBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	setbuilder.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-	setbuilder.addBinding(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	setbuilder.addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	setbuilder.addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	setbuilder.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	descriptorSetLayout = setbuilder.create(device.get());
+	descriptorSetLayout->SetDebugName("descriptorSetLayout");
 
 	PipelineLayoutBuilder layoutbuilder;
 	layoutbuilder.addSetLayout(descriptorSetLayout.get());
 	pipelineLayout = layoutbuilder.create(device.get());
+	pipelineLayout->SetDebugName("pipelineLayout");
 
 	RayTracingPipelineBuilder builder;
 	builder.setLayout(pipelineLayout.get());
@@ -672,6 +754,7 @@ void GPURaytracer::CreatePipeline()
 	builder.addMissGroup(1);
 	builder.addTrianglesHitGroup(2);
 	pipeline = builder.create(device.get());
+	pipeline->SetDebugName("pipeline");
 
 	// OK, this is by far the WORST idea I've seen in vulkan yet. And that's saying a lot.
 	// 
@@ -712,11 +795,13 @@ void GPURaytracer::CreatePipeline()
 	bufbuilder.setUsage(VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 	bufbuilder.setSize(sbtBufferSize);
 	shaderBindingTable = bufbuilder.create(device.get());
+	shaderBindingTable->SetDebugName("shaderBindingTable");
 
 	BufferBuilder tbuilder;
 	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 	tbuilder.setSize(sbtBufferSize);
 	sbtTransferBuffer = tbuilder.create(device.get());
+	sbtTransferBuffer->SetDebugName("sbtTransferBuffer");
 	uint8_t* src = (uint8_t*)pipeline->shaderGroupHandles.data();
 	uint8_t* dest = (uint8_t*)sbtTransferBuffer->Map(0, sbtBufferSize);
 	memcpy(dest + rgenOffset, src, handleSize);
@@ -743,38 +828,67 @@ void GPURaytracer::CreateDescriptorSet()
 	uniformbuilder.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 	uniformbuilder.setSize(sizeof(Uniforms));
 	uniformBuffer = uniformbuilder.create(device.get());
+	uniformBuffer->SetDebugName("uniformBuffer");
 
 	BufferBuilder uniformtransferbuilder;
 	uniformtransferbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	uniformtransferbuilder.setSize(sizeof(Uniforms));
 	uniformTransferBuffer = uniformtransferbuilder.create(device.get());
+	uniformTransferBuffer->SetDebugName("uniformTransferBuffer");
 
-	ImageBuilder builder;
-	builder.setUsage(VK_IMAGE_USAGE_STORAGE_BIT);
-	builder.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
-	builder.setSize(1024, 1024);
-	outputImage = builder.create(device.get());
+	BufferBuilder itbuilder;
+	itbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	itbuilder.setSize(16LL * 2 * rayTraceImageSize * rayTraceImageSize);
+	imageTransferBuffer = itbuilder.create(device.get());
+	imageTransferBuffer->SetDebugName("imageTransferBuffer");
 
-	ImageViewBuilder viewbuilder;
-	viewbuilder.setImage(outputImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
-	outputImageView = viewbuilder.create(device.get());
+	ImageBuilder imgbuilder1;
+	imgbuilder1.setUsage(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+	imgbuilder1.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
+	imgbuilder1.setSize(rayTraceImageSize, rayTraceImageSize);
+	positionsImage = imgbuilder1.create(device.get());
+	positionsImage->SetDebugName("positionsImage");
+	normalsImage = imgbuilder1.create(device.get());
+	normalsImage->SetDebugName("normalsImage");
 
-	PipelineBarrier barrier;
-	barrier.addImage(outputImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-	barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+	ImageBuilder imgbuilder2;
+	imgbuilder2.setUsage(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+	imgbuilder2.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
+	imgbuilder2.setSize(rayTraceImageSize, rayTraceImageSize);
+	outputImage = imgbuilder2.create(device.get());
+	outputImage->SetDebugName("outputImage");
+
+	ImageViewBuilder viewbuilder1;
+	viewbuilder1.setImage(positionsImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
+	positionsImageView = viewbuilder1.create(device.get());
+	positionsImageView->SetDebugName("positionsImageView");
+
+	ImageViewBuilder viewbuilder2;
+	viewbuilder2.setImage(normalsImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
+	normalsImageView = viewbuilder2.create(device.get());
+	normalsImageView->SetDebugName("normalsImageView");
+
+	ImageViewBuilder viewbuilder3;
+	viewbuilder3.setImage(outputImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
+	outputImageView = viewbuilder3.create(device.get());
+	outputImageView->SetDebugName("outputImageView");
 
 	DescriptorPoolBuilder poolbuilder;
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1);
-	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1);
+	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3);
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
 	poolbuilder.setMaxSets(1);
 	descriptorPool = poolbuilder.create(device.get());
+	descriptorPool->SetDebugName("descriptorPool");
 
 	descriptorSet = descriptorPool->allocate(descriptorSetLayout.get());
+	descriptorSet->SetDebugName("descriptorSet");
 
 	WriteDescriptors write;
 	write.addAccelerationStructure(descriptorSet.get(), 0, tlAccelStruct.get());
-	write.addStorageImage(descriptorSet.get(), 1, outputImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
-	write.addBuffer(descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get());
+	write.addStorageImage(descriptorSet.get(), 1, positionsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
+	write.addStorageImage(descriptorSet.get(), 2, normalsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
+	write.addStorageImage(descriptorSet.get(), 3, outputImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
+	write.addBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get());
 	write.updateSets(device.get());
 }

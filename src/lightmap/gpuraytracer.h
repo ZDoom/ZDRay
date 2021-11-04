@@ -75,8 +75,9 @@ private:
 	VkStridedDeviceAddressRegionKHR hitRegion = {};
 	VkStridedDeviceAddressRegionKHR callRegion = {};
 
-	std::unique_ptr<VulkanImage> outputImage;
-	std::unique_ptr<VulkanImageView> outputImageView;
+	std::unique_ptr<VulkanImage> positionsImage, normalsImage, outputImage;
+	std::unique_ptr<VulkanImageView> positionsImageView, normalsImageView, outputImageView;
+	std::unique_ptr<VulkanBuffer> imageTransferBuffer;
 
 	std::unique_ptr<VulkanBuffer> uniformBuffer;
 	std::unique_ptr<VulkanBuffer> uniformTransferBuffer;
@@ -86,4 +87,6 @@ private:
 
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
+
+	int rayTraceImageSize = 512;
 };
