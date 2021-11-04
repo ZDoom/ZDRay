@@ -8,8 +8,16 @@ class LevelMesh;
 
 struct Uniforms
 {
-	Mat4 viewInverse;
-	Mat4 projInverse;
+	Vec3 LightOrigin;
+	float PassType;
+	float LightRadius;
+	float LightIntensity;
+	float LightInnerAngleCos;
+	float LightOuterAngleCos;
+	Vec3 LightSpotDir;
+	float Padding1;
+	Vec3 LightColor;
+	float Padding2;
 };
 
 class GPURaytracer
@@ -88,5 +96,5 @@ private:
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
 
-	int rayTraceImageSize = 512;
+	int rayTraceImageSize = 2048;
 };
