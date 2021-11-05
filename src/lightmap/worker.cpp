@@ -1,7 +1,6 @@
 
 #include "worker.h"
 #include "math/mathlib.h"
-#include "lightmap.h"
 #include <vector>
 #include <thread>
 #include <algorithm>

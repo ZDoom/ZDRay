@@ -116,8 +116,8 @@ int				 SSELevel;
 int				 NumThreads = 0;
 int				 LMDims = 1024;
 int				 Samples = 8;
-int				 Multisample = 1;
-int				 LightBounce = 0;
+bool			 CPURaytrace = false;
+int				 LightBounce = 1;
 float			 GridSize = 32.0f;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
@@ -156,13 +156,13 @@ static option long_opts[] =
 	{"threads",			required_argument,	0,	'j'},
 	{"samples",			required_argument,	0,	'Q'},
 	{"size",			required_argument,	0,	'S'},
-	{"multisample",		required_argument,	0,	'M'},
+	{"cpu-raytrace",	no_argument,		0,	'C'},
 	{"bounce",			required_argument,	0,	'B'},
 	{"gridsize",		required_argument,	0,	'i'},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:Q:S:M:";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:Q:S:C";
 
 // CODE --------------------------------------------------------------------
 
@@ -449,10 +449,8 @@ static void ParseArgs(int argc, char **argv)
 			if (LMDims > 1024) LMDims = 1024;
 			LMDims = Math::RoundPowerOfTwo(LMDims);
 			break;
-		case 'M':
-			Multisample = atoi(optarg);
-			if (Multisample <= 0) Multisample = 0;
-			if (Multisample > 16) Multisample = 16;
+		case 'C':
+			CPURaytrace = true;
 			break;
 		case 'B':
 			LightBounce = atoi(optarg);
@@ -509,7 +507,7 @@ static void ShowUsage()
 		"                           slow compile time) must be in powers of two (default %d)\n"
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
-		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"
+		"  -C, --cpu-raytrace       Use the CPU for ray tracing\n"
 		"  -B, --bounce=NNN         Number of indirect light bounces (default %d, max 8)\n"
 		"  -i, --gridsize=NNN       Automatic light probe grid size, floating point\n"
 		"                           Lower values increase granularity at the expense of performance\n"
@@ -528,7 +526,6 @@ static void ShowUsage()
 		, AAPreference
 		, (int)std::thread::hardware_concurrency()
 		, Samples
-		, Multisample
 		, LightBounce
 		, GridSize
 	);

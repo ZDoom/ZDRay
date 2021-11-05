@@ -156,7 +156,6 @@ set( SOURCES
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
 	src/lightmap/pngwriter.cpp
 	src/lightmap/raytracer.cpp
-	src/lightmap/lightmap.cpp
 	src/lightmap/surfacelight.cpp
 	src/lightmap/surfaces.cpp
 	src/lightmap/worker.cpp
@@ -214,7 +213,6 @@ set( HEADERS
 	src/framework/binfile.h
 	src/lightmap/pngwriter.h
 	src/lightmap/raytracer.h
-	src/lightmap/lightmap.h
 	src/lightmap/surfacelight.h
 	src/lightmap/surfaces.h
 	src/lightmap/worker.h
