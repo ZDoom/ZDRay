@@ -15,9 +15,9 @@ struct Uniforms
 	float LightInnerAngleCos;
 	float LightOuterAngleCos;
 	Vec3 LightSpotDir;
-	float Padding1;
+	float SampleDistance;
 	Vec3 LightColor;
-	float Padding2;
+	float Padding;
 };
 
 class GPURaytracer

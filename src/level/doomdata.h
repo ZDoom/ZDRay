@@ -309,6 +309,24 @@ struct ThingLight
 		return spotAttenuation;
 	}
 
+	Vec3 SpotDir() const
+	{
+		if (outerAngleCos > -1.0f)
+		{
+			float negPitch = -radians(mapThing->pitch);
+			float xyLen = std::cos(negPitch);
+			Vec3 spotDir;
+			spotDir.x = -std::cos(radians(mapThing->angle)) * xyLen;
+			spotDir.y = -std::sin(radians(mapThing->angle)) * xyLen;
+			spotDir.z = -std::sin(negPitch);
+			return spotDir;
+		}
+		else
+		{
+			return Vec3(0.0f);
+		}
+	}
+
 	float DistAttenuation(float distance) const
 	{
 		return std::max(1.0f - (distance / LightRadius()), 0.0f);

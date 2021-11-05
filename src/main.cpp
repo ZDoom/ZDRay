@@ -527,6 +527,7 @@ static void ShowUsage()
 		, SplitCost
 		, AAPreference
 		, (int)std::thread::hardware_concurrency()
+		, Samples
 		, Multisample
 		, LightBounce
 		, GridSize

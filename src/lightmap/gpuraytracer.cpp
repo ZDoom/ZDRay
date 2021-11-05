@@ -198,6 +198,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		uniforms.LightSpotDir = light.SpotDir();
 		uniforms.LightColor = light.rgb;
 		uniforms.PassType = firstPass ? 0.0f : 1.0f;
+		uniforms.SampleDistance = mesh->samples;
 		firstPass = false;
 
 		auto data = uniformTransferBuffer->Map(0, sizeof(Uniforms));
@@ -705,10 +706,25 @@ void GPURaytracer::CreateShaders()
 				float LightInnerAngleCos;
 				float LightOuterAngleCos;
 				vec3 LightSpotDir;
-				float Padding1;
+				float SampleDistance;
 				vec3 LightColor;
-				float Padding2;
+				float Padding;
 			};
+
+			float RadicalInverse_VdC(uint bits)
+			{
+				bits = (bits << 16u) | (bits >> 16u);
+				bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+				bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+				bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+				bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+				return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
+			}
+
+			vec2 Hammersley(uint i, uint N)
+			{
+				return vec2(float(i) / float(N), RadicalInverse_VdC(i));
+			}
 
 			void main()
 			{
@@ -744,8 +760,25 @@ void GPURaytracer::CreateShaders()
 					float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
 					if (attenuation > 0.0)
 					{
-						traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, minDistance, dir, dist, 0);
-						attenuation *= payload.hitAttenuation;
+						const uint sample_count = 1024;
+						float shadowAttenuation = 0.0;
+						vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+						vec3 e1 = cross(normal, e0);
+						e0 = cross(normal, e1);
+						for (uint i = 0; i < sample_count; i++)
+						{
+							vec2 offset = (Hammersley(i, sample_count) - 0.5) * SampleDistance;
+							vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+
+							float dist2 = distance(LightOrigin, origin2);
+							vec3 dir2 = normalize(LightOrigin - origin2);
+
+							traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin2, minDistance, dir2, dist2, 0);
+							shadowAttenuation += payload.hitAttenuation;
+						}
+						shadowAttenuation *= 1.0 / float(sample_count);
+
+						attenuation *= shadowAttenuation;
 
 						emittance.rgb += LightColor * (attenuation * LightIntensity);
 					}
