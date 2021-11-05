@@ -19,7 +19,6 @@
 #include "glsl_miss.h"
 #include "glsl_closesthit.h"
 
-extern int Multisample;
 extern int LightBounce;
 extern float GridSize;
 
@@ -281,7 +280,29 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 void GPURaytracer::RaytraceProbeSample(LightProbeSample* probe)
 {
-	Vec3 color(0.0f, 0.0f, 0.0f);
+	Vec3 incoming(0.0f, 0.0f, 0.0f);
+
+	if (LightBounce > 0)
+	{
+		Vec3 directions[6] =
+		{
+			{  1.0f,  0.0f,  0.0f },
+			{ -1.0f,  0.0f,  0.0f },
+			{  0.0f,  1.0f,  0.0f },
+			{  0.0f, -1.0f,  0.0f },
+			{  0.0f,  0.0f,  1.0f, },
+			{  0.0f,  0.0f, -1.0f, }
+		};
+		for (int i = 0; i < SAMPLE_COUNT; i++)
+		{
+			const Vec3& normal = directions[i % 6];
+			Vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+			Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
+			Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
+			incoming += TracePath(probe->Position, L, i);
+		}
+		incoming = incoming / (float)SAMPLE_COUNT / (float)LightBounce;
+	}
 
 	for (ThingLight& light : mesh->map->ThingLights)
 	{
@@ -298,10 +319,15 @@ void GPURaytracer::RaytraceProbeSample(LightProbeSample* probe)
 		float dist = dir.Unit();
 		dir.Normalize();
 
-		color += light.rgb * (light.SpotAttenuation(dir) * light.DistAttenuation(dist) * light.intensity);
+		incoming += light.rgb * (light.SpotAttenuation(dir) * light.DistAttenuation(dist) * light.intensity);
 	}
 
-	probe->Color = color;
+	const Vec3& sundir = mesh->map->GetSunDirection();
+	LevelTraceHit trace = mesh->Trace(probe->Position, probe->Position + sundir * 32768.0f);
+	if (trace.fraction != 1.0f && trace.hitSurface->bSky)
+		incoming += mesh->map->GetSunColor();
+
+	probe->Color = incoming;
 }
 
 void GPURaytracer::RaytraceSurfaceSample(Surface* surface, int x, int y)
@@ -329,6 +355,15 @@ void GPURaytracer::RaytraceSurfaceSample(Surface* surface, int x, int y)
 	}
 
 	incoming = incoming + GetSurfaceEmittance(surface, 0.0f) + GetLightEmittance(surface, pos);
+
+	const Vec3& sundir = mesh->map->GetSunDirection();
+	float attenuation = normal.Dot(sundir);
+	if (attenuation > 0.0f)
+	{
+		LevelTraceHit trace = mesh->Trace(pos, pos + sundir * 32768.0f);
+		if (trace.fraction != 1.0f && trace.hitSurface->bSky)
+			incoming += mesh->map->GetSunColor() * attenuation;
+	}
 
 	size_t sampleWidth = surface->lightmapDims[0];
 	surface->samples[x + y * sampleWidth] = incoming;
@@ -369,20 +404,30 @@ Vec3 GPURaytracer::TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, 
 	if (depth >= LightBounce)
 		return Vec3(0.0f);
 
-	LevelTraceHit hit = mesh->Trace(pos, pos + dir * 1000.0f);
+	LevelTraceHit hit = mesh->Trace(pos + dir * 0.1f, pos + dir * 2000.0f);
 	if (hit.fraction == 1.0f)
 		return Vec3(0.0f);
 
 	Vec3 normal = hit.hitSurface->plane.Normal();
-	Vec3 hitpos = hit.start * (1.0f - hit.fraction) + hit.end * hit.fraction + normal * 0.1f;
+	Vec3 hitpos = hit.start * (1.0f - hit.fraction) + hit.end * hit.fraction;
 
 	Vec3 emittance = GetSurfaceEmittance(hit.hitSurface, pos.Distance(hitpos)) + GetLightEmittance(hit.hitSurface, hitpos) * 0.5f;
+
+	const Vec3& sundir = mesh->map->GetSunDirection();
+	float attenuation = normal.Dot(sundir);
+	if (attenuation > 0.0f)
+	{
+		Vec3 start = hitpos + normal * 0.1f;
+		LevelTraceHit trace = mesh->Trace(start, start + sundir * 32768.0f);
+		if (trace.fraction != 1.0f && trace.hitSurface->bSky)
+			emittance += mesh->map->GetSunColor() * (attenuation * 0.5f);
+	}
 
 	Vec2 Xi = Hammersley(sampleIndex, SAMPLE_COUNT);
 	Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
 	Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
 
-	float NdotL = std::max(Vec3::Dot(normal, L), 0.0f);
+	float NdotL = Vec3::Dot(normal, L);
 	if (NdotL <= 0.0f)
 		return emittance;
 
@@ -456,9 +501,10 @@ Vec3 GPURaytracer::GetSurfaceEmittance(Surface* surface, float distance)
 		}
 	}
 
-	if (def)
+	if (def && distance < def->distance + def->distance)
 	{
-		float attenuation = std::max(1.0f - (distance / def->distance), 0.0f);
+		float radius = def->distance + def->distance;
+		float attenuation = std::max(1.0f - (distance / radius), 0.0f);
 		return def->rgb * (attenuation * def->intensity);
 	}
 	else

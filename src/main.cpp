@@ -506,7 +506,7 @@ static void ShowUsage()
 		"  -P, --no-polyobjs        Do not check for polyobject subsector splits\n"
 		"  -j, --threads=NNN        Number of threads used for raytracing (default %d)\n"
 		"  -Q, --samples=NNN        Set texel sampling size (lowest = higher quaility but\n"
-		"                           slow compile time) must be in powers of two\n"
+		"                           slow compile time) must be in powers of two (default %d)\n"
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -M, --multisample=NNN    Number of samples to use per texel (default %d)\n"

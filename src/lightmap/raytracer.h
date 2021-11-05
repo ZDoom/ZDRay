@@ -23,7 +23,7 @@ private:
 	static Vec2 Hammersley(uint32_t i, uint32_t N);
 	static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness);
 
-	int SAMPLE_COUNT = 1024;// 128;// 1024;
+	int SAMPLE_COUNT = 1024;
 
 	LevelMesh* mesh = nullptr;
 };
