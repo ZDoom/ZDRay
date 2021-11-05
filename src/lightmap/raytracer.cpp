@@ -14,7 +14,6 @@
 #include <zlib.h>
 
 extern int LightBounce;
-extern float GridSize;
 
 Raytracer::Raytracer()
 {

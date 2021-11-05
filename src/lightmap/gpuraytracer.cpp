@@ -20,10 +20,24 @@
 #include "glsl_closesthit.h"
 
 extern int LightBounce;
-extern float GridSize;
+
+static RENDERDOC_API_1_4_2* renderdoc = nullptr;
 
 GPURaytracer::GPURaytracer()
 {
+	if (!renderdoc)
+	{
+		if (HMODULE mod = GetModuleHandle(TEXT("renderdoc.dll")))
+		{
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&renderdoc);
+			if (ret == 1)
+				printf("Renderdoc detected!\n");
+			else
+				renderdoc = nullptr;
+		}
+	}
+
 	auto printLog = [](const char* typestr, const std::string& msg)
 	{
 		printf("\n[%s] %s\n", typestr, msg.c_str());
@@ -103,17 +117,6 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		}
 	}
 
-	RENDERDOC_API_1_4_2* renderdoc = nullptr;
-	if (HMODULE mod = GetModuleHandle(TEXT("renderdoc.dll")))
-	{
-		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&renderdoc);
-		if (ret == 1)
-			printf("Renderdoc detected!\n");
-		else
-			renderdoc = nullptr;
-	}
-
 	if (renderdoc)
 		renderdoc->StartFrameCapture(0, 0);
 
@@ -132,7 +135,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	finishbuildbarrier.addMemory(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR);
 	finishbuildbarrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 
-	size_t maxTasks = rayTraceImageSize * rayTraceImageSize;
+	size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
 	if (tasks.size() > maxTasks)
 		throw std::runtime_error("Ray trace task count is too large");
 
