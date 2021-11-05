@@ -121,6 +121,14 @@ void ShaderBuilder::deinit()
 
 ShaderBuilder::ShaderBuilder()
 {
+    class InitShaderLib
+    {
+    public:
+        InitShaderLib() { ShaderBuilder::init(); }
+        ~InitShaderLib() { ShaderBuilder::deinit(); }
+    };
+
+    static InitShaderLib init;
 }
 
 void ShaderBuilder::setVertexShader(const std::string &c) { code = c; stage = EShLanguage::EShLangVertex; }

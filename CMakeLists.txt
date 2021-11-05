@@ -172,6 +172,9 @@ set( SOURCES
 	src/lightmap/stacktrace.h
 	src/lightmap/gpuraytracer.cpp
 	src/lightmap/gpuraytracer.h
+	src/lightmap/glsl_closesthit.h
+	src/lightmap/glsl_miss.h
+	src/lightmap/glsl_raygen.h
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp
