@@ -20,6 +20,16 @@ struct Uniforms
 	float Padding;
 };
 
+struct SurfaceInfo
+{
+	Vec3 Normal;
+	float EmissiveDistance;
+	Vec3 EmissiveColor;
+	float EmissiveIntensity;
+	float Sky;
+	float Padding0, Padding1, Padding2;
+};
+
 class GPURaytracer
 {
 public:
@@ -56,6 +66,8 @@ private:
 	std::unique_ptr<VulkanBuffer> vertexBuffer;
 	std::unique_ptr<VulkanBuffer> indexBuffer;
 	std::unique_ptr<VulkanBuffer> transferBuffer;
+	std::unique_ptr<VulkanBuffer> surfaceIndexBuffer;
+	std::unique_ptr<VulkanBuffer> surfaceBuffer;
 
 	std::unique_ptr<VulkanBuffer> blScratchBuffer;
 	std::unique_ptr<VulkanBuffer> blAccelStructBuffer;

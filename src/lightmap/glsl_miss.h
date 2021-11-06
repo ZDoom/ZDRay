@@ -6,13 +6,21 @@ static const char* glsl_miss = R"glsl(
 struct hitPayload
 {
 	float hitAttenuation;
+	bool isSkyRay;
 };
 
 layout(location = 0) rayPayloadInEXT hitPayload payload;
 
 void main()
 {
-	payload.hitAttenuation = 1.0;
+	if (!payload.isSkyRay)
+	{
+		payload.hitAttenuation = 1.0;
+	}
+	else
+	{
+		payload.hitAttenuation = 0.0;
+	}
 }
 
 )glsl";

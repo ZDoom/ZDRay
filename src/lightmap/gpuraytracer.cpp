@@ -191,7 +191,51 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	barrier2.addImage(outputImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 	barrier2.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 
-	bool firstPass = true;
+	// Sunlight
+	{
+		Uniforms uniforms = {};
+		uniforms.LightOrigin = Vec3(0.0f, 0.0f, 0.0f);
+		uniforms.LightRadius = -1.0f;
+		uniforms.LightIntensity = 1.0f;
+		uniforms.LightInnerAngleCos = -1.0f;
+		uniforms.LightOuterAngleCos = -1.0f;
+		uniforms.LightSpotDir = mesh->map->GetSunDirection();
+		uniforms.LightColor = mesh->map->GetSunColor();
+		uniforms.PassType = 0.0f;
+		uniforms.SampleDistance = (float)mesh->samples;
+
+		auto data = uniformTransferBuffer->Map(0, sizeof(Uniforms));
+		memcpy(data, &uniforms, sizeof(Uniforms));
+		uniformTransferBuffer->Unmap();
+
+		cmdbuffer->copyBuffer(uniformTransferBuffer.get(), uniformBuffer.get());
+
+		PipelineBarrier barrier3;
+		barrier3.addBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+		barrier3.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+
+		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline.get());
+		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get());
+		cmdbuffer->traceRays(&rgenRegion, &missRegion, &hitRegion, &callRegion, rayTraceImageSize, rayTraceImageSize, 1);
+
+		cmdbuffer->end();
+
+		auto submitFence = std::make_unique<VulkanFence>(device.get());
+
+		QueueSubmit submit;
+		submit.addCommandBuffer(cmdbuffer.get());
+		submit.execute(device.get(), device->graphicsQueue, submitFence.get());
+
+		vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkResetFences(device->device, 1, &submitFence->fence);
+
+		printf(".");
+
+		cmdbuffer.reset();
+		cmdbuffer = cmdpool->createBuffer();
+		cmdbuffer->begin();
+	}
+
 	for (ThingLight& light : mesh->map->ThingLights)
 	{
 		Uniforms uniforms = {};
@@ -202,9 +246,8 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		uniforms.LightOuterAngleCos = light.outerAngleCos;
 		uniforms.LightSpotDir = light.SpotDir();
 		uniforms.LightColor = light.rgb;
-		uniforms.PassType = firstPass ? 0.0f : 1.0f;
+		uniforms.PassType = 1.0f;
 		uniforms.SampleDistance = (float)mesh->samples;
-		firstPass = false;
 
 		auto data = uniformTransferBuffer->Map(0, sizeof(Uniforms));
 		memcpy(data, &uniforms, sizeof(Uniforms));
@@ -518,11 +561,64 @@ Vec3 GPURaytracer::GetSurfaceEmittance(Surface* surface, float distance)
 
 void GPURaytracer::CreateVertexAndIndexBuffers()
 {
+	std::vector<SurfaceInfo> surfaces;
+	surfaces.reserve(mesh->surfaces.size());
+	for (const auto& surface : mesh->surfaces)
+	{
+		SurfaceLightDef* def = nullptr;
+		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
+		{
+			int lightdefidx = mesh->map->Sides[surface->typeIndex].lightdef;
+			if (lightdefidx != -1)
+			{
+				def = &mesh->map->SurfaceLights[lightdefidx];
+			}
+		}
+		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+		{
+			MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
+			IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
+
+			if (sector && surface->numVerts > 0)
+			{
+				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
+				{
+					def = &mesh->map->SurfaceLights[sector->floorlightdef];
+				}
+				else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
+				{
+					def = &mesh->map->SurfaceLights[sector->ceilinglightdef];
+				}
+			}
+		}
+
+		SurfaceInfo info;
+		info.Sky = surface->bSky ? 1.0f : 0.0f;
+		info.Normal = surface->plane.Normal();
+		if (def)
+		{
+			info.EmissiveDistance = def->distance;
+			info.EmissiveIntensity = def->intensity;
+			info.EmissiveColor = def->rgb;
+		}
+		else
+		{
+			info.EmissiveDistance = 0.0f;
+			info.EmissiveIntensity = 0.0f;
+			info.EmissiveColor = Vec3(0.0f, 0.0f, 0.0f);
+		}
+		surfaces.push_back(info);
+	}
+
 	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(Vec3);
 	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
-	size_t transferbuffersize = vertexbuffersize + indexbuffersize;
+	size_t surfaceindexbuffersize = (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t);
+	size_t surfacebuffersize = (size_t)surfaces.size() * sizeof(SurfaceInfo);
+	size_t transferbuffersize = vertexbuffersize + indexbuffersize + surfaceindexbuffersize + surfacebuffersize;
 	size_t vertexoffset = 0;
 	size_t indexoffset = vertexoffset + vertexbuffersize;
+	size_t surfaceindexoffset = indexoffset + indexbuffersize;
+	size_t surfaceoffset = surfaceindexoffset + surfaceindexbuffersize;
 
 	BufferBuilder vbuilder;
 	vbuilder.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
@@ -536,6 +632,18 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	indexBuffer = ibuilder.create(device.get());
 	indexBuffer->SetDebugName("indexBuffer");
 
+	BufferBuilder sibuilder;
+	sibuilder.setUsage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	sibuilder.setSize(surfaceindexbuffersize);
+	surfaceIndexBuffer = sibuilder.create(device.get());
+	surfaceIndexBuffer->SetDebugName("surfaceIndexBuffer");
+
+	BufferBuilder sbuilder;
+	sbuilder.setUsage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	sbuilder.setSize(surfacebuffersize);
+	surfaceBuffer = sbuilder.create(device.get());
+	surfaceBuffer->SetDebugName("surfaceBuffer");
+
 	BufferBuilder tbuilder;
 	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 	tbuilder.setSize(transferbuffersize);
@@ -544,10 +652,14 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	uint8_t* data = (uint8_t*)transferBuffer->Map(0, transferbuffersize);
 	memcpy(data + vertexoffset, mesh->MeshVertices.Data(), vertexbuffersize);
 	memcpy(data + indexoffset, mesh->MeshElements.Data(), indexbuffersize);
+	memcpy(data + surfaceindexoffset, mesh->MeshSurfaces.Data(), surfaceindexbuffersize);
+	memcpy(data + surfaceoffset, surfaces.data(), surfacebuffersize);
 	transferBuffer->Unmap();
 
 	cmdbuffer->copyBuffer(transferBuffer.get(), vertexBuffer.get(), vertexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), indexBuffer.get(), indexoffset);
+	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceIndexBuffer.get(), surfaceindexoffset);
+	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceBuffer.get(), surfaceoffset);
 
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -725,20 +837,41 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 
 void GPURaytracer::CreateShaders()
 {
-	ShaderBuilder builder1;
-	builder1.setRayGenShader(glsl_raygen);
-	shaderRayGen = builder1.create(device.get());
-	shaderRayGen->SetDebugName("shaderRayGen");
+	try
+	{
+		ShaderBuilder builder;
+		builder.setRayGenShader(glsl_raygen);
+		shaderRayGen = builder.create(device.get());
+		shaderRayGen->SetDebugName("shaderRayGen");
+	}
+	catch (const std::exception& e)
+	{
+		throw std::runtime_error(std::string("Could not compile raygen shader: ") + e.what());
+	}
 
-	ShaderBuilder builder2;
-	builder2.setMissShader(glsl_miss);
-	shaderMiss = builder2.create(device.get());
-	shaderMiss->SetDebugName("shaderMiss");
+	try
+	{
+		ShaderBuilder builder;
+		builder.setMissShader(glsl_miss);
+		shaderMiss = builder.create(device.get());
+		shaderMiss->SetDebugName("shaderMiss");
+	}
+	catch (const std::exception& e)
+	{
+		throw std::runtime_error(std::string("Could not compile miss shader: ") + e.what());
+	}
 
-	ShaderBuilder builder;
-	builder.setClosestHitShader(glsl_closesthit);
-	shaderClosestHit = builder.create(device.get());
-	shaderClosestHit->SetDebugName("shaderClosestHit");
+	try
+	{
+		ShaderBuilder builder;
+		builder.setClosestHitShader(glsl_closesthit);
+		shaderClosestHit = builder.create(device.get());
+		shaderClosestHit->SetDebugName("shaderClosestHit");
+	}
+	catch (const std::exception& e)
+	{
+		throw std::runtime_error(std::string("Could not compile closest hit shader: ") + e.what());
+	}
 }
 
 void GPURaytracer::CreatePipeline()
@@ -749,6 +882,8 @@ void GPURaytracer::CreatePipeline()
 	setbuilder.addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	setbuilder.addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	setbuilder.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	setbuilder.addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+	setbuilder.addBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
 	descriptorSetLayout = setbuilder.create(device.get());
 	descriptorSetLayout->SetDebugName("descriptorSetLayout");
 
@@ -895,6 +1030,7 @@ void GPURaytracer::CreateDescriptorSet()
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1);
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3);
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2);
 	poolbuilder.setMaxSets(1);
 	descriptorPool = poolbuilder.create(device.get());
 	descriptorPool->SetDebugName("descriptorPool");
@@ -908,5 +1044,7 @@ void GPURaytracer::CreateDescriptorSet()
 	write.addStorageImage(descriptorSet.get(), 2, normalsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
 	write.addStorageImage(descriptorSet.get(), 3, outputImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
 	write.addBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get());
+	write.addBuffer(descriptorSet.get(), 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get());
+	write.addBuffer(descriptorSet.get(), 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get());
 	write.updateSets(device.get());
 }

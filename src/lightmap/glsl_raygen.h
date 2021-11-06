@@ -6,6 +6,7 @@ static const char* glsl_raygen = R"glsl(
 struct hitPayload
 {
 	float hitAttenuation;
+	bool isSkyRay;
 };
 
 layout(location = 0) rayPayloadEXT hitPayload payload;
@@ -60,46 +61,75 @@ void main()
 		emittance = imageLoad(outputs, texelPos);
 
 	const float minDistance = 0.01;
-	float dist = distance(LightOrigin, origin);
-	if (dist > minDistance && dist < LightRadius)
+	const uint sample_count = 1024;
+
+	payload.isSkyRay = (PassType == 0.0);
+	if (!payload.isSkyRay)
 	{
-		vec3 dir = normalize(LightOrigin - origin);
-
-		float distAttenuation = max(1.0 - (dist / LightRadius), 0.0);
-		float angleAttenuation = max(dot(normal, dir), 0.0);
-		float spotAttenuation = 1.0;
-		if (LightOuterAngleCos > -1.0)
+		float dist = distance(LightOrigin, origin);
+		if (dist > minDistance && dist < LightRadius)
 		{
-			float cosDir = dot(dir, LightSpotDir);
-			spotAttenuation = smoothstep(LightOuterAngleCos, LightInnerAngleCos, cosDir);
-			spotAttenuation = max(spotAttenuation, 0.0);
-		}
+			vec3 dir = normalize(LightOrigin - origin);
 
-		float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
-		if (attenuation > 0.0)
-		{
-			const uint sample_count = 1024;
-			float shadowAttenuation = 0.0;
-			vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
-			vec3 e1 = cross(normal, e0);
-			e0 = cross(normal, e1);
-			for (uint i = 0; i < sample_count; i++)
+			float distAttenuation = max(1.0 - (dist / LightRadius), 0.0);
+			float angleAttenuation = max(dot(normal, dir), 0.0);
+			float spotAttenuation = 1.0;
+			if (LightOuterAngleCos > -1.0)
 			{
-				vec2 offset = (Hammersley(i, sample_count) - 0.5) * SampleDistance;
-				vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
-
-				float dist2 = distance(LightOrigin, origin2);
-				vec3 dir2 = normalize(LightOrigin - origin2);
-
-				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin2, minDistance, dir2, dist2, 0);
-				shadowAttenuation += payload.hitAttenuation;
+				float cosDir = dot(dir, LightSpotDir);
+				spotAttenuation = smoothstep(LightOuterAngleCos, LightInnerAngleCos, cosDir);
+				spotAttenuation = max(spotAttenuation, 0.0);
 			}
-			shadowAttenuation *= 1.0 / float(sample_count);
 
-			attenuation *= shadowAttenuation;
+			float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
+			if (attenuation > 0.0)
+			{
+				float shadowAttenuation = 0.0;
+				vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+				vec3 e1 = cross(normal, e0);
+				e0 = cross(normal, e1);
+				for (uint i = 0; i < sample_count; i++)
+				{
+					vec2 offset = (Hammersley(i, sample_count) - 0.5) * SampleDistance;
+					vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
 
-			emittance.rgb += LightColor * (attenuation * LightIntensity);
+					float dist2 = distance(LightOrigin, origin2);
+					vec3 dir2 = normalize(LightOrigin - origin2);
+
+					traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin2, minDistance, dir2, dist2, 0);
+					shadowAttenuation += payload.hitAttenuation;
+				}
+				shadowAttenuation *= 1.0 / float(sample_count);
+
+				attenuation *= shadowAttenuation;
+
+				emittance.rgb += LightColor * (attenuation * LightIntensity);
+			}
 		}
+	}
+	else
+	{
+		vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+		vec3 e1 = cross(normal, e0);
+		e0 = cross(normal, e1);
+
+		origin += normal * 0.1;
+
+		float attenuation = 0.0;
+		for (uint i = 0; i < sample_count; i++)
+		{
+			vec2 offset = (Hammersley(i, sample_count) - 0.5) * SampleDistance;
+			vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+
+			float dist2 = 32768.0;
+			vec3 dir2 = LightSpotDir;
+
+			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin2, minDistance, dir2, dist2, 0);
+			attenuation += payload.hitAttenuation;
+		}
+		attenuation *= 1.0 / float(sample_count);
+
+		emittance.rgb += LightColor * (attenuation * LightIntensity);
 	}
 
 	emittance.w += 1.0;
