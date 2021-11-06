@@ -3,7 +3,6 @@
 #include "surfaces.h"
 #include "level/level.h"
 #include "raytracer.h"
-#include "surfacelight.h"
 #include "worker.h"
 #include "framework/binfile.h"
 #include "framework/templates.h"

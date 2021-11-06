@@ -3,7 +3,6 @@
 #include "surfaces.h"
 #include "level/level.h"
 #include "gpuraytracer.h"
-#include "surfacelight.h"
 #include "worker.h"
 #include "framework/binfile.h"
 #include "framework/templates.h"
@@ -67,14 +66,6 @@ GPURaytracer::GPURaytracer()
 	printf("Vulkan device: %s\n", props.deviceName);
 	printf("Vulkan device type: %s\n", deviceType.c_str());
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
-	/*
-	printf("Vulkan extensions:");
-	for (const VkExtensionProperties& p : device->physicalDevice.extensions)
-	{
-		printf(" %s", p.extensionName);
-	}
-	printf("\n");
-	*/
 }
 
 GPURaytracer::~GPURaytracer()
