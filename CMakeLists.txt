@@ -170,9 +170,15 @@ set( SOURCES
 	src/lightmap/stacktrace.h
 	src/lightmap/gpuraytracer.cpp
 	src/lightmap/gpuraytracer.h
-	src/lightmap/glsl_closesthit.h
-	src/lightmap/glsl_miss.h
-	src/lightmap/glsl_raygen.h
+	src/lightmap/glsl_rchit_bounce.h
+	src/lightmap/glsl_rchit_light.h
+	src/lightmap/glsl_rchit_sun.h
+	src/lightmap/glsl_rgen_bounce.h
+	src/lightmap/glsl_rgen_light.h
+	src/lightmap/glsl_rgen_sun.h
+	src/lightmap/glsl_rmiss_bounce.h
+	src/lightmap/glsl_rmiss_light.h
+	src/lightmap/glsl_rmiss_sun.h
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp

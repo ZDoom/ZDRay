@@ -8,6 +8,7 @@
 
 #include "volk/volk.h"
 #include "vk_mem_alloc/vk_mem_alloc.h"
+#include "renderdoc_app.h"
 
 #ifdef WIN32
 #undef min
@@ -45,7 +46,7 @@ public:
 class VulkanDevice
 {
 public:
-	VulkanDevice(int vk_device = 0, bool vk_debug = false, std::function<void(const char* typestr, const std::string& msg)> printLogCallback = {});
+	VulkanDevice(int vk_device = 0, bool vk_debug = false);
 	~VulkanDevice();
 
 	void setDebugObjectName(const char *name, uint64_t handle, VkObjectType type)
@@ -102,12 +103,13 @@ public:
 	std::vector<VulkanPhysicalDevice> availableDevices;
 	std::vector<VulkanCompatibleDevice> supportedDevices;
 
+	RENDERDOC_API_1_4_2* renderdoc = nullptr;
+
 	static void initVolk();
 
 private:
 	int vk_device;
 	bool vk_debug;
-	std::function<void(const char* typestr, const std::string& msg)> printLogCallback;
 
 	void createInstance();
 	//void createSurface();

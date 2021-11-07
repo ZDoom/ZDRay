@@ -1,13 +1,22 @@
 
 #include "vulkandevice.h"
 #include "vulkanobjects.h"
+#include "stacktrace.h"
 #include <algorithm>
 #include <set>
 #include <string>
 #include <mutex>
 
-VulkanDevice::VulkanDevice(int vk_device, bool vk_debug, std::function<void(const char* typestr, const std::string& msg)> printLogCallback) : vk_device(vk_device), vk_debug(vk_debug), printLogCallback(printLogCallback)
+VulkanDevice::VulkanDevice(int vk_device, bool vk_debug) : vk_device(vk_device), vk_debug(vk_debug)
 {
+	if (HMODULE mod = GetModuleHandle(TEXT("renderdoc.dll")))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&renderdoc);
+		if (ret != 1)
+			renderdoc = nullptr;
+	}
+
 	try
 	{
 		initVolk();
@@ -391,8 +400,11 @@ VkBool32 VulkanDevice::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT mess
 				typestr = "vulkan";
 			}
 
-			if (device->printLogCallback)
-				device->printLogCallback(typestr, msg);
+			printf("\n[%s] %s\n", typestr, msg.c_str());
+
+			std::string callstack = CaptureStackTraceText(0);
+			if (!callstack.empty())
+				printf("%s\n", callstack.c_str());
 		}
 	}
 

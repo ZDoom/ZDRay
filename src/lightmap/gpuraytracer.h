@@ -30,6 +30,11 @@ struct SurfaceInfo
 	float Padding0, Padding1, Padding2;
 };
 
+struct SurfaceTask
+{
+	int surf, x, y;
+};
+
 class GPURaytracer
 {
 public:
@@ -39,12 +44,22 @@ public:
 	void Raytrace(LevelMesh* level);
 
 private:
+	void CreateVulkanObjects();
 	void CreateVertexAndIndexBuffers();
 	void CreateBottomLevelAccelerationStructure();
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
+	std::unique_ptr<VulkanShader> CompileRayGenShader(const char* code, const char* name);
+	std::unique_ptr<VulkanShader> CompileClosestHitShader(const char* code, const char* name);
+	std::unique_ptr<VulkanShader> CompileMissShader(const char* code, const char* name);
 	void CreatePipeline();
 	void CreateDescriptorSet();
+
+	void UploadTasks(const std::vector<SurfaceTask>& tasks);
+	void RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader);
+	void DownloadTasks(const std::vector<SurfaceTask>& tasks);
+
+	void PrintVulkanInfo();
 
 	void RaytraceProbeSample(LightProbeSample* probe);
 	void RaytraceSurfaceSample(Surface* surface, int x, int y);
@@ -79,9 +94,9 @@ private:
 	std::unique_ptr<VulkanBuffer> tlAccelStructBuffer;
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
 
-	std::unique_ptr<VulkanShader> shaderRayGen;
-	std::unique_ptr<VulkanShader> shaderMiss;
-	std::unique_ptr<VulkanShader> shaderClosestHit;
+	std::unique_ptr<VulkanShader> rgenBounce, rgenLight, rgenSun;
+	std::unique_ptr<VulkanShader> rmissBounce, rmissLight, rmissSun;
+	std::unique_ptr<VulkanShader> rchitBounce, rchitLight, rchitSun;
 
 	std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
 
@@ -90,7 +105,7 @@ private:
 	std::unique_ptr<VulkanBuffer> shaderBindingTable;
 	std::unique_ptr<VulkanBuffer> sbtTransferBuffer;
 
-	VkStridedDeviceAddressRegionKHR rgenRegion = {};
+	VkStridedDeviceAddressRegionKHR rgenBounceRegion = {}, rgenLightRegion = {}, rgenSunRegion = {};
 	VkStridedDeviceAddressRegionKHR missRegion = {};
 	VkStridedDeviceAddressRegionKHR hitRegion = {};
 	VkStridedDeviceAddressRegionKHR callRegion = {};

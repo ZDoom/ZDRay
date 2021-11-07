@@ -1,4 +1,4 @@
-static const char* glsl_closesthit = R"glsl(
+static const char* glsl_rchit_bounce = R"glsl(
 
 #version 460
 #extension GL_EXT_ray_tracing : require
@@ -6,7 +6,6 @@ static const char* glsl_closesthit = R"glsl(
 struct hitPayload
 {
 	float hitAttenuation;
-	bool isSkyRay;
 };
 
 struct SurfaceInfo
@@ -26,16 +25,9 @@ layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
 
 void main()
 {
-	SurfaceInfo surface = surfaces[surfaceIndices[gl_PrimitiveID]];
+	// SurfaceInfo surface = surfaces[surfaceIndices[gl_PrimitiveID]];
 
-	if (!payload.isSkyRay)
-	{
-		payload.hitAttenuation = 0.0;
-	}
-	else
-	{
-		payload.hitAttenuation = surface.Sky;
-	}
+	payload.hitAttenuation = 0.0;
 }
 
 )glsl";

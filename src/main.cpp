@@ -117,6 +117,7 @@ int				 NumThreads = 0;
 int				 LMDims = 1024;
 int				 Samples = 8;
 bool			 CPURaytrace = false;
+bool			 VKDebug = false;
 int				 LightBounce = 1;
 float			 GridSize = 32.0f;
 
@@ -159,10 +160,11 @@ static option long_opts[] =
 	{"cpu-raytrace",	no_argument,		0,	'C'},
 	{"bounce",			required_argument,	0,	'B'},
 	{"gridsize",		required_argument,	0,	'i'},
+	{"vkdebug",			no_argument,		0,	'D'},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:Q:S:C";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:Q:S:CD";
 
 // CODE --------------------------------------------------------------------
 
@@ -452,6 +454,9 @@ static void ParseArgs(int argc, char **argv)
 		case 'C':
 			CPURaytrace = true;
 			break;
+		case 'D':
+			VKDebug = true;
+			break;
 		case 'B':
 			LightBounce = atoi(optarg);
 			if (LightBounce < 0) LightBounce = 0;
@@ -512,6 +517,7 @@ static void ShowUsage()
 		"  -i, --gridsize=NNN       Automatic light probe grid size, floating point\n"
 		"                           Lower values increase granularity at the expense of performance\n"
 		"                           Recommended: 32.0, 64.0, 128.0, etc (default %.1f)\n"
+		"  -D, --vkdebug            Print messages from the vulkan validation layer\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
 		"  -t, --no-timing          Suppress timing information\n"
