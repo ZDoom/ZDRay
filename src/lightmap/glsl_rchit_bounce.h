@@ -5,7 +5,9 @@ static const char* glsl_rchit_bounce = R"glsl(
 
 struct hitPayload
 {
+	vec3 hitPosition;
 	float hitAttenuation;
+	int hitSurfaceIndex;
 };
 
 struct SurfaceInfo
@@ -25,9 +27,10 @@ layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
 
 void main()
 {
-	// SurfaceInfo surface = surfaces[surfaceIndices[gl_PrimitiveID]];
-
-	payload.hitAttenuation = 0.0;
+	int surfaceIndex = surfaceIndices[gl_PrimitiveID];
+	payload.hitPosition = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+	payload.hitSurfaceIndex = surfaceIndex;
+	payload.hitAttenuation = 1.0;
 }
 
 )glsl";

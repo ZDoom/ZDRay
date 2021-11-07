@@ -5,29 +5,95 @@ static const char* glsl_rgen_sun = R"glsl(
 
 struct hitPayload
 {
+	vec3 hitPosition;
 	float hitAttenuation;
+	int hitSurfaceIndex;
 };
 
 layout(location = 0) rayPayloadEXT hitPayload payload;
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
-layout(set = 0, binding = 1, rgba32f) uniform image2D positions;
-layout(set = 0, binding = 2, rgba32f) uniform image2D normals;
+layout(set = 0, binding = 1, rgba32f) uniform image2D startpositions;
+layout(set = 0, binding = 2, rgba32f) uniform image2D positions;
 layout(set = 0, binding = 3, rgba32f) uniform image2D outputs;
 
 layout(set = 0, binding = 4) uniform Uniforms
 {
+	uint SampleIndex;
+	uint SampleCount;
+	uint PassType;
+	uint Padding2;
 	vec3 LightOrigin;
-	float PassType;
+	float Padding0;
 	float LightRadius;
 	float LightIntensity;
 	float LightInnerAngleCos;
 	float LightOuterAngleCos;
-	vec3 LightSpotDir;
+	vec3 LightDir;
 	float SampleDistance;
 	vec3 LightColor;
-	float Padding;
+	float Padding1;
 };
+
+struct SurfaceInfo
+{
+	vec3 Normal;
+	float EmissiveDistance;
+	vec3 EmissiveColor;
+	float EmissiveIntensity;
+	float Sky;
+	float Padding0, Padding1, Padding2;
+};
+
+layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
+
+vec2 Hammersley(uint i, uint N);
+float RadicalInverse_VdC(uint bits);
+
+void main()
+{
+	ivec2 texelPos = ivec2(gl_LaunchIDEXT.xy);
+	vec4 incoming = imageLoad(outputs, texelPos);
+	vec4 data0 = imageLoad(positions, texelPos);
+	int surfaceIndex = int(data0.w);
+	if (surfaceIndex < 0 || incoming.w <= 0.0)
+		return;
+
+	SurfaceInfo surface = surfaces[surfaceIndex];
+	vec3 normal = surface.Normal;
+
+	vec3 origin = data0.xyz;
+	origin += normal * 0.1;
+
+	const float minDistance = 0;
+	const float dist = 32768.0;
+
+	float attenuation = 0.0;
+	if (PassType == 0)
+	{
+		vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+		vec3 e1 = cross(normal, e0);
+		e0 = cross(normal, e1);
+
+		for (uint i = 0; i < SampleCount; i++)
+		{
+			vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
+			vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+
+			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, LightDir, dist, 0);
+			attenuation += payload.hitAttenuation;
+		}
+		attenuation *= 1.0 / float(SampleCount);
+	}
+	else
+	{
+		traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin, minDistance, LightDir, dist, 0);
+		attenuation = payload.hitAttenuation;
+	}
+
+	incoming.rgb += LightColor * (attenuation * LightIntensity) * incoming.w;
+	imageStore(outputs, texelPos, incoming);
+}
 
 float RadicalInverse_VdC(uint bits)
 {
@@ -42,49 +108,6 @@ float RadicalInverse_VdC(uint bits)
 vec2 Hammersley(uint i, uint N)
 {
 	return vec2(float(i) / float(N), RadicalInverse_VdC(i));
-}
-
-void main()
-{
-	ivec2 texelPos = ivec2(gl_LaunchIDEXT.xy);
-	vec4 data0 = imageLoad(positions, texelPos);
-	vec4 data1 = imageLoad(normals, texelPos);
-	if (data1 == vec4(0))
-		return;
-
-	vec3 origin = data0.xyz;
-	vec3 normal = data1.xyz;
-
-	vec4 emittance = vec4(0.0);
-	if (PassType == 1.0)
-		emittance = imageLoad(outputs, texelPos);
-
-	const float minDistance = 0.01;
-	const uint sample_count = 1024;
-
-	vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
-	vec3 e1 = cross(normal, e0);
-	e0 = cross(normal, e1);
-
-	origin += normal * 0.1;
-
-	float attenuation = 0.0;
-	for (uint i = 0; i < sample_count; i++)
-	{
-		vec2 offset = (Hammersley(i, sample_count) - 0.5) * SampleDistance;
-		vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
-
-		float dist2 = 32768.0;
-		vec3 dir2 = LightSpotDir;
-
-		traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, dir2, dist2, 0);
-		attenuation += payload.hitAttenuation;
-	}
-	attenuation *= 1.0 / float(sample_count);
-	emittance.rgb += LightColor * (attenuation * LightIntensity);
-
-	emittance.w += 1.0;
-	imageStore(outputs, texelPos, emittance);
 }
 
 )glsl";

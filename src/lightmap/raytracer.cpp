@@ -220,7 +220,7 @@ Vec3 Raytracer::TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, int
 		return emittance;
 
 	const float p = 1 / (2 * M_PI);
-	Vec3 incoming = TracePath(hitpos, normal, (sampleIndex + depth + 1) % SAMPLE_COUNT, depth + 1);
+	Vec3 incoming = TracePath(hitpos, L, (sampleIndex + depth + 1) % SAMPLE_COUNT, depth + 1);
 
 	return emittance + incoming * NdotL / p;
 }

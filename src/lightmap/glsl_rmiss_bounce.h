@@ -5,7 +5,9 @@ static const char* glsl_rmiss_bounce = R"glsl(
 
 struct hitPayload
 {
+	vec3 hitPosition;
 	float hitAttenuation;
+	int hitSurfaceIndex;
 };
 
 layout(location = 0) rayPayloadInEXT hitPayload payload;

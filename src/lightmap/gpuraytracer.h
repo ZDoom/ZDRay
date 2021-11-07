@@ -8,16 +8,20 @@ class LevelMesh;
 
 struct Uniforms
 {
+	uint32_t SampleIndex;
+	uint32_t SampleCount;
+	uint32_t PassType;
+	uint32_t Padding2;
 	Vec3 LightOrigin;
-	float PassType;
+	float Padding0;
 	float LightRadius;
 	float LightIntensity;
 	float LightInnerAngleCos;
 	float LightOuterAngleCos;
-	Vec3 LightSpotDir;
+	Vec3 LightDir;
 	float SampleDistance;
 	Vec3 LightColor;
-	float Padding;
+	float Padding1;
 };
 
 struct SurfaceInfo
@@ -110,8 +114,8 @@ private:
 	VkStridedDeviceAddressRegionKHR hitRegion = {};
 	VkStridedDeviceAddressRegionKHR callRegion = {};
 
-	std::unique_ptr<VulkanImage> positionsImage, normalsImage, outputImage;
-	std::unique_ptr<VulkanImageView> positionsImageView, normalsImageView, outputImageView;
+	std::unique_ptr<VulkanImage> startPositionsImage, positionsImage, outputImage;
+	std::unique_ptr<VulkanImageView> startPositionsImageView, positionsImageView, outputImageView;
 	std::unique_ptr<VulkanBuffer> imageTransferBuffer;
 
 	std::unique_ptr<VulkanBuffer> uniformBuffer;

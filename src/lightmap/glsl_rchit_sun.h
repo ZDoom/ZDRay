@@ -5,7 +5,9 @@ static const char* glsl_rchit_sun = R"glsl(
 
 struct hitPayload
 {
+	vec3 hitPosition;
 	float hitAttenuation;
+	int hitSurfaceIndex;
 };
 
 struct SurfaceInfo

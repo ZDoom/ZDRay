@@ -76,34 +76,60 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 	UploadTasks(tasks);
 
-	// Sunlight
-	{
-		Uniforms uniforms = {};
-		uniforms.LightOrigin = Vec3(0.0f, 0.0f, 0.0f);
-		uniforms.LightRadius = -1.0f;
-		uniforms.LightIntensity = 1.0f;
-		uniforms.LightInnerAngleCos = -1.0f;
-		uniforms.LightOuterAngleCos = -1.0f;
-		uniforms.LightSpotDir = mesh->map->GetSunDirection();
-		uniforms.LightColor = mesh->map->GetSunColor();
-		uniforms.PassType = 0.0f;
-		uniforms.SampleDistance = (float)mesh->samples;
-		RunTrace(uniforms, rgenSunRegion);
-	}
+	Uniforms uniforms = {};
+	uniforms.SampleDistance = (float)mesh->samples;
+	uniforms.SampleCount = SAMPLE_COUNT;
+
+	uniforms.SampleIndex = 0;
+	uniforms.PassType = 0;
+	RunTrace(uniforms, rgenBounceRegion);
+
+	uniforms.LightDir = mesh->map->GetSunDirection();
+	uniforms.LightColor = mesh->map->GetSunColor();
+	uniforms.LightIntensity = 1.0f;
+	RunTrace(uniforms, rgenSunRegion);
 
 	for (ThingLight& light : mesh->map->ThingLights)
 	{
-		Uniforms uniforms = {};
 		uniforms.LightOrigin = light.LightOrigin();
 		uniforms.LightRadius = light.LightRadius();
 		uniforms.LightIntensity = light.intensity;
 		uniforms.LightInnerAngleCos = light.innerAngleCos;
 		uniforms.LightOuterAngleCos = light.outerAngleCos;
-		uniforms.LightSpotDir = light.SpotDir();
+		uniforms.LightDir = light.SpotDir();
 		uniforms.LightColor = light.rgb;
-		uniforms.PassType = 1.0f;
-		uniforms.SampleDistance = (float)mesh->samples;
 		RunTrace(uniforms, rgenLightRegion);
+	}
+
+	for (uint32_t i = 0; i < uniforms.SampleCount; i++)
+	{
+		uniforms.PassType = 1;
+		uniforms.SampleIndex = i;
+		RunTrace(uniforms, rgenBounceRegion);
+
+		for (int bounce = 0; bounce < LightBounce; bounce++)
+		{
+			uniforms.LightDir = mesh->map->GetSunDirection();
+			uniforms.LightColor = mesh->map->GetSunColor();
+			uniforms.LightIntensity = 1.0f;
+			RunTrace(uniforms, rgenSunRegion);
+
+			for (ThingLight& light : mesh->map->ThingLights)
+			{
+				uniforms.LightOrigin = light.LightOrigin();
+				uniforms.LightRadius = light.LightRadius();
+				uniforms.LightIntensity = light.intensity;
+				uniforms.LightInnerAngleCos = light.innerAngleCos;
+				uniforms.LightOuterAngleCos = light.outerAngleCos;
+				uniforms.LightDir = light.SpotDir();
+				uniforms.LightColor = light.rgb;
+				RunTrace(uniforms, rgenLightRegion);
+			}
+
+			uniforms.PassType = 2;
+			uniforms.SampleIndex = (i + bounce) % uniforms.SampleCount;
+			RunTrace(uniforms, rgenBounceRegion);
+		}
 	}
 
 	DownloadTasks(tasks);
@@ -139,9 +165,8 @@ void GPURaytracer::UploadTasks(const std::vector<SurfaceTask>& tasks)
 		throw std::runtime_error("Ray trace task count is too large");
 
 	size_t imageSize = sizeof(Vec4) * rayTraceImageSize * rayTraceImageSize;
-	uint8_t* imageData = (uint8_t*)imageTransferBuffer->Map(0, imageSize * 2);
-	Vec4* positions = (Vec4*)imageData;
-	Vec4* normals = (Vec4*)(imageData + imageSize);
+	uint8_t* imageData = (uint8_t*)imageTransferBuffer->Map(0, imageSize);
+	Vec4* startPositions = (Vec4*)imageData;
 	for (size_t i = 0; i < tasks.size(); i++)
 	{
 		const SurfaceTask& task = tasks[i];
@@ -150,19 +175,16 @@ void GPURaytracer::UploadTasks(const std::vector<SurfaceTask>& tasks)
 		Vec3 normal = surface->plane.Normal();
 		Vec3 pos = surface->lightmapOrigin + normal + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
 
-		positions[i] = Vec4(pos, 1.0f);
-		normals[i] = Vec4(normal, 1.0f);
+		startPositions[i] = Vec4(pos, (float)task.surf);
 	}
 	for (size_t i = tasks.size(); i < maxTasks; i++)
 	{
-		positions[i] = Vec4(0.0f, 0.0f, 0.0f, 0.0f);
-		normals[i] = Vec4(0.0f, 0.0f, 0.0f, 0.0f);
+		startPositions[i] = Vec4(0.0f, 0.0f, 0.0f, -1.0f);
 	}
 	imageTransferBuffer->Unmap();
 
 	PipelineBarrier barrier1;
-	barrier1.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
-	barrier1.addImage(normalsImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
+	barrier1.addImage(startPositionsImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
 	barrier1.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 	VkBufferImageCopy region = {};
@@ -172,21 +194,12 @@ void GPURaytracer::UploadTasks(const std::vector<SurfaceTask>& tasks)
 	region.imageExtent.depth = 1;
 	region.imageSubresource.layerCount = 1;
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	cmdbuffer->copyBufferToImage(imageTransferBuffer->buffer, positionsImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-	region = {};
-	region.bufferOffset = imageSize;
-	region.imageExtent.width = rayTraceImageSize;
-	region.imageExtent.height = rayTraceImageSize;
-	region.imageExtent.depth = 1;
-	region.imageSubresource.layerCount = 1;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	cmdbuffer->copyBufferToImage(imageTransferBuffer->buffer, normalsImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	cmdbuffer->copyBufferToImage(imageTransferBuffer->buffer, startPositionsImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 	PipelineBarrier barrier2;
 	barrier2.addBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-	barrier2.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-	barrier2.addImage(normalsImage.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+	barrier2.addImage(startPositionsImage.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+	barrier2.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 	barrier2.addImage(outputImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 	barrier2.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 }
@@ -303,7 +316,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		info.Normal = surface->plane.Normal();
 		if (def)
 		{
-			info.EmissiveDistance = def->distance;
+			info.EmissiveDistance = def->distance + def->distance;
 			info.EmissiveIntensity = def->intensity;
 			info.EmissiveColor = def->rgb;
 		}
@@ -611,7 +624,7 @@ void GPURaytracer::CreatePipeline()
 	setbuilder.addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	setbuilder.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	setbuilder.addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
-	setbuilder.addBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+	setbuilder.addBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
 	descriptorSetLayout = setbuilder.create(device.get());
 	descriptorSetLayout->SetDebugName("descriptorSetLayout");
 
@@ -750,15 +763,15 @@ void GPURaytracer::CreateDescriptorSet()
 	imgbuilder1.setUsage(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 	imgbuilder1.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
 	imgbuilder1.setSize(rayTraceImageSize, rayTraceImageSize);
-	positionsImage = imgbuilder1.create(device.get());
-	positionsImage->SetDebugName("positionsImage");
+	startPositionsImage = imgbuilder1.create(device.get());
+	startPositionsImage->SetDebugName("startPositionsImage");
 
 	ImageBuilder imgbuilder2;
 	imgbuilder2.setUsage(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 	imgbuilder2.setFormat(VK_FORMAT_R32G32B32A32_SFLOAT);
 	imgbuilder2.setSize(rayTraceImageSize, rayTraceImageSize);
-	normalsImage = imgbuilder2.create(device.get());
-	normalsImage->SetDebugName("normalsImage");
+	positionsImage = imgbuilder2.create(device.get());
+	positionsImage->SetDebugName("positionsImage");
 
 	ImageBuilder imgbuilder3;
 	imgbuilder3.setUsage(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
@@ -768,14 +781,14 @@ void GPURaytracer::CreateDescriptorSet()
 	outputImage->SetDebugName("outputImage");
 
 	ImageViewBuilder viewbuilder1;
-	viewbuilder1.setImage(positionsImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
-	positionsImageView = viewbuilder1.create(device.get());
-	positionsImageView->SetDebugName("positionsImageView");
+	viewbuilder1.setImage(startPositionsImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
+	startPositionsImageView = viewbuilder1.create(device.get());
+	startPositionsImageView->SetDebugName("startPositionsImageView");
 
 	ImageViewBuilder viewbuilder2;
-	viewbuilder2.setImage(normalsImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
-	normalsImageView = viewbuilder2.create(device.get());
-	normalsImageView->SetDebugName("normalsImageView");
+	viewbuilder2.setImage(positionsImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
+	positionsImageView = viewbuilder2.create(device.get());
+	positionsImageView->SetDebugName("positionsImageView");
 
 	ImageViewBuilder viewbuilder3;
 	viewbuilder3.setImage(outputImage.get(), VK_FORMAT_R32G32B32A32_SFLOAT);
@@ -796,8 +809,8 @@ void GPURaytracer::CreateDescriptorSet()
 
 	WriteDescriptors write;
 	write.addAccelerationStructure(descriptorSet.get(), 0, tlAccelStruct.get());
-	write.addStorageImage(descriptorSet.get(), 1, positionsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
-	write.addStorageImage(descriptorSet.get(), 2, normalsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
+	write.addStorageImage(descriptorSet.get(), 1, startPositionsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
+	write.addStorageImage(descriptorSet.get(), 2, positionsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
 	write.addStorageImage(descriptorSet.get(), 3, outputImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
 	write.addBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get());
 	write.addBuffer(descriptorSet.get(), 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get());
@@ -982,7 +995,7 @@ Vec3 GPURaytracer::TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, 
 		return emittance;
 
 	const float p = 1 / (2 * M_PI);
-	Vec3 incoming = TracePath(hitpos, normal, (sampleIndex + depth + 1) % SAMPLE_COUNT, depth + 1);
+	Vec3 incoming = TracePath(hitpos, L, (sampleIndex + depth + 1) % SAMPLE_COUNT, depth + 1);
 
 	return emittance + incoming * NdotL / p;
 }
