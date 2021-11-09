@@ -59,14 +59,16 @@ private:
 	void CreatePipeline();
 	void CreateDescriptorSet();
 
-	void UploadTasks(const std::vector<SurfaceTask>& tasks);
+	void UploadTasks(const SurfaceTask* tasks, size_t size);
+	void BeginTracing();
 	void RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader);
-	void DownloadTasks(const std::vector<SurfaceTask>& tasks);
+	void EndTracing();
+	void DownloadTasks(const SurfaceTask* tasks, size_t size);
+	void SubmitCommands();
 
 	void PrintVulkanInfo();
 
 	void RaytraceProbeSample(LightProbeSample* probe);
-	void RaytraceSurfaceSample(Surface* surface, int x, int y);
 	Vec3 TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, int depth = 0);
 
 	Vec3 GetLightEmittance(Surface* surface, const Vec3& pos);
@@ -76,9 +78,14 @@ private:
 	static Vec2 Hammersley(uint32_t i, uint32_t N);
 	static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness);
 
-	int SAMPLE_COUNT = 1024;
+	const int sampleCount = 1024;
+	const int uniformStructs = 256;
+	int rayTraceImageSize = 1024;
 
 	LevelMesh* mesh = nullptr;
+
+	Uniforms* mappedUniforms = nullptr;
+	int uniformsIndex = 0;
 
 	std::unique_ptr<VulkanDevice> device;
 
@@ -127,5 +134,4 @@ private:
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
 
-	int rayTraceImageSize = 2048;
 };
