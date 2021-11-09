@@ -74,6 +74,19 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		}
 	}
 
+	std::vector<Vec3> HemisphereVectors;
+	HemisphereVectors.reserve(bounceSampleCount);
+	for (int i = 0; i < bounceSampleCount; i++)
+	{
+		Vec2 Xi = Hammersley(i, bounceSampleCount);
+		Vec3 H;
+		H.x = Xi.x * 2.0f - 1.0f;
+		H.y = Xi.y * 2.0f - 1.0f;
+		H.z = RadicalInverse_VdC(i) + 0.01f;
+		H.Normalize();
+		HemisphereVectors.push_back(H);
+	}
+
 	size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
 	for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
 	{
@@ -84,56 +97,36 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 		Uniforms uniforms = {};
 		uniforms.SampleDistance = (float)mesh->samples;
-		uniforms.SampleCount = sampleCount;
+		uniforms.LightCount = mesh->map->ThingLights.Size();
+		uniforms.SunDir = mesh->map->GetSunDirection();
+		uniforms.SunColor = mesh->map->GetSunColor();
+		uniforms.SunIntensity = 1.0f;
 
 		uniforms.SampleIndex = 0;
+		uniforms.SampleCount = bounceSampleCount;
 		uniforms.PassType = 0;
 		RunTrace(uniforms, rgenBounceRegion);
 
-		uniforms.LightDir = mesh->map->GetSunDirection();
-		uniforms.LightColor = mesh->map->GetSunColor();
-		uniforms.LightIntensity = 1.0f;
-		RunTrace(uniforms, rgenSunRegion);
+		uniforms.SampleCount = coverageSampleCount;
+		RunTrace(uniforms, rgenLightRegion);
 
-		for (ThingLight& light : mesh->map->ThingLights)
-		{
-			uniforms.LightOrigin = light.LightOrigin();
-			uniforms.LightRadius = light.LightRadius();
-			uniforms.LightIntensity = light.intensity;
-			uniforms.LightInnerAngleCos = light.innerAngleCos;
-			uniforms.LightOuterAngleCos = light.outerAngleCos;
-			uniforms.LightDir = light.SpotDir();
-			uniforms.LightColor = light.rgb;
-			RunTrace(uniforms, rgenLightRegion);
-		}
-
-		for (uint32_t i = 0; i < uniforms.SampleCount; i++)
+		for (uint32_t i = 0; i < (uint32_t)bounceSampleCount; i++)
 		{
 			uniforms.PassType = 1;
 			uniforms.SampleIndex = i;
+			uniforms.SampleCount = bounceSampleCount;
+			uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
 			RunTrace(uniforms, rgenBounceRegion);
 
 			for (int bounce = 0; bounce < LightBounce; bounce++)
 			{
-				uniforms.LightDir = mesh->map->GetSunDirection();
-				uniforms.LightColor = mesh->map->GetSunColor();
-				uniforms.LightIntensity = 1.0f;
-				RunTrace(uniforms, rgenSunRegion);
-
-				for (ThingLight& light : mesh->map->ThingLights)
-				{
-					uniforms.LightOrigin = light.LightOrigin();
-					uniforms.LightRadius = light.LightRadius();
-					uniforms.LightIntensity = light.intensity;
-					uniforms.LightInnerAngleCos = light.innerAngleCos;
-					uniforms.LightOuterAngleCos = light.outerAngleCos;
-					uniforms.LightDir = light.SpotDir();
-					uniforms.LightColor = light.rgb;
-					RunTrace(uniforms, rgenLightRegion);
-				}
+				uniforms.SampleCount = coverageSampleCount;
+				RunTrace(uniforms, rgenLightRegion);
 
 				uniforms.PassType = 2;
+				uniforms.SampleCount = bounceSampleCount;
 				uniforms.SampleIndex = (i + bounce) % uniforms.SampleCount;
+				uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
 				RunTrace(uniforms, rgenBounceRegion);
 			}
 		}
@@ -186,8 +179,7 @@ void GPURaytracer::UploadTasks(const SurfaceTask* tasks, size_t size)
 		const SurfaceTask& task = tasks[i];
 		Surface* surface = mesh->surfaces[task.surf].get();
 
-		Vec3 normal = surface->plane.Normal();
-		Vec3 pos = surface->lightmapOrigin + normal + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+		Vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
 
 		startPositions[i] = Vec4(pos, (float)task.surf);
 	}
@@ -367,15 +359,31 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		surfaces.push_back(info);
 	}
 
+	std::vector<LightInfo> lights;
+	for (ThingLight& light : mesh->map->ThingLights)
+	{
+		LightInfo info;
+		info.Origin = light.LightOrigin();
+		info.Radius = light.LightRadius();
+		info.Intensity = light.intensity;
+		info.InnerAngleCos = light.innerAngleCos;
+		info.OuterAngleCos = light.outerAngleCos;
+		info.SpotDir = light.SpotDir();
+		info.Color = light.rgb;
+		lights.push_back(info);
+	}
+
 	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(Vec3);
 	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
 	size_t surfaceindexbuffersize = (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t);
 	size_t surfacebuffersize = (size_t)surfaces.size() * sizeof(SurfaceInfo);
-	size_t transferbuffersize = vertexbuffersize + indexbuffersize + surfaceindexbuffersize + surfacebuffersize;
+	size_t lightbuffersize = (size_t)lights.size() * sizeof(LightInfo);
+	size_t transferbuffersize = vertexbuffersize + indexbuffersize + surfaceindexbuffersize + surfacebuffersize + lightbuffersize;
 	size_t vertexoffset = 0;
 	size_t indexoffset = vertexoffset + vertexbuffersize;
 	size_t surfaceindexoffset = indexoffset + indexbuffersize;
 	size_t surfaceoffset = surfaceindexoffset + surfaceindexbuffersize;
+	size_t lightoffset = surfaceoffset + surfacebuffersize;
 
 	BufferBuilder vbuilder;
 	vbuilder.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
@@ -401,6 +409,12 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	surfaceBuffer = sbuilder.create(device.get());
 	surfaceBuffer->SetDebugName("surfaceBuffer");
 
+	BufferBuilder lbuilder;
+	lbuilder.setUsage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	lbuilder.setSize(lightbuffersize);
+	lightBuffer = sbuilder.create(device.get());
+	lightBuffer->SetDebugName("lightBuffer");
+
 	BufferBuilder tbuilder;
 	tbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 	tbuilder.setSize(transferbuffersize);
@@ -411,12 +425,14 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	memcpy(data + indexoffset, mesh->MeshElements.Data(), indexbuffersize);
 	memcpy(data + surfaceindexoffset, mesh->MeshSurfaces.Data(), surfaceindexbuffersize);
 	memcpy(data + surfaceoffset, surfaces.data(), surfacebuffersize);
+	memcpy(data + lightoffset, lights.data(), lightbuffersize);
 	transferBuffer->Unmap();
 
 	cmdbuffer->copyBuffer(transferBuffer.get(), vertexBuffer.get(), vertexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), indexBuffer.get(), indexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceIndexBuffer.get(), surfaceindexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceBuffer.get(), surfaceoffset);
+	cmdbuffer->copyBuffer(transferBuffer.get(), lightBuffer.get(), lightoffset);
 
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -663,6 +679,7 @@ void GPURaytracer::CreatePipeline()
 	setbuilder.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	setbuilder.addBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
 	setbuilder.addBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+	setbuilder.addBinding(7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	descriptorSetLayout = setbuilder.create(device.get());
 	descriptorSetLayout->SetDebugName("descriptorSetLayout");
 
@@ -837,7 +854,7 @@ void GPURaytracer::CreateDescriptorSet()
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1);
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3);
 	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1);
-	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2);
+	poolbuilder.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3);
 	poolbuilder.setMaxSets(1);
 	descriptorPool = poolbuilder.create(device.get());
 	descriptorPool->SetDebugName("descriptorPool");
@@ -853,6 +870,7 @@ void GPURaytracer::CreateDescriptorSet()
 	write.addBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, uniformBuffer.get());
 	write.addBuffer(descriptorSet.get(), 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get());
 	write.addBuffer(descriptorSet.get(), 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get());
+	write.addBuffer(descriptorSet.get(), 7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, lightBuffer.get());
 	write.updateSets(device.get());
 }
 
@@ -894,15 +912,15 @@ void GPURaytracer::RaytraceProbeSample(LightProbeSample* probe)
 			{  0.0f,  0.0f,  1.0f, },
 			{  0.0f,  0.0f, -1.0f, }
 		};
-		for (int i = 0; i < sampleCount; i++)
+		for (int i = 0; i < bounceSampleCount; i++)
 		{
 			const Vec3& normal = directions[i % 6];
-			Vec2 Xi = Hammersley(i, sampleCount);
+			Vec2 Xi = Hammersley(i, bounceSampleCount);
 			Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
 			Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
 			incoming += TracePath(probe->Position, L, i);
 		}
-		incoming = incoming / (float)sampleCount / (float)LightBounce;
+		incoming = incoming / (float)bounceSampleCount / (float)LightBounce;
 	}
 
 	for (ThingLight& light : mesh->map->ThingLights)
@@ -985,7 +1003,7 @@ Vec3 GPURaytracer::TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, 
 			emittance += mesh->map->GetSunColor() * (attenuation * 0.5f);
 	}
 
-	Vec2 Xi = Hammersley(sampleIndex, sampleCount);
+	Vec2 Xi = Hammersley(sampleIndex, bounceSampleCount);
 	Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
 	Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
 
@@ -994,7 +1012,7 @@ Vec3 GPURaytracer::TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, 
 		return emittance;
 
 	const float p = 1 / (2 * M_PI);
-	Vec3 incoming = TracePath(hitpos, L, (sampleIndex + depth + 1) % sampleCount, depth + 1);
+	Vec3 incoming = TracePath(hitpos, L, (sampleIndex + depth + 1) % bounceSampleCount, depth + 1);
 
 	return emittance + incoming * NdotL / p;
 }

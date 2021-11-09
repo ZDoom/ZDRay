@@ -22,16 +22,12 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint SampleIndex;
 	uint SampleCount;
 	uint PassType;
-	uint Padding2;
-	vec3 LightOrigin;
-	float Padding0;
-	float LightRadius;
-	float LightIntensity;
-	float LightInnerAngleCos;
-	float LightOuterAngleCos;
-	vec3 LightDir;
+	uint LightCount;
+	vec3 SunDir;
 	float SampleDistance;
-	vec3 LightColor;
+	vec3 SunColor;
+	float SunIntensity;
+	vec3 HemisphereVec;
 	float Padding1;
 };
 
@@ -47,9 +43,7 @@ struct SurfaceInfo
 
 layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
 
-vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness);
-vec2 Hammersley(uint i, uint N);
-float RadicalInverse_VdC(uint bits);
+vec3 ImportanceSample(vec3 N);
 
 void main()
 {
@@ -62,6 +56,8 @@ void main()
 		data0 = imageLoad(startpositions, texelPos);
 
 	vec4 incoming = vec4(0.0, 0.0, 0.0, 1.0);
+	if (PassType != 0)
+		incoming = imageLoad(outputs, texelPos);
 
 	int surfaceIndex = int(data0.w);
 	if (surfaceIndex >= 0)
@@ -77,13 +73,10 @@ void main()
 		}
 		else
 		{
-			incoming = imageLoad(outputs, texelPos);
-
 			if (PassType == 1)
 				incoming.w = 1.0f / float(SampleCount);
 
-			vec2 Xi = Hammersley(SampleIndex, SampleCount);
-			vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
+			vec3 H = ImportanceSample(normal);
 			vec3 L = normalize(H * (2.0f * dot(normal, H)) - normal);
 
 			float NdotL = max(dot(normal, L), 0.0);
@@ -91,11 +84,12 @@ void main()
 			const float p = 1 / (2 * 3.14159265359);
 			incoming.w *= NdotL / p;
 
+			surfaceIndex = -1;
 			if (NdotL > 0.0f)
 			{
 				const float minDistance = 0.1;
 
-				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, minDistance, L, 2000, 0);
+				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin + normal * 0.1, minDistance, L, 32768, 0);
 				if (payload.hitAttenuation == 1.0)
 				{
 					float hitDistance = distance(origin, payload.hitPosition);
@@ -122,39 +116,15 @@ void main()
 	imageStore(outputs, texelPos, incoming);
 }
 
-vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
+vec3 ImportanceSample(vec3 N)
 {
-	float a = roughness * roughness;
-
-	float phi = 2.0f * 3.14159265359 * Xi.x;
-	float cosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a * a - 1.0f) * Xi.y));
-	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
-
-	// from spherical coordinates to cartesian coordinates
-	vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-
 	// from tangent-space vector to world-space sample vector
-	vec3 up = abs(N.z) < 0.999f ? vec3(0.0f, 0.0f, 1.0f) : vec3(1.0f, 0.0f, 0.0f);
+	vec3 up = abs(N.x) < abs(N.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
 	vec3 tangent = normalize(cross(up, N));
 	vec3 bitangent = cross(N, tangent);
 
-	vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+	vec3 sampleVec = tangent * HemisphereVec.x + bitangent * HemisphereVec.y + N * HemisphereVec.z;
 	return normalize(sampleVec);
-}
-
-float RadicalInverse_VdC(uint bits)
-{
-	bits = (bits << 16u) | (bits >> 16u);
-	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
-}
-
-vec2 Hammersley(uint i, uint N)
-{
-	return vec2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
 )glsl";

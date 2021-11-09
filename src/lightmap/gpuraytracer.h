@@ -11,16 +11,12 @@ struct Uniforms
 	uint32_t SampleIndex;
 	uint32_t SampleCount;
 	uint32_t PassType;
-	uint32_t Padding2;
-	Vec3 LightOrigin;
-	float Padding0;
-	float LightRadius;
-	float LightIntensity;
-	float LightInnerAngleCos;
-	float LightOuterAngleCos;
-	Vec3 LightDir;
+	uint32_t LightCount;
+	Vec3 SunDir;
 	float SampleDistance;
-	Vec3 LightColor;
+	Vec3 SunColor;
+	float SunIntensity;
+	Vec3 HemisphereVec;
 	float Padding1;
 };
 
@@ -32,6 +28,20 @@ struct SurfaceInfo
 	float EmissiveIntensity;
 	float Sky;
 	float Padding0, Padding1, Padding2;
+};
+
+struct LightInfo
+{
+	Vec3 Origin;
+	float Padding0;
+	float Radius;
+	float Intensity;
+	float InnerAngleCos;
+	float OuterAngleCos;
+	Vec3 SpotDir;
+	float Padding1;
+	Vec3 Color;
+	float Padding2;
 };
 
 struct SurfaceTask
@@ -78,7 +88,8 @@ private:
 	static Vec2 Hammersley(uint32_t i, uint32_t N);
 	static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness);
 
-	const int sampleCount = 1024;
+	const int coverageSampleCount = 256;
+	const int bounceSampleCount = 2048;
 	const int uniformStructs = 256;
 	int rayTraceImageSize = 1024;
 
@@ -94,6 +105,7 @@ private:
 	std::unique_ptr<VulkanBuffer> transferBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceIndexBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceBuffer;
+	std::unique_ptr<VulkanBuffer> lightBuffer;
 
 	std::unique_ptr<VulkanBuffer> blScratchBuffer;
 	std::unique_ptr<VulkanBuffer> blAccelStructBuffer;

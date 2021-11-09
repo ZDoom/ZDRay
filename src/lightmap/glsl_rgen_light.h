@@ -22,16 +22,12 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint SampleIndex;
 	uint SampleCount;
 	uint PassType;
-	uint Padding2;
-	vec3 LightOrigin;
-	float Padding0;
-	float LightRadius;
-	float LightIntensity;
-	float LightInnerAngleCos;
-	float LightOuterAngleCos;
-	vec3 LightDir;
+	uint LightCount;
+	vec3 SunDir;
 	float SampleDistance;
-	vec3 LightColor;
+	vec3 SunColor;
+	float SunIntensity;
+	vec3 HemisphereVec;
 	float Padding1;
 };
 
@@ -45,7 +41,22 @@ struct SurfaceInfo
 	float Padding0, Padding1, Padding2;
 };
 
+struct LightInfo
+{
+	vec3 Origin;
+	float Padding0;
+	float Radius;
+	float Intensity;
+	float InnerAngleCos;
+	float OuterAngleCos;
+	vec3 SpotDir;
+	float Padding1;
+	vec3 Color;
+	float Padding2;
+};
+
 layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
+layout(set = 0, binding = 7) buffer LightBuffer { LightInfo lights[]; };
 
 vec2 Hammersley(uint i, uint N);
 float RadicalInverse_VdC(uint bits);
@@ -59,59 +70,94 @@ void main()
 	if (surfaceIndex < 0 || incoming.w <= 0.0)
 		return;
 
+	SurfaceInfo surface = surfaces[surfaceIndex];
+	vec3 normal = surface.Normal;
+
+	vec3 origin = data0.xyz + normal * 0.1;
+
 	const float minDistance = 0.01;
 
-	vec3 origin = data0.xyz;
-	float dist = distance(LightOrigin, origin);
-	if (dist > minDistance && dist < LightRadius)
+	// Sun light
 	{
-		vec3 dir = normalize(LightOrigin - origin);
+		const float dist = 32768.0;
 
-		SurfaceInfo surface = surfaces[surfaceIndex];
-		vec3 normal = surface.Normal;
-
-		float distAttenuation = max(1.0 - (dist / LightRadius), 0.0);
-		float angleAttenuation = max(dot(normal, dir), 0.0);
-		float spotAttenuation = 1.0;
-		if (LightOuterAngleCos > -1.0)
+		float attenuation = 0.0;
+		if (PassType == 0)
 		{
-			float cosDir = dot(dir, LightDir);
-			spotAttenuation = smoothstep(LightOuterAngleCos, LightInnerAngleCos, cosDir);
-			spotAttenuation = max(spotAttenuation, 0.0);
+			vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+			vec3 e1 = cross(normal, e0);
+			e0 = cross(normal, e1);
+
+			for (uint i = 0; i < SampleCount; i++)
+			{
+				vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
+				vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+
+				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, SunDir, dist, 0);
+				attenuation += payload.hitAttenuation;
+			}
+			attenuation *= 1.0 / float(SampleCount);
 		}
-
-		float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
-		if (attenuation > 0.0)
+		else
 		{
-			float shadowAttenuation = 0.0;
+			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin, minDistance, SunDir, dist, 0);
+			attenuation = payload.hitAttenuation;
+		}
+		incoming.rgb += SunColor * (attenuation * SunIntensity) * incoming.w;
+	}
 
-			if (PassType == 0)
+	for (uint j = 0; j < LightCount; j++)
+	{
+		LightInfo light = lights[j];
+
+		float dist = distance(light.Origin, origin);
+		if (dist > minDistance && dist < light.Radius)
+		{
+			vec3 dir = normalize(light.Origin - origin);
+
+			float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
+			float angleAttenuation = max(dot(normal, dir), 0.0);
+			float spotAttenuation = 1.0;
+			if (light.OuterAngleCos > -1.0)
 			{
-				vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
-				vec3 e1 = cross(normal, e0);
-				e0 = cross(normal, e1);
-				for (uint i = 0; i < SampleCount; i++)
+				float cosDir = dot(dir, light.SpotDir);
+				spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
+				spotAttenuation = max(spotAttenuation, 0.0);
+			}
+
+			float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
+			if (attenuation > 0.0)
+			{
+				float shadowAttenuation = 0.0;
+
+				if (PassType == 0)
 				{
-					vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
-					vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+					vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+					vec3 e1 = cross(normal, e0);
+					e0 = cross(normal, e1);
+					for (uint i = 0; i < SampleCount; i++)
+					{
+						vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
+						vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
 
-					float dist2 = distance(LightOrigin, origin2);
-					vec3 dir2 = normalize(LightOrigin - origin2);
+						float dist2 = distance(light.Origin, origin2);
+						vec3 dir2 = normalize(light.Origin - origin2);
 
-					traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin2, minDistance, dir2, dist2, 0);
-					shadowAttenuation += payload.hitAttenuation;
+						traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin2, minDistance, dir2, dist2, 0);
+						shadowAttenuation += payload.hitAttenuation;
+					}
+					shadowAttenuation *= 1.0 / float(SampleCount);
 				}
-				shadowAttenuation *= 1.0 / float(SampleCount);
-			}
-			else
-			{
-				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin, minDistance, dir, dist, 0);
-				shadowAttenuation = payload.hitAttenuation;
-			}
+				else
+				{
+					traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin, minDistance, dir, dist, 0);
+					shadowAttenuation = payload.hitAttenuation;
+				}
 
-			attenuation *= shadowAttenuation;
+				attenuation *= shadowAttenuation;
 
-			incoming.rgb += LightColor * (attenuation * LightIntensity) * incoming.w;
+				incoming.rgb += light.Color * (attenuation * light.Intensity) * incoming.w;
+			}
 		}
 	}
 

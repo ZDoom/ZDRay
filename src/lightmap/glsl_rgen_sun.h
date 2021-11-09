@@ -22,16 +22,12 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint SampleIndex;
 	uint SampleCount;
 	uint PassType;
-	uint Padding2;
-	vec3 LightOrigin;
-	float Padding0;
-	float LightRadius;
-	float LightIntensity;
-	float LightInnerAngleCos;
-	float LightOuterAngleCos;
-	vec3 LightDir;
+	uint LightCount;
+	vec3 SunDir;
 	float SampleDistance;
-	vec3 LightColor;
+	vec3 SunColor;
+	float SunIntensity;
+	vec3 HemisphereVec;
 	float Padding1;
 };
 
@@ -80,18 +76,18 @@ void main()
 			vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
 			vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
 
-			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, LightDir, dist, 0);
+			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, SunDir, dist, 0);
 			attenuation += payload.hitAttenuation;
 		}
 		attenuation *= 1.0 / float(SampleCount);
 	}
 	else
 	{
-		traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin, minDistance, LightDir, dist, 0);
+		traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin, minDistance, SunDir, dist, 0);
 		attenuation = payload.hitAttenuation;
 	}
 
-	incoming.rgb += LightColor * (attenuation * LightIntensity) * incoming.w;
+	incoming.rgb += SunColor * (attenuation * SunIntensity) * incoming.w;
 	imageStore(outputs, texelPos, incoming);
 }
 
