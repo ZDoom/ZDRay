@@ -44,9 +44,9 @@ struct LightInfo
 	float Padding2;
 };
 
-struct SurfaceTask
+struct TraceTask
 {
-	int surf, x, y;
+	int id, x, y;
 };
 
 class GPURaytracer
@@ -69,24 +69,17 @@ private:
 	void CreatePipeline();
 	void CreateDescriptorSet();
 
-	void UploadTasks(const SurfaceTask* tasks, size_t size);
+	void UploadTasks(const TraceTask* tasks, size_t size);
 	void BeginTracing();
 	void RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader);
 	void EndTracing();
-	void DownloadTasks(const SurfaceTask* tasks, size_t size);
+	void DownloadTasks(const TraceTask* tasks, size_t size);
 	void SubmitCommands();
 
 	void PrintVulkanInfo();
 
-	void RaytraceProbeSample(LightProbeSample* probe);
-	Vec3 TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, int depth = 0);
-
-	Vec3 GetLightEmittance(Surface* surface, const Vec3& pos);
-	Vec3 GetSurfaceEmittance(Surface* surface, float distance);
-
 	static float RadicalInverse_VdC(uint32_t bits);
 	static Vec2 Hammersley(uint32_t i, uint32_t N);
-	static Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness);
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;
@@ -117,7 +110,7 @@ private:
 	std::unique_ptr<VulkanBuffer> tlAccelStructBuffer;
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
 
-	std::unique_ptr<VulkanShader> rgenBounce, rgenLight, rgenSun;
+	std::unique_ptr<VulkanShader> rgenBounce, rgenLight;
 	std::unique_ptr<VulkanShader> rmissBounce, rmissLight, rmissSun;
 	std::unique_ptr<VulkanShader> rchitBounce, rchitLight, rchitSun;
 
@@ -128,7 +121,7 @@ private:
 	std::unique_ptr<VulkanBuffer> shaderBindingTable;
 	std::unique_ptr<VulkanBuffer> sbtTransferBuffer;
 
-	VkStridedDeviceAddressRegionKHR rgenBounceRegion = {}, rgenLightRegion = {}, rgenSunRegion = {};
+	VkStridedDeviceAddressRegionKHR rgenBounceRegion = {}, rgenLightRegion = {};
 	VkStridedDeviceAddressRegionKHR missRegion = {};
 	VkStridedDeviceAddressRegionKHR hitRegion = {};
 	VkStridedDeviceAddressRegionKHR callRegion = {};

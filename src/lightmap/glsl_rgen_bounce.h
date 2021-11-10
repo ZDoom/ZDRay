@@ -59,22 +59,40 @@ void main()
 	if (PassType != 0)
 		incoming = imageLoad(outputs, texelPos);
 
+	vec3 origin = data0.xyz;
 	int surfaceIndex = int(data0.w);
-	if (surfaceIndex >= 0)
+	if (surfaceIndex != -1)
 	{
-		SurfaceInfo surface = surfaces[surfaceIndex];
-
-		vec3 origin = data0.xyz;
-		vec3 normal = surface.Normal;
-	
 		if (PassType == 0)
 		{
-			incoming.rgb = surface.EmissiveColor * surface.EmissiveIntensity;
+			if (surfaceIndex >= 0)
+			{
+				SurfaceInfo surface = surfaces[surfaceIndex];
+				incoming.rgb = surface.EmissiveColor * surface.EmissiveIntensity;
+			}
 		}
 		else
 		{
 			if (PassType == 1)
 				incoming.w = 1.0f / float(SampleCount);
+
+			vec3 normal;
+			if (surfaceIndex >= 0)
+			{
+				normal = surfaces[surfaceIndex].Normal;
+			}
+			else
+			{
+				switch (SampleIndex % 6)
+				{
+				case 0: normal = vec3( 1.0f,  0.0f,  0.0f); break;
+				case 1: normal = vec3(-1.0f,  0.0f,  0.0f); break;
+				case 2: normal = vec3( 0.0f,  1.0f,  0.0f); break;
+				case 3: normal = vec3( 0.0f, -1.0f,  0.0f); break;
+				case 4: normal = vec3( 0.0f,  0.0f,  1.0f); break;
+				case 5: normal = vec3( 0.0f,  0.0f, -1.0f); break;
+				}
+			}
 
 			vec3 H = ImportanceSample(normal);
 			vec3 L = normalize(H * (2.0f * dot(normal, H)) - normal);
@@ -94,7 +112,7 @@ void main()
 				{
 					float hitDistance = distance(origin, payload.hitPosition);
 					surfaceIndex = payload.hitSurfaceIndex;
-					surface = surfaces[surfaceIndex];
+					SurfaceInfo surface = surfaces[surfaceIndex];
 					origin = payload.hitPosition;
 
 					if (surface.EmissiveDistance > 0.0)
@@ -107,10 +125,10 @@ void main()
 
 			incoming.w *= 0.25; // the amount of incoming light the surfaces emit
 		}
-
-		data0.xyz = origin;
-		data0.w = float(surfaceIndex);
 	}
+
+	data0.xyz = origin;
+	data0.w = float(surfaceIndex);
 
 	imageStore(positions, texelPos, data0);
 	imageStore(outputs, texelPos, incoming);

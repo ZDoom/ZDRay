@@ -14,7 +14,6 @@
 #include <zlib.h>
 #include "glsl_rgen_bounce.h"
 #include "glsl_rgen_light.h"
-#include "glsl_rgen_sun.h"
 #include "glsl_rchit_bounce.h"
 #include "glsl_rchit_light.h"
 #include "glsl_rchit_sun.h"
@@ -46,15 +45,15 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 	CreateVulkanObjects();
 
-	printf("Tracing light probes\n");
-
-	Worker::RunJob((int)mesh->lightProbes.size(), [=](int id) {
-		RaytraceProbeSample(&mesh->lightProbes[id]);
-	});
-
-	printf("Tracing surfaces, %d bounce(s)\n", LightBounce);
-
-	std::vector<SurfaceTask> tasks;
+	std::vector<TraceTask> tasks;
+	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
+	{
+		TraceTask task;
+		task.id = -(int)(i + 2);
+		task.x = 0;
+		task.y = 0;
+		tasks.push_back(task);
+	}
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
@@ -65,8 +64,8 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		{
 			for (int x = 0; x < sampleWidth; x++)
 			{
-				SurfaceTask task;
-				task.surf = (int)i;
+				TraceTask task;
+				task.id = (int)i;
 				task.x = x;
 				task.y = y;
 				tasks.push_back(task);
@@ -87,6 +86,8 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		HemisphereVectors.push_back(H);
 	}
 
+	printf("Ray tracing with %d bounce(s)\n", LightBounce);
+
 	size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
 	for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
 	{
@@ -102,9 +103,9 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		uniforms.SunColor = mesh->map->GetSunColor();
 		uniforms.SunIntensity = 1.0f;
 
+		uniforms.PassType = 0;
 		uniforms.SampleIndex = 0;
 		uniforms.SampleCount = bounceSampleCount;
-		uniforms.PassType = 0;
 		RunTrace(uniforms, rgenBounceRegion);
 
 		uniforms.SampleCount = coverageSampleCount;
@@ -124,8 +125,8 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 				RunTrace(uniforms, rgenLightRegion);
 
 				uniforms.PassType = 2;
-				uniforms.SampleCount = bounceSampleCount;
 				uniforms.SampleIndex = (i + bounce) % uniforms.SampleCount;
+				uniforms.SampleCount = bounceSampleCount;
 				uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
 				RunTrace(uniforms, rgenBounceRegion);
 			}
@@ -159,7 +160,7 @@ void GPURaytracer::CreateVulkanObjects()
 	finishbuildbarrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 }
 
-void GPURaytracer::UploadTasks(const SurfaceTask* tasks, size_t size)
+void GPURaytracer::UploadTasks(const TraceTask* tasks, size_t size)
 {
 	if (!cmdbuffer)
 	{
@@ -176,12 +177,20 @@ void GPURaytracer::UploadTasks(const SurfaceTask* tasks, size_t size)
 	Vec4* startPositions = (Vec4*)imageData;
 	for (size_t i = 0; i < size; i++)
 	{
-		const SurfaceTask& task = tasks[i];
-		Surface* surface = mesh->surfaces[task.surf].get();
+		const TraceTask& task = tasks[i];
 
-		Vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+		if (task.id >= 0)
+		{
+			Surface* surface = mesh->surfaces[task.id].get();
+			Vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+			startPositions[i] = Vec4(pos, (float)task.id);
+		}
+		else
+		{
+			LightProbeSample& probe = mesh->lightProbes[(size_t)(-task.id) - 2];
+			startPositions[i] = Vec4(probe.Position, (float)-2);
+		}
 
-		startPositions[i] = Vec4(pos, (float)task.surf);
 	}
 	for (size_t i = size; i < maxTasks; i++)
 	{
@@ -276,7 +285,7 @@ void GPURaytracer::SubmitCommands()
 	cmdbuffer.reset();
 }
 
-void GPURaytracer::DownloadTasks(const SurfaceTask* tasks, size_t size)
+void GPURaytracer::DownloadTasks(const TraceTask* tasks, size_t size)
 {
 	PipelineBarrier barrier4;
 	barrier4.addImage(outputImage.get(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
@@ -299,11 +308,18 @@ void GPURaytracer::DownloadTasks(const SurfaceTask* tasks, size_t size)
 	Vec4* output = (Vec4*)imageData;
 	for (size_t i = 0; i < size; i++)
 	{
-		const SurfaceTask& task = tasks[i];
-		Surface* surface = mesh->surfaces[task.surf].get();
-
-		size_t sampleWidth = surface->lightmapDims[0];
-		surface->samples[task.x + task.y * sampleWidth] = Vec3(output[i].x, output[i].y, output[i].z);
+		const TraceTask& task = tasks[i];
+		if (task.id >= 0)
+		{
+			Surface* surface = mesh->surfaces[task.id].get();
+			size_t sampleWidth = surface->lightmapDims[0];
+			surface->samples[task.x + task.y * sampleWidth] = Vec3(output[i].x, output[i].y, output[i].z);
+		}
+		else
+		{
+			LightProbeSample& probe = mesh->lightProbes[(size_t)(-task.id) - 2];
+			probe.Color = Vec3(output[i].x, output[i].y, output[i].z);
+		}
 	}
 	imageTransferBuffer->Unmap();
 }
@@ -412,7 +428,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	BufferBuilder lbuilder;
 	lbuilder.setUsage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 	lbuilder.setSize(lightbuffersize);
-	lightBuffer = sbuilder.create(device.get());
+	lightBuffer = lbuilder.create(device.get());
 	lightBuffer->SetDebugName("lightBuffer");
 
 	BufferBuilder tbuilder;
@@ -612,7 +628,6 @@ void GPURaytracer::CreateShaders()
 {
 	rgenBounce = CompileRayGenShader(glsl_rgen_bounce, "rgen.bounce");
 	rgenLight = CompileRayGenShader(glsl_rgen_light, "rgen.light");
-	rgenSun = CompileRayGenShader(glsl_rgen_sun, "rgen.sun");
 	rchitBounce = CompileClosestHitShader(glsl_rchit_bounce, "rchit.bounce");
 	rchitLight = CompileClosestHitShader(glsl_rchit_light, "rchit.light");
 	rchitSun = CompileClosestHitShader(glsl_rchit_sun, "rchit.sun");
@@ -693,7 +708,6 @@ void GPURaytracer::CreatePipeline()
 	builder.setMaxPipelineRayRecursionDepth(1);
 	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, rgenBounce.get());
 	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, rgenLight.get());
-	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, rgenSun.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissBounce.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissLight.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissSun.get());
@@ -702,13 +716,12 @@ void GPURaytracer::CreatePipeline()
 	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, rchitSun.get());
 	builder.addRayGenGroup(0);
 	builder.addRayGenGroup(1);
-	builder.addRayGenGroup(2);
+	builder.addMissGroup(2);
 	builder.addMissGroup(3);
 	builder.addMissGroup(4);
-	builder.addMissGroup(5);
+	builder.addTrianglesHitGroup(5);
 	builder.addTrianglesHitGroup(6);
 	builder.addTrianglesHitGroup(7);
-	builder.addTrianglesHitGroup(8);
 	pipeline = builder.create(device.get());
 	pipeline->SetDebugName("pipeline");
 
@@ -722,7 +735,7 @@ void GPURaytracer::CreatePipeline()
 			return value;
 	};
 
-	VkDeviceSize raygenCount = 3;
+	VkDeviceSize raygenCount = 2;
 	VkDeviceSize missCount = 3;
 	VkDeviceSize hitCount = 3;
 
@@ -736,8 +749,6 @@ void GPURaytracer::CreatePipeline()
 	rgenBounceRegion.size = rgenStride;
 	rgenLightRegion.stride = rgenStride;
 	rgenLightRegion.size = rgenStride;
-	rgenSunRegion.stride = rgenStride;
-	rgenSunRegion.size = rgenStride;
 
 	missRegion.stride = handleSizeAligned;
 	missRegion.size = align_up(missCount * handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
@@ -789,7 +800,6 @@ void GPURaytracer::CreatePipeline()
 
 	rgenBounceRegion.deviceAddress = sbtAddress + rgenOffset;
 	rgenLightRegion.deviceAddress = sbtAddress + rgenOffset + rgenStride;
-	rgenSunRegion.deviceAddress = sbtAddress + rgenOffset + 2 * rgenStride;
 	missRegion.deviceAddress = sbtAddress + missOffset;
 	hitRegion.deviceAddress = sbtAddress + hitOffset;
 }
@@ -867,7 +877,7 @@ void GPURaytracer::CreateDescriptorSet()
 	write.addStorageImage(descriptorSet.get(), 1, startPositionsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
 	write.addStorageImage(descriptorSet.get(), 2, positionsImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
 	write.addStorageImage(descriptorSet.get(), 3, outputImageView.get(), VK_IMAGE_LAYOUT_GENERAL);
-	write.addBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, uniformBuffer.get());
+	write.addBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, uniformBuffer.get(), 0, sizeof(Uniforms));
 	write.addBuffer(descriptorSet.get(), 5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get());
 	write.addBuffer(descriptorSet.get(), 6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get());
 	write.addBuffer(descriptorSet.get(), 7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, lightBuffer.get());
@@ -897,124 +907,9 @@ void GPURaytracer::PrintVulkanInfo()
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
 }
 
-void GPURaytracer::RaytraceProbeSample(LightProbeSample* probe)
+Vec2 GPURaytracer::Hammersley(uint32_t i, uint32_t N)
 {
-	Vec3 incoming(0.0f, 0.0f, 0.0f);
-
-	if (LightBounce > 0)
-	{
-		Vec3 directions[6] =
-		{
-			{  1.0f,  0.0f,  0.0f },
-			{ -1.0f,  0.0f,  0.0f },
-			{  0.0f,  1.0f,  0.0f },
-			{  0.0f, -1.0f,  0.0f },
-			{  0.0f,  0.0f,  1.0f, },
-			{  0.0f,  0.0f, -1.0f, }
-		};
-		for (int i = 0; i < bounceSampleCount; i++)
-		{
-			const Vec3& normal = directions[i % 6];
-			Vec2 Xi = Hammersley(i, bounceSampleCount);
-			Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
-			Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
-			incoming += TracePath(probe->Position, L, i);
-		}
-		incoming = incoming / (float)bounceSampleCount / (float)LightBounce;
-	}
-
-	for (ThingLight& light : mesh->map->ThingLights)
-	{
-		Vec3 lightOrigin = light.LightOrigin();
-		float lightRadius = light.LightRadius();
-
-		if (probe->Position.DistanceSq(lightOrigin) > (lightRadius * lightRadius))
-			continue;
-
-		if (mesh->TraceAnyHit(lightOrigin, probe->Position))
-			continue; // this light is occluded by something
-
-		Vec3 dir = (lightOrigin - probe->Position);
-		float dist = dir.Unit();
-		dir.Normalize();
-
-		incoming += light.rgb * (light.SpotAttenuation(dir) * light.DistAttenuation(dist) * light.intensity);
-	}
-
-	const Vec3& sundir = mesh->map->GetSunDirection();
-	LevelTraceHit trace = mesh->Trace(probe->Position, probe->Position + sundir * 32768.0f);
-	if (trace.fraction != 1.0f && trace.hitSurface->bSky)
-		incoming += mesh->map->GetSunColor();
-
-	probe->Color = incoming;
-}
-
-Vec3 GPURaytracer::GetLightEmittance(Surface* surface, const Vec3& pos)
-{
-	Vec3 emittance = Vec3(0.0f);
-	for (ThingLight& light : mesh->map->ThingLights)
-	{
-		Vec3 lightOrigin = light.LightOrigin();
-		float lightRadius = light.LightRadius();
-
-		if (surface->plane.Distance(lightOrigin) - surface->plane.d < 0)
-			continue; // completely behind the plane
-
-		if (pos.DistanceSq(lightOrigin) > (lightRadius * lightRadius))
-			continue; // light too far away
-
-		Vec3 dir = (lightOrigin - pos);
-		float dist = dir.Unit();
-		dir.Normalize();
-
-		float attenuation = light.SpotAttenuation(dir) * light.DistAttenuation(dist) * surface->plane.Normal().Dot(dir);
-		if (attenuation <= 0.0f)
-			continue;
-
-		if (mesh->TraceAnyHit(lightOrigin, pos))
-			continue; // this light is occluded by something
-
-		emittance += light.rgb * (attenuation * light.intensity);
-	}
-	return emittance;
-}
-
-Vec3 GPURaytracer::TracePath(const Vec3& pos, const Vec3& dir, int sampleIndex, int depth)
-{
-	if (depth >= LightBounce)
-		return Vec3(0.0f);
-
-	LevelTraceHit hit = mesh->Trace(pos + dir * 0.1f, pos + dir * 2000.0f);
-	if (hit.fraction == 1.0f)
-		return Vec3(0.0f);
-
-	Vec3 normal = hit.hitSurface->plane.Normal();
-	Vec3 hitpos = hit.start * (1.0f - hit.fraction) + hit.end * hit.fraction;
-
-	Vec3 emittance = GetSurfaceEmittance(hit.hitSurface, pos.Distance(hitpos)) + GetLightEmittance(hit.hitSurface, hitpos) * 0.5f;
-
-	const Vec3& sundir = mesh->map->GetSunDirection();
-	float attenuation = normal.Dot(sundir);
-	if (attenuation > 0.0f)
-	{
-		Vec3 start = hitpos + normal * 0.1f;
-		LevelTraceHit trace = mesh->Trace(start, start + sundir * 32768.0f);
-		if (trace.fraction != 1.0f && trace.hitSurface->bSky)
-			emittance += mesh->map->GetSunColor() * (attenuation * 0.5f);
-	}
-
-	Vec2 Xi = Hammersley(sampleIndex, bounceSampleCount);
-	Vec3 H = ImportanceSampleGGX(Xi, normal, 1.0f);
-	Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
-
-	float NdotL = Vec3::Dot(normal, L);
-	if (NdotL <= 0.0f)
-		return emittance;
-
-	const float p = 1 / (2 * M_PI);
-	Vec3 incoming = TracePath(hitpos, L, (sampleIndex + depth + 1) % bounceSampleCount, depth + 1);
-
-	return emittance + incoming * NdotL / p;
+	return Vec2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
 float GPURaytracer::RadicalInverse_VdC(uint32_t bits)
@@ -1025,70 +920,4 @@ float GPURaytracer::RadicalInverse_VdC(uint32_t bits)
 	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
 	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
 	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
-}
-
-Vec2 GPURaytracer::Hammersley(uint32_t i, uint32_t N)
-{
-	return Vec2(float(i) / float(N), RadicalInverse_VdC(i));
-}
-
-Vec3 GPURaytracer::ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness)
-{
-	float a = roughness * roughness;
-
-	float phi = 2.0f * M_PI * Xi.x;
-	float cosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a * a - 1.0f) * Xi.y));
-	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
-
-	// from spherical coordinates to cartesian coordinates
-	Vec3 H(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta, cosTheta);
-
-	// from tangent-space vector to world-space sample vector
-	Vec3 up = std::abs(N.z) < 0.999f ? Vec3(0.0f, 0.0f, 1.0f) : Vec3(1.0f, 0.0f, 0.0f);
-	Vec3 tangent = Vec3::Normalize(Vec3::Cross(up, N));
-	Vec3 bitangent = Vec3::Cross(N, tangent);
-
-	Vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
-	return Vec3::Normalize(sampleVec);
-}
-
-Vec3 GPURaytracer::GetSurfaceEmittance(Surface* surface, float distance)
-{
-	SurfaceLightDef* def = nullptr;
-	if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
-	{
-		int lightdefidx = mesh->map->Sides[surface->typeIndex].lightdef;
-		if (lightdefidx != -1)
-		{
-			def = &mesh->map->SurfaceLights[lightdefidx];
-		}
-	}
-	else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
-	{
-		MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
-		IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
-
-		if (sector && surface->numVerts > 0)
-		{
-			if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
-			{
-				def = &mesh->map->SurfaceLights[sector->floorlightdef];
-			}
-			else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
-			{
-				def = &mesh->map->SurfaceLights[sector->ceilinglightdef];
-			}
-		}
-	}
-
-	if (def && distance < def->distance + def->distance)
-	{
-		float radius = def->distance + def->distance;
-		float attenuation = std::max(1.0f - (distance / radius), 0.0f);
-		return def->rgb * (attenuation * def->intensity);
-	}
-	else
-	{
-		return Vec3(0.0f);
-	}
 }

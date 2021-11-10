@@ -175,7 +175,6 @@ set( SOURCES
 	src/lightmap/glsl_rchit_sun.h
 	src/lightmap/glsl_rgen_bounce.h
 	src/lightmap/glsl_rgen_light.h
-	src/lightmap/glsl_rgen_sun.h
 	src/lightmap/glsl_rmiss_bounce.h
 	src/lightmap/glsl_rmiss_light.h
 	src/lightmap/glsl_rmiss_sun.h

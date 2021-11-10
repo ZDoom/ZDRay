@@ -67,11 +67,12 @@ void main()
 	vec4 incoming = imageLoad(outputs, texelPos);
 	vec4 data0 = imageLoad(positions, texelPos);
 	int surfaceIndex = int(data0.w);
-	if (surfaceIndex < 0 || incoming.w <= 0.0)
+	if (surfaceIndex == -1 || incoming.w <= 0.0)
 		return;
 
-	SurfaceInfo surface = surfaces[surfaceIndex];
-	vec3 normal = surface.Normal;
+	vec3 normal;
+	if (surfaceIndex >= 0)
+		normal = surfaces[surfaceIndex].Normal;
 
 	vec3 origin = data0.xyz + normal * 0.1;
 
@@ -82,7 +83,7 @@ void main()
 		const float dist = 32768.0;
 
 		float attenuation = 0.0;
-		if (PassType == 0)
+		if (PassType == 0 && surfaceIndex >= 0)
 		{
 			vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
 			vec3 e1 = cross(normal, e0);
@@ -116,7 +117,11 @@ void main()
 			vec3 dir = normalize(light.Origin - origin);
 
 			float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
-			float angleAttenuation = max(dot(normal, dir), 0.0);
+			float angleAttenuation = 1.0f;
+			if (surfaceIndex >= 0)
+			{
+				angleAttenuation = max(dot(normal, dir), 0.0);
+			}
 			float spotAttenuation = 1.0;
 			if (light.OuterAngleCos > -1.0)
 			{
@@ -130,7 +135,7 @@ void main()
 			{
 				float shadowAttenuation = 0.0;
 
-				if (PassType == 0)
+				if (PassType == 0 && surfaceIndex >= 0)
 				{
 					vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
 					vec3 e1 = cross(normal, e0);
