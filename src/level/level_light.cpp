@@ -84,6 +84,13 @@ void FLevel::SetupLights()
 		}
 	}
 
+	// GG to whoever memset'ed FLevel
+	defaultSunColor = Vec3(1, 1, 1);
+	defaultSunDirection = Vec3(0.45f, 0.3f, 0.9f);
+	Samples = 8;
+	LightBounce = 1;
+	GridSize = 32.0f;
+
 	for (int i = 0; i < (int)Things.Size(); ++i)
 	{
 		IntThing* thing = &Things[i];
@@ -91,7 +98,7 @@ void FLevel::SetupLights()
 		{
 			ThingLightProbes.Push(i);
 		}
-		else if (thing->type == 9890) // Sunlight
+		else if (thing->type == 9890) // ZDRayInfo
 		{
 			uint32_t lightcolor = 0xffffff;
 			Vec3 sundir(0.0f, 0.0f, 0.0f);
@@ -115,6 +122,25 @@ void FLevel::SetupLights()
 				else if (!stricmp(key.key, "sundirz"))
 				{
 					sundir.z = atof(key.value);
+				}
+				else if (!stricmp(key.key, "sampledistance"))
+				{
+					Samples = atoi(key.value);
+					if (Samples <= 0) Samples = 1;
+					if (Samples > 128) Samples = 128;
+					Samples = Math::RoundPowerOfTwo(Samples);
+				}
+				else if (!stricmp(key.key, "bounces"))
+				{
+					LightBounce = atoi(key.value);
+					if (LightBounce < 0) LightBounce = 0;
+					if (LightBounce > 8) LightBounce = 8;
+				}
+				else if (!stricmp(key.key, "gridsize"))
+				{
+					GridSize = atof(key.value);
+					if (GridSize < 0.f) GridSize = 0.f;
+					if (GridSize > 1024.f) GridSize = 1024.f;
 				}
 			}
 

@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <zlib.h>
 
-extern int LightBounce;
 extern bool VKDebug;
 
 CPURaytracer::CPURaytracer()
@@ -59,7 +58,7 @@ void CPURaytracer::Raytrace(LevelMesh* level)
 	CreateHemisphereVectors();
 	CreateLights();
 
-	printf("Ray tracing with %d bounce(s)\n", LightBounce);
+	printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
 
 	Worker::RunJob((int)tasks.size(), [=](int id) { RaytraceTask(tasks[id]); });
 
@@ -107,7 +106,7 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 		state.HemisphereVec = HemisphereVectors[state.SampleIndex];
 		RunBounceTrace(state);
 
-		for (int bounce = 0; bounce < LightBounce && !state.EndTrace; bounce++)
+		for (int bounce = 0; bounce < mesh->map->LightBounce && !state.EndTrace; bounce++)
 		{
 			state.SampleCount = coverageSampleCount;
 			RunLightTrace(state);

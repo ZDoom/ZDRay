@@ -387,8 +387,11 @@ struct FLevel
 	TArray<SurfaceLightDef> SurfaceLights;
 	TArray<int> ThingLightProbes;
 
-	Vec3 defaultSunColor = Vec3(1, 1, 1);
-	Vec3 defaultSunDirection = Vec3(0.45f, 0.3f, 0.9f);
+	Vec3 defaultSunColor;
+	Vec3 defaultSunDirection;
+	int Samples;
+	int LightBounce;
+	float GridSize;
 
 	void FindMapBounds ();
 	void RemoveExtraLines ();

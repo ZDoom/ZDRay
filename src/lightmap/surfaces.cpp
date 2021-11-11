@@ -34,8 +34,6 @@
 #include "pngwriter.h"
 #include <map>
 
-extern float GridSize;
-
 #ifdef _MSC_VER
 #pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning(disable: 4244) // warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
@@ -392,12 +390,12 @@ void LevelMesh::CreateLightProbes(FLevel& map)
 	float maxX = std::floor(map.MaxX / 65536.0f) + 1.0f;
 	float maxY = std::floor(map.MaxY / 65536.0f) + 1.0f;
 
-	float halfGridSize = GridSize * 0.5f;
-	float doubleGridSize = GridSize * 2.0f;
+	float halfGridSize = map.GridSize * 0.5f;
+	float doubleGridSize = map.GridSize * 2.0f;
 
-	for (float y = minY; y < maxY; y += GridSize)
+	for (float y = minY; y < maxY; y += map.GridSize)
 	{
-		for (float x = minX; x < maxX; x += GridSize)
+		for (float x = minX; x < maxX; x += map.GridSize)
 		{
 			MapSubsectorEx* ssec = map.PointInSubSector((int)x, (int)y);
 			IntSector* sec = ssec ? map.GetSectorFromSubSector(ssec) : nullptr;

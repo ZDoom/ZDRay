@@ -21,7 +21,6 @@
 #include "glsl_rmiss_light.h"
 #include "glsl_rmiss_sun.h"
 
-extern int LightBounce;
 extern bool VKDebug;
 
 GPURaytracer::GPURaytracer()
@@ -86,7 +85,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		HemisphereVectors.push_back(H);
 	}
 
-	printf("Ray tracing with %d bounce(s)\n", LightBounce);
+	printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
 
 	size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
 	for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
@@ -119,7 +118,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 			uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
 			RunTrace(uniforms, rgenBounceRegion);
 
-			for (int bounce = 0; bounce < LightBounce; bounce++)
+			for (int bounce = 0; bounce < mesh->map->LightBounce; bounce++)
 			{
 				uniforms.SampleCount = coverageSampleCount;
 				RunTrace(uniforms, rgenLightRegion);

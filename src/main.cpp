@@ -115,11 +115,8 @@ bool			 HaveSSE1, HaveSSE2;
 int				 SSELevel;
 int				 NumThreads = 0;
 int				 LMDims = 1024;
-int				 Samples = 8;
 bool			 CPURaytrace = false;
 bool			 VKDebug = false;
-int				 LightBounce = 1;
-float			 GridSize = 32.0f;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -155,16 +152,13 @@ static option long_opts[] =
 	{"no-sse2",			no_argument,		0,  1003},
 	{"comments",		no_argument,		0,	'c'},
 	{"threads",			required_argument,	0,	'j'},
-	{"samples",			required_argument,	0,	'Q'},
 	{"size",			required_argument,	0,	'S'},
 	{"cpu-raytrace",	no_argument,		0,	'C'},
-	{"bounce",			required_argument,	0,	'B'},
-	{"gridsize",		required_argument,	0,	'i'},
 	{"vkdebug",			no_argument,		0,	'D'},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:Q:S:CD";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:CD";
 
 // CODE --------------------------------------------------------------------
 
@@ -439,12 +433,6 @@ static void ParseArgs(int argc, char **argv)
 		case 'j':
 			NumThreads = atoi(optarg);
 			break;
-		case 'Q':
-			Samples = atoi(optarg);
-			if (Samples <= 0) Samples = 1;
-			if (Samples > 128) Samples = 128;
-			Samples = Math::RoundPowerOfTwo(Samples);
-			break;
 		case 'S':
 			LMDims = atoi(optarg);
 			if (LMDims <= 0) LMDims = 1;
@@ -456,15 +444,6 @@ static void ParseArgs(int argc, char **argv)
 			break;
 		case 'D':
 			VKDebug = true;
-			break;
-		case 'B':
-			LightBounce = atoi(optarg);
-			if (LightBounce < 0) LightBounce = 0;
-			if (LightBounce > 8) LightBounce = 8;
-			break;
-		case 'i':
-			GridSize = std::stof(optarg);
-			if (GridSize < 0.f) GridSize = 0.f;
 			break;
 		case 1000:
 			ShowUsage();
@@ -508,15 +487,9 @@ static void ShowUsage()
 		"  -d, --diagonal-cost=NNN  Cost for avoiding diagonal splitters (default %d)\n"
 		"  -P, --no-polyobjs        Do not check for polyobject subsector splits\n"
 		"  -j, --threads=NNN        Number of threads used for raytracing (default %d)\n"
-		"  -Q, --samples=NNN        Set texel sampling size (lowest = higher quaility but\n"
-		"                           slow compile time) must be in powers of two (default %d)\n"
 		"  -S, --size=NNN           lightmap texture dimensions for width and height\n"
 		"                           must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -C, --cpu-raytrace       Use the CPU for ray tracing\n"
-		"  -B, --bounce=NNN         Number of indirect light bounces (default %d, max 8)\n"
-		"  -i, --gridsize=NNN       Automatic light probe grid size, floating point\n"
-		"                           Lower values increase granularity at the expense of performance\n"
-		"                           Recommended: 32.0, 64.0, 128.0, etc (default %.1f)\n"
 		"  -D, --vkdebug            Print messages from the vulkan validation layer\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
@@ -531,9 +504,6 @@ static void ShowUsage()
 		, SplitCost
 		, AAPreference
 		, (int)std::thread::hardware_concurrency()
-		, Samples
-		, LightBounce
-		, GridSize
 	);
 }
 

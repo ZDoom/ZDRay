@@ -30,7 +30,6 @@
 #endif
 
 extern int LMDims;
-extern int Samples;
 extern bool CPURaytrace;
 
 extern void ShowView (FLevel *level);
@@ -693,7 +692,7 @@ void FProcessor::BuildNodes()
 void FProcessor::BuildLightmaps()
 {
 	Level.SetupLights();
-	LightmapMesh = std::make_unique<LevelMesh>(Level, Samples, LMDims);
+	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.Samples, LMDims);
 
 	if (CPURaytrace)
 	{
