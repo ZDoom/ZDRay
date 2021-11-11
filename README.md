@@ -9,6 +9,40 @@ Samuel Villarreal, Christoph Oelckers and anyone else involved in creating or ma
 
 The ray tracing code has been completely rewritten since. It now supports bounces and can do the ray tracing on the GPU.
 
+## ZDRay Usage
+
+<pre>
+Usage: zdray [options] sourcefile.wad
+  -m, --map=MAP            Only affect the specified map
+  -o, --output=FILE        Write output to FILE instead of tmp.wad
+  -c, --comments           Write UDMF index comments
+  -q, --no-prune           Keep unused sidedefs and sectors
+  -N, --no-nodes           Do not rebuild nodes
+  -g, --gl                 Build GL-friendly nodes
+  -G, --gl-matching        Build GL-friendly nodes that match normal nodes
+  -x, --gl-only            Only build GL-friendly nodes
+  -5, --gl-v5              Create v5 GL-friendly nodes (overriden by -z and -X)
+  -X, --extended           Create extended nodes (including GL nodes, if built)
+  -z, --compress           Compress the nodes (including GL nodes, if built)
+  -Z, --compress-normal    Compress normal nodes but not GL nodes
+  -b, --empty-blockmap     Create an empty blockmap
+  -r, --empty-reject       Create an empty reject table
+  -R, --zero-reject        Create a reject table of all zeroes
+  -E, --no-reject          Leave reject table untouched
+  -p, --partition=NNN      Maximum segs to consider at each node (default 64)
+  -s, --split-cost=NNN     Cost for splitting segs (default 8)
+  -d, --diagonal-cost=NNN  Cost for avoiding diagonal splitters (default 16)
+  -P, --no-polyobjs        Do not check for polyobject subsector splits
+  -j, --threads=NNN        Number of threads used for raytracing (default 64)
+  -S, --size=NNN           lightmap texture dimensions for width and height must be in powers of two (1, 2, 4, 8, 16, etc)
+  -C, --cpu-raytrace       Use the CPU for ray tracing
+  -D, --vkdebug            Print messages from the vulkan validation layer
+  -w, --warn               Show warning messages
+  -t, --no-timing          Suppress timing information
+  -V, --version            Display version information
+      --help               Display this usage information
+</pre>
+
 ## ZDRay UDMF properties
 
 <pre>
