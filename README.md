@@ -34,7 +34,8 @@ Usage: zdray [options] sourcefile.wad
   -d, --diagonal-cost=NNN  Cost for avoiding diagonal splitters (default 16)
   -P, --no-polyobjs        Do not check for polyobject subsector splits
   -j, --threads=NNN        Number of threads used for raytracing (default 64)
-  -S, --size=NNN           lightmap texture dimensions for width and height must be in powers of two (1, 2, 4, 8, 16, etc)
+  -S, --size=NNN           lightmap texture dimensions for width and height must
+                           be in powers of two (1, 2, 4, 8, 16, etc)
   -C, --cpu-raytrace       Use the CPU for ray tracing
   -D, --vkdebug            Print messages from the vulkan validation layer
   -w, --warn               Show warning messages
