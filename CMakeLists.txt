@@ -155,7 +155,6 @@ set( SOURCES
 	src/nodebuilder/nodebuild_utility.cpp
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
 	src/lightmap/pngwriter.cpp
-	src/lightmap/raytracer.cpp
 	src/lightmap/surfaces.cpp
 	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
@@ -178,6 +177,8 @@ set( SOURCES
 	src/lightmap/glsl_rmiss_bounce.h
 	src/lightmap/glsl_rmiss_light.h
 	src/lightmap/glsl_rmiss_sun.h
+	src/lightmap/cpuraytracer.cpp
+	src/lightmap/cpuraytracer.h
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp
@@ -216,7 +217,6 @@ set( HEADERS
 	src/framework/halffloat.h
 	src/framework/binfile.h
 	src/lightmap/pngwriter.h
-	src/lightmap/raytracer.h
 	src/lightmap/surfaces.h
 	src/lightmap/worker.h
 	src/lightmap/collision.h

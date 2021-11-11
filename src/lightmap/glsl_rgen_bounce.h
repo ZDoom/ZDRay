@@ -110,16 +110,15 @@ void main()
 				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin + normal * 0.1, minDistance, L, 32768, 0);
 				if (payload.hitAttenuation == 1.0)
 				{
-					float hitDistance = distance(origin, payload.hitPosition);
 					surfaceIndex = payload.hitSurfaceIndex;
 					SurfaceInfo surface = surfaces[surfaceIndex];
-					origin = payload.hitPosition;
-
 					if (surface.EmissiveDistance > 0.0)
 					{
+						float hitDistance = distance(origin, payload.hitPosition);
 						float attenuation = max(1.0 - (hitDistance / surface.EmissiveDistance), 0.0f);
 						incoming.rgb += surface.EmissiveColor * (surface.EmissiveIntensity * attenuation * incoming.w);
 					}
+					origin = payload.hitPosition;
 				}
 			}
 

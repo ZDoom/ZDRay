@@ -70,11 +70,13 @@ void main()
 	if (surfaceIndex == -1 || incoming.w <= 0.0)
 		return;
 
+	vec3 origin = data0.xyz;
 	vec3 normal;
 	if (surfaceIndex >= 0)
+	{
 		normal = surfaces[surfaceIndex].Normal;
-
-	vec3 origin = data0.xyz + normal * 0.1;
+		origin += normal * 0.1;
+	}
 
 	const float minDistance = 0.01;
 
@@ -104,7 +106,7 @@ void main()
 			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin, minDistance, SunDir, dist, 0);
 			attenuation = payload.hitAttenuation;
 		}
-		incoming.rgb += SunColor * (attenuation * SunIntensity) * incoming.w;
+		incoming.rgb += SunColor * (attenuation * SunIntensity * incoming.w);
 	}
 
 	for (uint j = 0; j < LightCount; j++)

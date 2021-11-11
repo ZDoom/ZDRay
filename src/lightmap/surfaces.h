@@ -74,17 +74,6 @@ struct Surface
 	std::string material;
 };
 
-struct LevelTraceHit
-{
-	Vec3 start;
-	Vec3 end;
-	float fraction;
-
-	Surface *hitSurface;
-	int indices[3];
-	float b, c;
-};
-
 class LightmapTexture
 {
 public:
@@ -166,9 +155,6 @@ public:
 	void AddLightmapLump(FWadWriter& wadFile);
 	void Export(std::string filename);
 
-	LevelTraceHit Trace(const Vec3 &startVec, const Vec3 &endVec);
-	bool TraceAnyHit(const Vec3 &startVec, const Vec3 &endVec);
-
 	FLevel* map = nullptr;
 
 	std::vector<std::unique_ptr<Surface>> surfaces;
@@ -184,7 +170,6 @@ public:
 	TArray<int> MeshUVIndex;
 	TArray<unsigned int> MeshElements;
 	TArray<int> MeshSurfaces;
-	std::unique_ptr<TriangleMeshShape> CollisionMesh;
 
 private:
 	void CreateSubsectorSurfaces(FLevel &doomMap);

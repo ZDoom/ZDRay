@@ -62,7 +62,7 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 
 	printf("Surfaces total: %i\n\n", (int)surfaces.size());
 
-	printf("Building collision mesh..\n\n");
+	printf("Building level mesh..\n\n");
 
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
@@ -107,8 +107,6 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 			}
 		}
 	}
-
-	CollisionMesh = std::make_unique<TriangleMeshShape>(&MeshVertices[0], MeshVertices.Size(), &MeshElements[0], MeshElements.Size());
 
 	CreateLightProbes(doomMap);
 
@@ -787,41 +785,6 @@ void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 	}
 
 	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
-}
-
-LevelTraceHit LevelMesh::Trace(const Vec3 &startVec, const Vec3 &endVec)
-{
-	TraceHit hit = TriangleMeshShape::find_first_hit(CollisionMesh.get(), startVec, endVec);
-
-	LevelTraceHit trace;
-	trace.start = startVec;
-	trace.end = endVec;
-	trace.fraction = hit.fraction;
-	if (trace.fraction < 1.0f)
-	{
-		int elementIdx = hit.triangle * 3;
-		trace.hitSurface = surfaces[MeshSurfaces[hit.triangle]].get();
-		trace.indices[0] = MeshUVIndex[MeshElements[elementIdx]];
-		trace.indices[1] = MeshUVIndex[MeshElements[elementIdx + 1]];
-		trace.indices[2] = MeshUVIndex[MeshElements[elementIdx + 2]];
-		trace.b = hit.b;
-		trace.c = hit.c;
-	}
-	else
-	{
-		trace.hitSurface = nullptr;
-		trace.indices[0] = 0;
-		trace.indices[1] = 0;
-		trace.indices[2] = 0;
-		trace.b = 0.0f;
-		trace.c = 0.0f;
-	}
-	return trace;
-}
-
-bool LevelMesh::TraceAnyHit(const Vec3 &startVec, const Vec3 &endVec)
-{
-	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
 }
 
 bool LevelMesh::IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)

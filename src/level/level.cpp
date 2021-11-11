@@ -19,7 +19,7 @@
 */
 
 #include "level/level.h"
-#include "lightmap/raytracer.h"
+#include "lightmap/cpuraytracer.h"
 #include "lightmap/gpuraytracer.h"
 //#include "rejectbuilder.h"
 #include <memory>
@@ -697,7 +697,7 @@ void FProcessor::BuildLightmaps()
 
 	if (CPURaytrace)
 	{
-		Raytracer raytracer;
+		CPURaytracer raytracer;
 		raytracer.Raytrace(LightmapMesh.get());
 	}
 	else
