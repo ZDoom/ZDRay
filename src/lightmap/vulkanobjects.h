@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VulkanDevice.h"
+#include "vulkandevice.h"
 
 #include <memory>
 #include <stdexcept>
