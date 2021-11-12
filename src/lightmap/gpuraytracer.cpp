@@ -388,6 +388,9 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		lights.push_back(info);
 	}
 
+	if (lights.empty()) // vulkan doesn't support zero byte buffers
+		lights.push_back(LightInfo());
+
 	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(Vec3);
 	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
 	size_t surfaceindexbuffersize = (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t);
