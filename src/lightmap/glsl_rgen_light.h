@@ -87,7 +87,7 @@ void main()
 		float attenuation = 0.0;
 		if (PassType == 0 && surfaceIndex >= 0)
 		{
-			vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+			vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
 			vec3 e1 = cross(normal, e0);
 			e0 = cross(normal, e1);
 
@@ -139,7 +139,7 @@ void main()
 
 				if (PassType == 0 && surfaceIndex >= 0)
 				{
-					vec3 e0 = cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0));
+					vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
 					vec3 e1 = cross(normal, e0);
 					e0 = cross(normal, e1);
 					for (uint i = 0; i < SampleCount; i++)

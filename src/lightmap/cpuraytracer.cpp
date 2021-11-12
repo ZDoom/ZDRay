@@ -251,7 +251,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 		float attenuation = 0.0f;
 		if (state.PassType == 0 && surface)
 		{
-			Vec3 e0 = Vec3::Cross(normal, std::abs(normal.x) < std::abs(normal.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f));
+			Vec3 e0 = Vec3::Normalize(Vec3::Cross(normal, std::abs(normal.x) < std::abs(normal.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f)));
 			Vec3 e1 = Vec3::Cross(normal, e0);
 			e0 = Vec3::Cross(normal, e1);
 
@@ -308,7 +308,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 
 				if (state.PassType == 0 && surface)
 				{
-					Vec3 e0 = Vec3::Cross(normal, std::abs(normal.x) < std::abs(normal.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f));
+					Vec3 e0 = Vec3::Normalize(Vec3::Cross(normal, std::abs(normal.x) < std::abs(normal.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f)));
 					Vec3 e1 = Vec3::Cross(normal, e0);
 					e0 = Vec3::Cross(normal, e1);
 					for (uint32_t i = 0; i < state.SampleCount; i++)
