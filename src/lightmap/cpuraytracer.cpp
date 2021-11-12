@@ -257,7 +257,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 
 			for (uint32_t i = 0; i < state.SampleCount; i++)
 			{
-				Vec2 offset = (Hammersley(i, state.SampleCount) - 0.5) * state.SampleDistance;
+				Vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
 				Vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
 				Vec3 start = origin2;
@@ -313,7 +313,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 					e0 = Vec3::Cross(normal, e1);
 					for (uint32_t i = 0; i < state.SampleCount; i++)
 					{
-						Vec2 offset = (Hammersley(i, state.SampleCount) - 0.5) * state.SampleDistance;
+						Vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
 						Vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
 						LevelTraceHit hit = Trace(origin2, light.Origin);
