@@ -694,16 +694,30 @@ void FProcessor::BuildLightmaps()
 	Level.SetupLights();
 	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.Samples, LMDims);
 
-	if (CPURaytrace)
+	std::unique_ptr<GPURaytracer> gpuraytracer;
+	if (!CPURaytrace)
+	{
+		try
+		{
+			gpuraytracer = std::make_unique<GPURaytracer>();
+		}
+		catch (std::exception msg)
+		{
+			printf("%s\n", msg.what());
+			printf("Falling back to CPU ray tracing\n");
+		}
+	}
+
+	if (gpuraytracer)
+	{
+		gpuraytracer->Raytrace(LightmapMesh.get());
+	}
+	else
 	{
 		CPURaytracer raytracer;
 		raytracer.Raytrace(LightmapMesh.get());
 	}
-	else
-	{
-		GPURaytracer raytracer;
-		raytracer.Raytrace(LightmapMesh.get());
-	}
+
 	LightmapMesh->CreateTextures();
 }
 
