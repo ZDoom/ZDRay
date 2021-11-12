@@ -401,7 +401,7 @@ endif()
 
 if (WIN32)
 else()
-set(PLATFORM_LIB "dl pthread")
+set(PLATFORM_LIB "-ldl -lpthread")
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCXX )
