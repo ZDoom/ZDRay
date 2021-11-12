@@ -65,9 +65,9 @@ float BinFile::ReadFloat()
 	return fi.f;
 }
 
-Vec3 BinFile::ReadVector()
+vec3 BinFile::ReadVector()
 {
-	Vec3 vec;
+	vec3 vec;
 
 	vec.x = ReadFloat();
 	vec.y = ReadFloat();
@@ -121,7 +121,7 @@ void BinFile::WriteFloat(const float val)
 	Write32(fi.i);
 }
 
-void BinFile::WriteVector(const Vec3 &val)
+void BinFile::WriteVector(const vec3 &val)
 {
 	WriteFloat(val.x);
 	WriteFloat(val.y);

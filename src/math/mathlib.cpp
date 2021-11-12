@@ -44,7 +44,7 @@ int Math::RoundPowerOfTwo(int x)
 	return x;
 }
 
-void Math::CubicCurve(const Vec3 &start, const Vec3 &end, const float time, const Vec3 &point, Vec3 *vec)
+void Math::CubicCurve(const vec3 &start, const vec3 &end, const float time, const vec3 &point, vec3 *vec)
 {
 	int i;
 	float xyz[3];
@@ -60,7 +60,7 @@ void Math::CubicCurve(const Vec3 &start, const Vec3 &end, const float time, cons
 	vec->z = xyz[2];
 }
 
-void Math::QuadraticCurve(const Vec3 &start, const Vec3 &end, const float time, const Vec3 &pt1, const Vec3 &pt2, Vec3 *vec)
+void Math::QuadraticCurve(const vec3 &start, const vec3 &end, const float time, const vec3 &pt1, const vec3 &pt2, vec3 *vec)
 {
 	int i;
 	float xyz[3];

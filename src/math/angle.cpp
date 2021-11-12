@@ -45,7 +45,7 @@ Angle::Angle(const float yaw, const float pitch, const float roll)
 	this->roll = roll;
 }
 
-Angle::Angle(const Vec3 &vector)
+Angle::Angle(const vec3 &vector)
 {
 	this->yaw = vector.x;
 	this->pitch = vector.y;
@@ -158,7 +158,7 @@ Angle Angle::Diff(Angle &angle)
 	return out;
 }
 
-void Angle::ToAxis(Vec3 *forward, Vec3 *up, Vec3 *right)
+void Angle::ToAxis(vec3 *forward, vec3 *up, vec3 *right)
 {
 	float sy = Math::Sin(yaw);
 	float cy = Math::Cos(yaw);
@@ -187,46 +187,38 @@ void Angle::ToAxis(Vec3 *forward, Vec3 *up, Vec3 *right)
 	}
 }
 
-Vec3 Angle::ToForwardAxis()
+vec3 Angle::ToForwardAxis()
 {
-	Vec3 vec;
+	vec3 vec;
 
 	ToAxis(&vec, nullptr, nullptr);
 	return vec;
 }
 
-Vec3 Angle::ToUpAxis()
+vec3 Angle::ToUpAxis()
 {
-	Vec3 vec;
+	vec3 vec;
 
 	ToAxis(nullptr, &vec, nullptr);
 	return vec;
 }
 
-Vec3 Angle::ToRightAxis()
+vec3 Angle::ToRightAxis()
 {
-	Vec3 vec;
+	vec3 vec;
 
 	ToAxis(nullptr, nullptr, &vec);
 	return vec;
 }
 
-const Vec3 &Angle::ToVec3() const
+const vec3 &Angle::ToVec3() const
 {
-	return *reinterpret_cast<const Vec3*>(&yaw);
+	return *reinterpret_cast<const vec3*>(&yaw);
 }
 
-Vec3 &Angle::ToVec3()
+vec3 &Angle::ToVec3()
 {
-	return *reinterpret_cast<Vec3*>(&yaw);
-}
-
-Quat Angle::ToQuat()
-{
-	return
-		(Quat(pitch, Vec3::vecRight) *
-		(Quat(yaw, Vec3::vecUp) *
-			Quat(roll, Vec3::vecForward)));
+	return *reinterpret_cast<vec3*>(&yaw);
 }
 
 Angle Angle::operator+(const Angle &angle)
@@ -268,7 +260,7 @@ Angle &Angle::operator=(const Angle &angle)
 	return *this;
 }
 
-Angle &Angle::operator=(const Vec3 &vector)
+Angle &Angle::operator=(const vec3 &vector)
 {
 	yaw = vector.x;
 	pitch = vector.y;

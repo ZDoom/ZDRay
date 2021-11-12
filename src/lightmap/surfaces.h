@@ -57,20 +57,20 @@ struct Surface
 	int lightmapNum;
 	int lightmapOffs[2];
 	int lightmapDims[2];
-	Vec3 lightmapOrigin;
-	Vec3 lightmapSteps[2];
-	Vec3 textureCoords[2];
+	vec3 lightmapOrigin;
+	vec3 lightmapSteps[2];
+	vec3 textureCoords[2];
 	BBox bounds;
 	int numVerts;
-	std::vector<Vec3> verts;
+	std::vector<vec3> verts;
 	std::vector<float> lightmapCoords;
-	std::vector<Vec3> samples;
-	std::vector<Vec3> indirect;
+	std::vector<vec3> samples;
+	std::vector<vec3> indirect;
 	SurfaceType type;
 	int typeIndex;
 	IntSector *controlSector;
 	bool bSky;
-	std::vector<Vec2> uvs;
+	std::vector<vec2> uvs;
 	std::string material;
 };
 
@@ -142,8 +142,8 @@ private:
 class LightProbeSample
 {
 public:
-	Vec3 Position = Vec3(0.0f, 0.0f, 0.0f);
-	Vec3 Color = Vec3(0.0f, 0.0f, 0.0f);
+	vec3 Position = vec3(0.0f, 0.0f, 0.0f);
+	vec3 Color = vec3(0.0f, 0.0f, 0.0f);
 };
 
 class LevelMesh
@@ -166,7 +166,7 @@ public:
 	int textureWidth = 128;
 	int textureHeight = 128;
 
-	TArray<Vec3> MeshVertices;
+	TArray<vec3> MeshVertices;
 	TArray<int> MeshUVIndex;
 	TArray<unsigned int> MeshElements;
 	TArray<int> MeshSurfaces;
@@ -183,5 +183,5 @@ private:
 	void FinishSurface(Surface* surface);
 	uint16_t* AllocTextureRoom(Surface* surface, int* x, int* y);
 
-	static bool IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2);
+	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);
 };

@@ -179,13 +179,11 @@ set( SOURCES
 	src/lightmap/glsl_rmiss_sun.h
 	src/lightmap/cpuraytracer.cpp
 	src/lightmap/cpuraytracer.h
+	src/math/mat.cpp
+	src/math/plane.cpp
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp
-	src/math/matrix.cpp
-	src/math/plane.cpp
-	src/math/quaternion.cpp
-	src/math/vector.cpp
 	src/models/model.cpp
 	src/models/model.h
 	src/models/model_md2.h
@@ -220,6 +218,9 @@ set( HEADERS
 	src/lightmap/surfaces.h
 	src/lightmap/worker.h
 	src/lightmap/collision.h
+	src/math/mat.h
+	src/math/quaternion.h
+	src/math/vec.h
 	src/math/mathlib.h
 )
 

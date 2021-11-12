@@ -73,16 +73,16 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		}
 	}
 
-	std::vector<Vec3> HemisphereVectors;
+	std::vector<vec3> HemisphereVectors;
 	HemisphereVectors.reserve(bounceSampleCount);
 	for (int i = 0; i < bounceSampleCount; i++)
 	{
-		Vec2 Xi = Hammersley(i, bounceSampleCount);
-		Vec3 H;
+		vec2 Xi = Hammersley(i, bounceSampleCount);
+		vec3 H;
 		H.x = Xi.x * 2.0f - 1.0f;
 		H.y = Xi.y * 2.0f - 1.0f;
 		H.z = RadicalInverse_VdC(i) + 0.01f;
-		H.Normalize();
+		H = normalize(H);
 		HemisphereVectors.push_back(H);
 	}
 
@@ -172,9 +172,9 @@ void GPURaytracer::UploadTasks(const TraceTask* tasks, size_t size)
 	if (size > maxTasks)
 		throw std::runtime_error("Ray trace task count is too large");
 
-	size_t imageSize = sizeof(Vec4) * rayTraceImageSize * rayTraceImageSize;
+	size_t imageSize = sizeof(vec4) * rayTraceImageSize * rayTraceImageSize;
 	uint8_t* imageData = (uint8_t*)imageTransferBuffer->Map(0, imageSize);
-	Vec4* startPositions = (Vec4*)imageData;
+	vec4* startPositions = (vec4*)imageData;
 	for (size_t i = 0; i < size; i++)
 	{
 		const TraceTask& task = tasks[i];
@@ -182,19 +182,19 @@ void GPURaytracer::UploadTasks(const TraceTask* tasks, size_t size)
 		if (task.id >= 0)
 		{
 			Surface* surface = mesh->surfaces[task.id].get();
-			Vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
-			startPositions[i] = Vec4(pos, (float)task.id);
+			vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+			startPositions[i] = vec4(pos, (float)task.id);
 		}
 		else
 		{
 			LightProbeSample& probe = mesh->lightProbes[(size_t)(-task.id) - 2];
-			startPositions[i] = Vec4(probe.Position, (float)-2);
+			startPositions[i] = vec4(probe.Position, (float)-2);
 		}
 
 	}
 	for (size_t i = size; i < maxTasks; i++)
 	{
-		startPositions[i] = Vec4(0.0f, 0.0f, 0.0f, -1.0f);
+		startPositions[i] = vec4(0.0f, 0.0f, 0.0f, -1.0f);
 	}
 	imageTransferBuffer->Unmap();
 
@@ -303,9 +303,9 @@ void GPURaytracer::DownloadTasks(const TraceTask* tasks, size_t size)
 
 	SubmitCommands();
 
-	size_t imageSize = sizeof(Vec4) * rayTraceImageSize * rayTraceImageSize;
+	size_t imageSize = sizeof(vec4) * rayTraceImageSize * rayTraceImageSize;
 	uint8_t* imageData = (uint8_t*)imageTransferBuffer->Map(0, imageSize);
-	Vec4* output = (Vec4*)imageData;
+	vec4* output = (vec4*)imageData;
 	for (size_t i = 0; i < size; i++)
 	{
 		const TraceTask& task = tasks[i];
@@ -313,12 +313,12 @@ void GPURaytracer::DownloadTasks(const TraceTask* tasks, size_t size)
 		{
 			Surface* surface = mesh->surfaces[task.id].get();
 			size_t sampleWidth = surface->lightmapDims[0];
-			surface->samples[task.x + task.y * sampleWidth] = Vec3(output[i].x, output[i].y, output[i].z);
+			surface->samples[task.x + task.y * sampleWidth] = vec3(output[i].x, output[i].y, output[i].z);
 		}
 		else
 		{
 			LightProbeSample& probe = mesh->lightProbes[(size_t)(-task.id) - 2];
-			probe.Color = Vec3(output[i].x, output[i].y, output[i].z);
+			probe.Color = vec3(output[i].x, output[i].y, output[i].z);
 		}
 	}
 	imageTransferBuffer->Unmap();
@@ -370,7 +370,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		{
 			info.EmissiveDistance = 0.0f;
 			info.EmissiveIntensity = 0.0f;
-			info.EmissiveColor = Vec3(0.0f, 0.0f, 0.0f);
+			info.EmissiveColor = vec3(0.0f, 0.0f, 0.0f);
 		}
 		surfaces.push_back(info);
 	}
@@ -392,7 +392,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	if (lights.empty()) // vulkan doesn't support zero byte buffers
 		lights.push_back(LightInfo());
 
-	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(Vec3);
+	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(vec3);
 	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
 	size_t surfaceindexbuffersize = (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t);
 	size_t surfacebuffersize = (size_t)surfaces.size() * sizeof(SurfaceInfo);
@@ -472,7 +472,7 @@ void GPURaytracer::CreateBottomLevelAccelerationStructure()
 	VkAccelerationStructureGeometryTrianglesDataKHR triangles = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR };
 	triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	triangles.vertexData.deviceAddress = vertexAddress;
-	triangles.vertexStride = sizeof(Vec3);
+	triangles.vertexStride = sizeof(vec3);
 	triangles.indexType = VK_INDEX_TYPE_UINT32;
 	triangles.indexData.deviceAddress = indexAddress;
 	triangles.maxVertex = mesh->MeshVertices.Size();
@@ -823,7 +823,7 @@ void GPURaytracer::CreateDescriptorSet()
 
 	BufferBuilder itbuilder;
 	itbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-	itbuilder.setSize(2 * sizeof(Vec4) * rayTraceImageSize * rayTraceImageSize);
+	itbuilder.setSize(2 * sizeof(vec4) * rayTraceImageSize * rayTraceImageSize);
 	imageTransferBuffer = itbuilder.create(device.get());
 	imageTransferBuffer->SetDebugName("imageTransferBuffer");
 
@@ -910,9 +910,9 @@ void GPURaytracer::PrintVulkanInfo()
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
 }
 
-Vec2 GPURaytracer::Hammersley(uint32_t i, uint32_t N)
+vec2 GPURaytracer::Hammersley(uint32_t i, uint32_t N)
 {
-	return Vec2(float(i) / float(N), RadicalInverse_VdC(i));
+	return vec2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
 float GPURaytracer::RadicalInverse_VdC(uint32_t bits)

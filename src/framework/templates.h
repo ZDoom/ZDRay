@@ -165,29 +165,3 @@ const T MAX (const T a, const T b)
 {
 	return a > b ? a : b;
 }
-
-//==========================================================================
-//
-// clamp
-//
-// Clamps in to the range [min,max].
-//==========================================================================
-
-template<class T>
-inline
-T clamp (const T in, const T min, const T max)
-{
-	return in <= min ? min : in >= max ? max : in;
-}
-
-template<class T>
-T smoothstep(const T edge0, const T edge1, const T x)
-{
-	auto t = clamp<T>((x - edge0) / (edge1 - edge0), T(0.0), T(1.0));
-	return t * t * (T(3.0) - T(2.0) * t);
-}
-
-inline float radians(float degrees)
-{
-	return degrees * 3.14159265359f / 180.0f;
-}

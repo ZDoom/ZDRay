@@ -120,11 +120,11 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 {
 	Plane* plane;
 	BBox bounds;
-	Vec3 roundedSize;
+	vec3 roundedSize;
 	int i;
 	Plane::PlaneAxis axis;
-	Vec3 tCoords[2];
-	Vec3 tOrigin;
+	vec3 tCoords[2];
+	vec3 tOrigin;
 	int width;
 	int height;
 	float d;
@@ -141,8 +141,8 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples + 1;
 	}
 
-	tCoords[0].Clear();
-	tCoords[1].Clear();
+	tCoords[0] = vec3(0.0f);
+	tCoords[1] = vec3(0.0f);
 
 	axis = plane->BestAxis();
 
@@ -197,7 +197,7 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 
 	for (i = 0; i < 2; i++)
 	{
-		tCoords[i].Normalize();
+		tCoords[i] = normalize(tCoords[i]);
 		d = plane->Distance(tCoords[i]) / plane->Normal()[axis];
 		tCoords[i][axis] -= d;
 	}
@@ -217,8 +217,8 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 
 BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
 {
-	Vec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
-	Vec3 hi(-M_INFINITY, -M_INFINITY, -M_INFINITY);
+	vec3 low(M_INFINITY, M_INFINITY, M_INFINITY);
+	vec3 hi(-M_INFINITY, -M_INFINITY, -M_INFINITY);
 
 	BBox bounds;
 	bounds.Clear();
@@ -256,11 +256,11 @@ void LevelMesh::FinishSurface(Surface* surface)
 {
 	int sampleWidth = surface->lightmapDims[0];
 	int sampleHeight = surface->lightmapDims[1];
-	Vec3* colorSamples = surface->samples.data();
+	vec3* colorSamples = surface->samples.data();
 
 	if (!surface->indirect.empty())
 	{
-		Vec3* indirect = surface->indirect.data();
+		vec3* indirect = surface->indirect.data();
 		for (int i = 0; i < sampleHeight; i++)
 		{
 			for (int j = 0; j < sampleWidth; j++)
@@ -298,9 +298,9 @@ void LevelMesh::FinishSurface(Surface* surface)
 		// calculate texture coordinates
 		for (int i = 0; i < surface->numVerts; i++)
 		{
-			Vec3 tDelta = surface->verts[i] - surface->bounds.min;
-			surface->lightmapCoords[i * 2 + 0] = (tDelta.Dot(surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
-			surface->lightmapCoords[i * 2 + 1] = (tDelta.Dot(surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
+			vec3 tDelta = surface->verts[i] - surface->bounds.min;
+			surface->lightmapCoords[i * 2 + 0] = (dot(tDelta, surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
+			surface->lightmapCoords[i * 2 + 1] = (dot(tDelta, surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
 		}
 
 		surface->lightmapOffs[0] = x;
@@ -311,11 +311,11 @@ void LevelMesh::FinishSurface(Surface* surface)
 		float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
 		for (int y = 0; y < sampleHeight; y++)
 		{
-			Vec3* src = &colorSamples[y * sampleWidth];
+			vec3* src = &colorSamples[y * sampleWidth];
 			for (int x = 0; x < sampleWidth; x++)
 			{
 				// gaussian blur with a 3x3 kernel
-				Vec3 color = { 0.0f };
+				vec3 color = { 0.0f };
 				for (int yy = -1; yy <= 1; yy++)
 				{
 					int yyy = clamp(y + yy, 0, sampleHeight - 1) - y;
@@ -407,9 +407,9 @@ void LevelMesh::CreateLightProbes(FLevel& map)
 				if (delta > doubleGridSize)
 				{
 					LightProbeSample p[3];
-					p[0].Position = Vec3(x, y, z0 + halfGridSize);
-					p[1].Position = Vec3(x, y, z0 + (z1 - z0) * 0.5f);
-					p[2].Position = Vec3(x, y, z1 - halfGridSize);
+					p[0].Position = vec3(x, y, z0 + halfGridSize);
+					p[1].Position = vec3(x, y, z0 + (z1 - z0) * 0.5f);
+					p[2].Position = vec3(x, y, z1 - halfGridSize);
 
 					for (int i = 0; i < 3; i++)
 					{
@@ -462,8 +462,8 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 	int typeIndex = side - &doomMap.Sides[0];
 
-	Vec2 dx(v2.x - v1.x, v2.y - v1.y);
-	float distance = std::sqrt(dx.Dot(dx));
+	vec2 dx(v2.x - v1.x, v2.y - v1.y);
+	float distance = length(dx);
 
 	if (back)
 	{
@@ -785,7 +785,7 @@ void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
 }
 
-bool LevelMesh::IsDegenerate(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2)
+bool LevelMesh::IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2)
 {
 	// A degenerate triangle has a zero cross product for two of its sides.
 	float ax = v1.x - v0.x;
@@ -928,9 +928,9 @@ void LevelMesh::Export(std::string filename)
 	for (int i = 0; i < 3; i++) mtlfilename.pop_back();
 	mtlfilename += "mtl";
 
-	TArray<Vec3> outvertices;
-	TArray<Vec2> outuv;
-	TArray<Vec3> outnormal;
+	TArray<vec3> outvertices;
+	TArray<vec2> outuv;
+	TArray<vec3> outnormal;
 	TArray<int> outface;
 
 	outvertices.Resize(MeshVertices.Size());
@@ -947,7 +947,7 @@ void LevelMesh::Export(std::string filename)
 			int uvindex = MeshUVIndex[vertexidx];
 
 			outvertices[vertexidx] = MeshVertices[vertexidx];
-			outuv[vertexidx] = Vec2(surface->lightmapCoords[uvindex * 2], surface->lightmapCoords[uvindex * 2 + 1]);
+			outuv[vertexidx] = vec2(surface->lightmapCoords[uvindex * 2], surface->lightmapCoords[uvindex * 2 + 1]);
 			outnormal[vertexidx] = surface->plane.Normal();
 			outface.Push(vertexidx);
 

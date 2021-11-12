@@ -44,18 +44,18 @@ Plane::Plane(const float a, const float b, const float c, const float d)
 	this->d = d;
 }
 
-Plane::Plane(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3)
+Plane::Plane(const vec3 &pt1, const vec3 &pt2, const vec3 &pt3)
 {
 	SetNormal(pt1, pt2, pt3);
-	this->d = Vec3::Dot(pt1, Normal());
+	this->d = dot(pt1, Normal());
 }
 
-Plane::Plane(const Vec3 &normal, const Vec3 &point)
+Plane::Plane(const vec3 &normal, const vec3 &point)
 {
 	this->a = normal.x;
 	this->b = normal.y;
 	this->c = normal.z;
-	this->d = point.Dot(normal);
+	this->d = dot(point, normal);
 }
 
 Plane::Plane(const Plane &plane)
@@ -66,36 +66,36 @@ Plane::Plane(const Plane &plane)
 	this->d = plane.d;
 }
 
-Plane &Plane::SetNormal(const Vec3 &normal)
+Plane &Plane::SetNormal(const vec3 &normal)
 {
 	Normal() = normal;
 	return *this;
 }
 
-Plane &Plane::SetNormal(const Vec3 &pt1, const Vec3 &pt2, const Vec3 &pt3)
+Plane &Plane::SetNormal(const vec3 &pt1, const vec3 &pt2, const vec3 &pt3)
 {
-	Normal() = (pt2 - pt1).Cross(pt3 - pt2).Normalize();
+	Normal() = normalize(cross(pt2 - pt1, pt3 - pt2));
 	return *this;
 }
 
-Vec3 const &Plane::Normal() const
+vec3 const &Plane::Normal() const
 {
-	return *reinterpret_cast<const Vec3*>(&a);
+	return *reinterpret_cast<const vec3*>(&a);
 }
 
-Vec3 &Plane::Normal()
+vec3 &Plane::Normal()
 {
-	return *reinterpret_cast<Vec3*>(&a);
+	return *reinterpret_cast<vec3*>(&a);
 }
 
-float Plane::Distance(const Vec3 &point)
+float Plane::Distance(const vec3 &point)
 {
-	return point.Dot(Normal());
+	return dot(point, Normal());
 }
 
-Plane &Plane::SetDistance(const Vec3 &point)
+Plane &Plane::SetDistance(const vec3 &point)
 {
-	this->d = point.Dot(Normal());
+	this->d = dot(point, Normal());
 	return *this;
 }
 
@@ -106,7 +106,7 @@ bool Plane::IsFacing(const float yaw)
 
 float Plane::ToYaw()
 {
-	float d = Normal().Unit();
+	float d = length(Normal());
 
 	if (d != 0)
 	{
@@ -125,23 +125,17 @@ float Plane::ToYaw()
 
 float Plane::ToPitch()
 {
-	return Math::ACos(Vec3::vecUp.Dot(Normal()));
+	return Math::ACos(dot(vec3(0.0f, 0.0f, 1.0f), Normal()));
 }
 
-Quat Plane::ToQuat()
+vec4 const &Plane::ToVec4() const
 {
-	Vec3 cross = Vec3::vecUp.Cross(Normal()).Normalize();
-	return Quat(Math::ACos(Vec3::vecUp.Dot(Normal())), cross);
+	return *reinterpret_cast<const vec4*>(&a);
 }
 
-Vec4 const &Plane::ToVec4() const
+vec4 &Plane::ToVec4()
 {
-	return *reinterpret_cast<const Vec4*>(&a);
-}
-
-Vec4 &Plane::ToVec4()
-{
-	return *reinterpret_cast<Vec4*>(&a);
+	return *reinterpret_cast<vec4*>(&a);
 }
 
 const Plane::PlaneAxis Plane::BestAxis() const
@@ -163,8 +157,8 @@ const Plane::PlaneAxis Plane::BestAxis() const
 	return AXIS_XY;
 }
 
-Vec3 Plane::GetInclination()
+vec3 Plane::GetInclination()
 {
-	Vec3 dir = Normal() * Vec3::vecUp.Dot(Normal());
-	return (Vec3::vecUp - dir).Normalize();
+	vec3 dir = Normal() * dot(vec3(0.0f, 0.0f, 1.0f), Normal());
+	return normalize(vec3(0.0f, 0.0f, 1.0f) - dir);
 }

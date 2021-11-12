@@ -28,7 +28,7 @@
 #include <immintrin.h>
 #endif
 
-TriangleMeshShape::TriangleMeshShape(const Vec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements)
+TriangleMeshShape::TriangleMeshShape(const vec3 *vertices, int num_vertices, const unsigned int *elements, int num_elements)
 	: vertices(vertices), num_vertices(num_vertices), elements(elements), num_elements(num_elements)
 {
 	int num_triangles = num_elements / 3;
@@ -36,7 +36,7 @@ TriangleMeshShape::TriangleMeshShape(const Vec3 *vertices, int num_vertices, con
 		return;
 
 	std::vector<int> triangles;
-	std::vector<Vec3> centroids;
+	std::vector<vec3> centroids;
 	triangles.reserve(num_triangles);
 	centroids.reserve(num_triangles);
 	for (int i = 0; i < num_triangles; i++)
@@ -44,7 +44,7 @@ TriangleMeshShape::TriangleMeshShape(const Vec3 *vertices, int num_vertices, con
 		triangles.push_back(i);
 
 		int element_index = i * 3;
-		Vec3 centroid = (vertices[elements[element_index + 0]] + vertices[elements[element_index + 1]] + vertices[elements[element_index + 2]]) * (1.0f / 3.0f);
+		vec3 centroid = (vertices[elements[element_index + 0]] + vertices[elements[element_index + 1]] + vertices[elements[element_index + 2]]) * (1.0f / 3.0f);
 		centroids.push_back(centroid);
 	}
 
@@ -53,7 +53,7 @@ TriangleMeshShape::TriangleMeshShape(const Vec3 *vertices, int num_vertices, con
 	root = subdivide(&triangles[0], (int)triangles.size(), &centroids[0], &work_buffer[0]);
 }
 
-float TriangleMeshShape::sweep(TriangleMeshShape *shape1, SphereShape *shape2, const Vec3 &target)
+float TriangleMeshShape::sweep(TriangleMeshShape *shape1, SphereShape *shape2, const vec3 &target)
 {
 	return sweep(shape1, shape2, shape1->root, target);
 }
@@ -68,19 +68,19 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, SphereShape *sha
 	return find_any_hit(shape1, shape2, shape1->root);
 }
 
-bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const Vec3 &ray_start, const Vec3 &ray_end)
+bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end)
 {
 	return find_any_hit(shape, RayBBox(ray_start, ray_end), shape->root);
 }
 
-TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const Vec3 &ray_start, const Vec3 &ray_end)
+TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end)
 {
 	TraceHit hit;
 
 	// Perform segmented tracing to keep the ray AABB box smaller
 
-	Vec3 ray_dir = ray_end - ray_start;
-	float tracedist = ray_dir.Length();
+	vec3 ray_dir = ray_end - ray_start;
+	float tracedist = length(ray_dir);
 	float segmentlen = std::max(100.0f, tracedist / 20.0f);
 	for (float t = 0.0f; t < tracedist; t += segmentlen)
 	{
@@ -98,7 +98,7 @@ TraceHit TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const Vec3 
 	return hit;
 }
 
-float TriangleMeshShape::sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const Vec3 &target)
+float TriangleMeshShape::sweep(TriangleMeshShape *shape1, SphereShape *shape2, int a, const vec3 &target)
 {
 	if (sweep_overlap_bv_sphere(shape1, shape2, a, target))
 	{
@@ -239,7 +239,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 {
 	const int start_element = shape->nodes[a].element_index;
 
-	Vec3 p[3] =
+	vec3 p[3] =
 	{
 		shape->vertices[shape->elements[start_element]],
 		shape->vertices[shape->elements[start_element + 1]],
@@ -248,15 +248,15 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 
 	// Moeller–Trumbore ray-triangle intersection algorithm:
 
-	Vec3 D = ray.end - ray.start;
+	vec3 D = ray.end - ray.start;
 
 	// Find vectors for two edges sharing p[0]
-	Vec3 e1 = p[1] - p[0];
-	Vec3 e2 = p[2] - p[0];
+	vec3 e1 = p[1] - p[0];
+	vec3 e2 = p[2] - p[0];
 
 	// Begin calculating determinant - also used to calculate u parameter
-	Vec3 P = Vec3::Cross(D, e2);
-	float det = Vec3::Dot(e1, P);
+	vec3 P = cross(D, e2);
+	float det = dot(e1, P);
 
 	// Backface check
 	//if (det < 0.0f)
@@ -269,26 +269,26 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 	float inv_det = 1.0f / det;
 
 	// Calculate distance from p[0] to ray origin
-	Vec3 T = ray.start - p[0];
+	vec3 T = ray.start - p[0];
 
 	// Calculate u parameter and test bound
-	float u = Vec3::Dot(T, P) * inv_det;
+	float u = dot(T, P) * inv_det;
 
 	// Check if the intersection lies outside of the triangle
 	if (u < 0.f || u > 1.f)
 		return 1.0f;
 
 	// Prepare to test v parameter
-	Vec3 Q = Vec3::Cross(T, e1);
+	vec3 Q = cross(T, e1);
 
 	// Calculate V parameter and test bound
-	float v = Vec3::Dot(D, Q) * inv_det;
+	float v = dot(D, Q) * inv_det;
 
 	// The intersection lies outside of the triangle
 	if (v < 0.f || u + v  > 1.f)
 		return 1.0f;
 
-	float t = Vec3::Dot(e2, Q) * inv_det;
+	float t = dot(e2, Q) * inv_det;
 	if (t <= FLT_EPSILON)
 		return 1.0f;
 
@@ -299,7 +299,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 	return t;
 }
 
-bool TriangleMeshShape::sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const Vec3 &target)
+bool TriangleMeshShape::sweep_overlap_bv_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const vec3 &target)
 {
 	// Convert to ray test by expanding the AABB:
 
@@ -309,30 +309,30 @@ bool TriangleMeshShape::sweep_overlap_bv_sphere(TriangleMeshShape *shape1, Spher
 	return IntersectionTest::ray_aabb(RayBBox(shape2->center, target), aabb) == IntersectionTest::overlap;
 }
 
-float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const Vec3 &target)
+float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shape1, SphereShape *shape2, int a, const vec3 &target)
 {
 	const int start_element = shape1->nodes[a].element_index;
 
-	Vec3 p[3] =
+	vec3 p[3] =
 	{
 		shape1->vertices[shape1->elements[start_element]],
 		shape1->vertices[shape1->elements[start_element + 1]],
 		shape1->vertices[shape1->elements[start_element + 2]]
 	};
 
-	Vec3 c = shape2->center;
-	Vec3 e = target;
+	vec3 c = shape2->center;
+	vec3 e = target;
 	float r = shape2->radius;
 
 	// Dynamic intersection test between a ray and the minkowski sum of the sphere and polygon:
 
-	Vec3 n = Vec3::Normalize(Vec3::Cross(p[1] - p[0], p[2] - p[0]));
-	Vec4 plane(n, -Vec3::Dot(n, p[0]));
+	vec3 n = normalize(cross(p[1] - p[0], p[2] - p[0]));
+	vec4 plane(n, -dot(n, p[0]));
 
 	// Step 1: Plane intersect test
 
-	float sc = Vec4::Dot(plane, Vec4(c, 1.0f));
-	float se = Vec4::Dot(plane, Vec4(e, 1.0f));
+	float sc = dot(plane, vec4(c, 1.0f));
+	float se = dot(plane, vec4(e, 1.0f));
 	bool same_side = sc * se > 0.0f;
 
 	if (same_side && std::abs(sc) > r && std::abs(se) > r)
@@ -342,26 +342,26 @@ float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shap
 	{
 		float t = (sc - r) / (sc - se);
 
-		Vec3 vt = c + (e - c) * t;
+		vec3 vt = c + (e - c) * t;
 
-		Vec3 u0 = p[1] - p[0];
-		Vec3 u1 = p[2] - p[0];
+		vec3 u0 = p[1] - p[0];
+		vec3 u1 = p[2] - p[0];
 
-		Vec2 v_2d[3] =
+		vec2 v_2d[3] =
 		{
-			Vec2(0.0f, 0.0f),
-			Vec2(Vec3::Dot(u0, u0), 0.0f),
-			Vec2(0.0f, Vec3::Dot(u1, u1))
+			vec2(0.0f, 0.0f),
+			vec2(dot(u0, u0), 0.0f),
+			vec2(0.0f, dot(u1, u1))
 		};
 
-		Vec2 point(Vec3::Dot(u0, vt), Vec3::Dot(u1, vt));
+		vec2 point(dot(u0, vt), dot(u1, vt));
 
 		bool inside = false;
-		Vec2 e0 = v_2d[2];
+		vec2 e0 = v_2d[2];
 		bool y0 = e0.y >= point.y;
 		for (int i = 0; i < 3; i++)
 		{
-			Vec2 e1 = v_2d[i];
+			vec2 e1 = v_2d[i];
 			bool y1 = e1.y >= point.y;
 
 			if (y0 != y1 && ((e1.y - point.y) * (e0.x - e1.x) >= (e1.x - point.x) * (e0.y - e1.y)) == y1)
@@ -377,21 +377,21 @@ float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shap
 
 	// Step 2: Edge intersect test
 
-	Vec3 ke[3] =
+	vec3 ke[3] =
 	{
 		p[1] - p[0],
 		p[2] - p[1],
 		p[0] - p[2],
 	};
 
-	Vec3 kg[3] =
+	vec3 kg[3] =
 	{
 		p[0] - c,
 		p[1] - c,
 		p[2] - c,
 	};
 
-	Vec3 ks = e - c;
+	vec3 ks = e - c;
 
 	float kgg[3];
 	float kgs[3];
@@ -399,12 +399,12 @@ float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shap
 
 	for (int i = 0; i < 3; i++)
 	{
-		float kee = Vec3::Dot(ke[i], ke[i]);
-		float keg = Vec3::Dot(ke[i], kg[i]);
-		float kes = Vec3::Dot(ke[i], ks);
-		kgg[i] = Vec3::Dot(kg[i], kg[i]);
-		kgs[i] = Vec3::Dot(kg[i], ks);
-		kss[i] = Vec3::Dot(ks, ks);
+		float kee = dot(ke[i], ke[i]);
+		float keg = dot(ke[i], kg[i]);
+		float kes = dot(ke[i], ks);
+		kgg[i] = dot(kg[i], kg[i]);
+		kgs[i] = dot(kg[i], ks);
+		kss[i] = dot(ks, ks);
 
 		float aa = kee * kss[i] - kes * kes;
 		float bb = 2 * (keg * kes - kee * kgs[i]);
@@ -425,8 +425,8 @@ float TriangleMeshShape::sweep_intersect_triangle_sphere(TriangleMeshShape *shap
 
 		if (t >= 0.0f && t <= 1.0f)
 		{
-			Vec3 ct = c + ks * t;
-			float d = Vec3::Dot(ct - p[i], ke[i]);
+			vec3 ct = c + ks * t;
+			float d = dot(ct - p[i], ke[i]);
 			if (d >= 0.0f && d <= kee)
 				return t;
 		}
@@ -486,49 +486,49 @@ bool TriangleMeshShape::overlap_triangle_sphere(TriangleMeshShape *shape1, Spher
 
 	int element_index = shape1->nodes[shape1_node_index].element_index;
 
-	Vec3 P = shape2->center;
-	Vec3 A = shape1->vertices[shape1->elements[element_index]] - P;
-	Vec3 B = shape1->vertices[shape1->elements[element_index + 1]] - P;
-	Vec3 C = shape1->vertices[shape1->elements[element_index + 2]] - P;
+	vec3 P = shape2->center;
+	vec3 A = shape1->vertices[shape1->elements[element_index]] - P;
+	vec3 B = shape1->vertices[shape1->elements[element_index + 1]] - P;
+	vec3 C = shape1->vertices[shape1->elements[element_index + 2]] - P;
 	float r = shape2->radius;
 	float rr = r * r;
 
 	// Testing if sphere lies outside the triangle plane
-	Vec3 V = Vec3::Cross(B - A, C - A);
-	float d = Vec3::Dot(A, V);
-	float e = Vec3::Dot(V, V);
+	vec3 V = cross(B - A, C - A);
+	float d = dot(A, V);
+	float e = dot(V, V);
 	bool sep1 = d * d > rr * e;
 
 	// Testing if sphere lies outside a triangle vertex
-	float aa = Vec3::Dot(A, A);
-	float ab = Vec3::Dot(A, B);
-	float ac = Vec3::Dot(A, C);
-	float bb = Vec3::Dot(B, B);
-	float bc = Vec3::Dot(B, C);
-	float cc = Vec3::Dot(C, C);
+	float aa = dot(A, A);
+	float ab = dot(A, B);
+	float ac = dot(A, C);
+	float bb = dot(B, B);
+	float bc = dot(B, C);
+	float cc = dot(C, C);
 	bool sep2 = (aa > rr) && (ab > aa) && (ac > aa);
 	bool sep3 = (bb > rr) && (ab > bb) && (bc > bb);
 	bool sep4 = (cc > rr) && (ac > cc) && (bc > cc);
 
 	// Testing if sphere lies outside a triangle edge
-	Vec3 AB = B - A;
-	Vec3 BC = C - B;
-	Vec3 CA = A - C;
+	vec3 AB = B - A;
+	vec3 BC = C - B;
+	vec3 CA = A - C;
 	float d1 = ab - aa;
 	float d2 = bc - bb;
 	float d3 = ac - cc;
-	float e1 = Vec3::Dot(AB, AB);
-	float e2 = Vec3::Dot(BC, BC);
-	float e3 = Vec3::Dot(CA, CA);
-	Vec3 Q1 = A * e1 - AB * d1;
-	Vec3 Q2 = B * e2 - BC * d2;
-	Vec3 Q3 = C * e3 - CA * d3;
-	Vec3 QC = C * e1 - Q1;
-	Vec3 QA = A * e2 - Q2;
-	Vec3 QB = B * e3 - Q3;
-	bool sep5 = (Vec3::Dot(Q1, Q1) > rr * e1 * e1) && (Vec3::Dot(Q1, QC) > 0.0f);
-	bool sep6 = (Vec3::Dot(Q2, Q2) > rr * e2 * e2) && (Vec3::Dot(Q2, QA) > 0.0f);
-	bool sep7 = (Vec3::Dot(Q3, Q3) > rr * e3 * e3) && (Vec3::Dot(Q3, QB) > 0.0f);
+	float e1 = dot(AB, AB);
+	float e2 = dot(BC, BC);
+	float e3 = dot(CA, CA);
+	vec3 Q1 = A * e1 - AB * d1;
+	vec3 Q2 = B * e2 - BC * d2;
+	vec3 Q3 = C * e3 - CA * d3;
+	vec3 QC = C * e1 - Q1;
+	vec3 QA = A * e2 - Q2;
+	vec3 QB = B * e3 - Q3;
+	bool sep5 = (dot(Q1, Q1) > rr * e1 * e1) && (dot(Q1, QC) > 0.0f);
+	bool sep6 = (dot(Q2, Q2) > rr * e2 * e2) && (dot(Q2, QA) > 0.0f);
+	bool sep7 = (dot(Q3, Q3) > rr * e3 * e3) && (dot(Q3, QB) > 0.0f);
 
 	bool separated = sep1 || sep2 || sep3 || sep4 || sep5 || sep6 || sep7;
 	return (!separated);
@@ -541,7 +541,7 @@ bool TriangleMeshShape::is_leaf(int node_index)
 
 float TriangleMeshShape::volume(int node_index)
 {
-	const Vec3 &extents = nodes[node_index].aabb.Extents;
+	const vec3 &extents = nodes[node_index].aabb.Extents;
 	return extents.x * extents.y * extents.z;
 }
 
@@ -591,14 +591,14 @@ float TriangleMeshShape::get_balanced_depth() const
 	return std::log2((float)(num_elements / 3));
 }
 
-int TriangleMeshShape::subdivide(int *triangles, int num_triangles, const Vec3 *centroids, int *work_buffer)
+int TriangleMeshShape::subdivide(int *triangles, int num_triangles, const vec3 *centroids, int *work_buffer)
 {
 	if (num_triangles == 0)
 		return -1;
 
 	// Find bounding box and median of the triangle centroids
-	Vec3 median;
-	Vec3 min, max;
+	vec3 median;
+	vec3 min, max;
 	min = vertices[elements[triangles[0] * 3]];
 	max = min;
 	for (int i = 0; i < num_triangles; i++)
@@ -606,7 +606,7 @@ int TriangleMeshShape::subdivide(int *triangles, int num_triangles, const Vec3 *
 		int element_index = triangles[i] * 3;
 		for (int j = 0; j < 3; j++)
 		{
-			const Vec3 &vertex = vertices[elements[element_index + j]];
+			const vec3 &vertex = vertices[elements[element_index + j]];
 
 			min.x = std::min(min.x, vertex.x);
 			min.y = std::min(min.y, vertex.y);
@@ -640,18 +640,18 @@ int TriangleMeshShape::subdivide(int *triangles, int num_triangles, const Vec3 *
 
 	// Try split at longest axis, then if that fails the next longest, and then the remaining one
 	int left_count, right_count;
-	Vec3 axis;
+	vec3 axis;
 	for (int attempt = 0; attempt < 3; attempt++)
 	{
 		// Find the split plane for axis
 		switch (axis_order[attempt])
 		{
 		default:
-		case 0: axis = Vec3(1.0f, 0.0f, 0.0f); break;
-		case 1: axis = Vec3(0.0f, 1.0f, 0.0f); break;
-		case 2: axis = Vec3(0.0f, 0.0f, 1.0f); break;
+		case 0: axis = vec3(1.0f, 0.0f, 0.0f); break;
+		case 1: axis = vec3(0.0f, 1.0f, 0.0f); break;
+		case 2: axis = vec3(0.0f, 0.0f, 1.0f); break;
 		}
-		Vec4 plane(axis, -Vec3::Dot(median, axis));
+		vec4 plane(axis, -dot(median, axis));
 
 		// Split triangles into two
 		left_count = 0;
@@ -661,7 +661,7 @@ int TriangleMeshShape::subdivide(int *triangles, int num_triangles, const Vec3 *
 			int triangle = triangles[i];
 			int element_index = triangle * 3;
 
-			float side = Vec4::Dot(Vec4(centroids[triangles[i]], 1.0f), plane);
+			float side = dot(vec4(centroids[triangles[i]], 1.0f), plane);
 			if (side >= 0.0f)
 			{
 				work_buffer[left_count] = triangle;
@@ -707,10 +707,10 @@ int TriangleMeshShape::subdivide(int *triangles, int num_triangles, const Vec3 *
 
 /////////////////////////////////////////////////////////////////////////////
 
-IntersectionTest::Result IntersectionTest::plane_aabb(const Vec4 &plane, const BBox &aabb)
+IntersectionTest::Result IntersectionTest::plane_aabb(const vec4 &plane, const BBox &aabb)
 {
-	Vec3 center = aabb.Center();
-	Vec3 extents = aabb.Extents();
+	vec3 center = aabb.Center();
+	vec3 extents = aabb.Extents();
 	float e = extents.x * std::abs(plane.x) + extents.y * std::abs(plane.y) + extents.z * std::abs(plane.z);
 	float s = center.x * plane.x + center.y * plane.y + center.z * plane.z + plane.w;
 	if (s - e > 0)
@@ -721,12 +721,12 @@ IntersectionTest::Result IntersectionTest::plane_aabb(const Vec4 &plane, const B
 		return intersecting;
 }
 
-IntersectionTest::Result IntersectionTest::plane_obb(const Vec4 &plane, const OrientedBBox &obb)
+IntersectionTest::Result IntersectionTest::plane_obb(const vec4 &plane, const OrientedBBox &obb)
 {
-	Vec3 n = plane.ToVec3();
+	vec3 n = plane.xyz();
 	float d = plane.w;
-	float e = obb.Extents.x * std::abs(Vec3::Dot(obb.axis_x, n)) + obb.Extents.y * std::abs(Vec3::Dot(obb.axis_y, n)) + obb.Extents.z * std::abs(Vec3::Dot(obb.axis_z, n));
-	float s = Vec3::Dot(obb.Center, n) + d;
+	float e = obb.Extents.x * std::abs(dot(obb.axis_x, n)) + obb.Extents.y * std::abs(dot(obb.axis_y, n)) + obb.Extents.z * std::abs(dot(obb.axis_z, n));
+	float s = dot(obb.Center, n) + d;
 	if (s - e > 0)
 		return inside;
 	else if (s + e < 0)
@@ -735,10 +735,10 @@ IntersectionTest::Result IntersectionTest::plane_obb(const Vec4 &plane, const Or
 		return intersecting;
 }
 
-IntersectionTest::OverlapResult IntersectionTest::sphere(const Vec3 &center1, float radius1, const Vec3 &center2, float radius2)
+IntersectionTest::OverlapResult IntersectionTest::sphere(const vec3 &center1, float radius1, const vec3 &center2, float radius2)
 {
-	Vec3 h = center1 - center2;
-	float square_distance = Vec3::Dot(h, h);
+	vec3 h = center1 - center2;
+	float square_distance = dot(h, h);
 	float radius_sum = radius1 + radius2;
 	if (square_distance > radius_sum * radius_sum)
 		return disjoint;
@@ -746,18 +746,18 @@ IntersectionTest::OverlapResult IntersectionTest::sphere(const Vec3 &center1, fl
 		return overlap;
 }
 
-IntersectionTest::OverlapResult IntersectionTest::sphere_aabb(const Vec3 &center, float radius, const BBox &aabb)
+IntersectionTest::OverlapResult IntersectionTest::sphere_aabb(const vec3 &center, float radius, const BBox &aabb)
 {
-	Vec3 a = aabb.min - center;
-	Vec3 b = center - aabb.max;
+	vec3 a = aabb.min - center;
+	vec3 b = center - aabb.max;
 	a.x = std::max(a.x, 0.0f);
 	a.y = std::max(a.y, 0.0f);
 	a.z = std::max(a.z, 0.0f);
 	b.x = std::max(b.x, 0.0f);
 	b.y = std::max(b.y, 0.0f);
 	b.z = std::max(b.z, 0.0f);
-	Vec3 e = a + b;
-	float d = Vec3::Dot(e, e);
+	vec3 e = a + b;
+	float d = dot(e, e);
 	if (d > radius * radius)
 		return disjoint;
 	else
@@ -847,9 +847,9 @@ IntersectionTest::OverlapResult IntersectionTest::ray_aabb(const RayBBox &ray, c
 	return (mask & 7) ? disjoint : overlap;
 
 #else
-	const Vec3 &v = ray.v;
-	const Vec3 &w = ray.w;
-	const Vec3 &h = aabb.Extents;
+	const vec3 &v = ray.v;
+	const vec3 &w = ray.w;
+	const vec3 &h = aabb.Extents;
 	auto c = ray.c - aabb.Center;
 
 	if (std::abs(c.x) > v.x + h.x || std::abs(c.y) > v.y + h.y || std::abs(c.z) > v.z + h.z)
@@ -870,7 +870,7 @@ FrustumPlanes::FrustumPlanes()
 {
 }
 
-FrustumPlanes::FrustumPlanes(const Mat4 &world_to_projection)
+FrustumPlanes::FrustumPlanes(const mat4 &world_to_projection)
 {
 	planes[0] = near_frustum_plane(world_to_projection);
 	planes[1] = far_frustum_plane(world_to_projection);
@@ -880,68 +880,68 @@ FrustumPlanes::FrustumPlanes(const Mat4 &world_to_projection)
 	planes[5] = bottom_frustum_plane(world_to_projection);
 }
 
-Vec4 FrustumPlanes::left_frustum_plane(const Mat4 &matrix)
+vec4 FrustumPlanes::left_frustum_plane(const mat4 &matrix)
 {
-	Vec4 plane(
+	vec4 plane(
 		matrix[3 + 0 * 4] + matrix[0 + 0 * 4],
 		matrix[3 + 1 * 4] + matrix[0 + 1 * 4],
 		matrix[3 + 2 * 4] + matrix[0 + 2 * 4],
 		matrix[3 + 3 * 4] + matrix[0 + 3 * 4]);
-	plane /= plane.ToVec3().Length();
+	plane /= length(plane.xyz());
 	return plane;
 }
 
-Vec4 FrustumPlanes::right_frustum_plane(const Mat4 &matrix)
+vec4 FrustumPlanes::right_frustum_plane(const mat4 &matrix)
 {
-	Vec4 plane(
+	vec4 plane(
 		matrix[3 + 0 * 4] - matrix[0 + 0 * 4],
 		matrix[3 + 1 * 4] - matrix[0 + 1 * 4],
 		matrix[3 + 2 * 4] - matrix[0 + 2 * 4],
 		matrix[3 + 3 * 4] - matrix[0 + 3 * 4]);
-	plane /= plane.ToVec3().Length();
+	plane /= length(plane.xyz());
 	return plane;
 }
 
-Vec4 FrustumPlanes::top_frustum_plane(const Mat4 &matrix)
+vec4 FrustumPlanes::top_frustum_plane(const mat4 &matrix)
 {
-	Vec4 plane(
+	vec4 plane(
 		matrix[3 + 0 * 4] - matrix[1 + 0 * 4],
 		matrix[3 + 1 * 4] - matrix[1 + 1 * 4],
 		matrix[3 + 2 * 4] - matrix[1 + 2 * 4],
 		matrix[3 + 3 * 4] - matrix[1 + 3 * 4]);
-	plane /= plane.ToVec3().Length();
+	plane /= length(plane.xyz());
 	return plane;
 }
 
-Vec4 FrustumPlanes::bottom_frustum_plane(const Mat4 &matrix)
+vec4 FrustumPlanes::bottom_frustum_plane(const mat4 &matrix)
 {
-	Vec4 plane(
+	vec4 plane(
 		matrix[3 + 0 * 4] + matrix[1 + 0 * 4],
 		matrix[3 + 1 * 4] + matrix[1 + 1 * 4],
 		matrix[3 + 2 * 4] + matrix[1 + 2 * 4],
 		matrix[3 + 3 * 4] + matrix[1 + 3 * 4]);
-	plane /= plane.ToVec3().Length();
+	plane /= length(plane.xyz());
 	return plane;
 }
 
-Vec4 FrustumPlanes::near_frustum_plane(const Mat4 &matrix)
+vec4 FrustumPlanes::near_frustum_plane(const mat4 &matrix)
 {
-	Vec4 plane(
+	vec4 plane(
 		matrix[3 + 0 * 4] + matrix[2 + 0 * 4],
 		matrix[3 + 1 * 4] + matrix[2 + 1 * 4],
 		matrix[3 + 2 * 4] + matrix[2 + 2 * 4],
 		matrix[3 + 3 * 4] + matrix[2 + 3 * 4]);
-	plane /= plane.ToVec3().Length();
+	plane /= length(plane.xyz());
 	return plane;
 }
 
-Vec4 FrustumPlanes::far_frustum_plane(const Mat4 &matrix)
+vec4 FrustumPlanes::far_frustum_plane(const mat4 &matrix)
 {
-	Vec4 plane(
+	vec4 plane(
 		matrix[3 + 0 * 4] - matrix[2 + 0 * 4],
 		matrix[3 + 1 * 4] - matrix[2 + 1 * 4],
 		matrix[3 + 2 * 4] - matrix[2 + 2 * 4],
 		matrix[3 + 3 * 4] - matrix[2 + 3 * 4]);
-	plane /= plane.ToVec3().Length();
+	plane /= length(plane.xyz());
 	return plane;
 }

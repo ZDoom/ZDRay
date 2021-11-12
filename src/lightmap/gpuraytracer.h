@@ -12,19 +12,19 @@ struct Uniforms
 	uint32_t SampleCount;
 	uint32_t PassType;
 	uint32_t LightCount;
-	Vec3 SunDir;
+	vec3 SunDir;
 	float SampleDistance;
-	Vec3 SunColor;
+	vec3 SunColor;
 	float SunIntensity;
-	Vec3 HemisphereVec;
+	vec3 HemisphereVec;
 	float Padding1;
 };
 
 struct SurfaceInfo
 {
-	Vec3 Normal;
+	vec3 Normal;
 	float EmissiveDistance;
-	Vec3 EmissiveColor;
+	vec3 EmissiveColor;
 	float EmissiveIntensity;
 	float Sky;
 	float Padding0, Padding1, Padding2;
@@ -32,15 +32,15 @@ struct SurfaceInfo
 
 struct LightInfo
 {
-	Vec3 Origin;
+	vec3 Origin;
 	float Padding0;
 	float Radius;
 	float Intensity;
 	float InnerAngleCos;
 	float OuterAngleCos;
-	Vec3 SpotDir;
+	vec3 SpotDir;
 	float Padding1;
-	Vec3 Color;
+	vec3 Color;
 	float Padding2;
 };
 
@@ -79,7 +79,7 @@ private:
 	void PrintVulkanInfo();
 
 	static float RadicalInverse_VdC(uint32_t bits);
-	static Vec2 Hammersley(uint32_t i, uint32_t N);
+	static vec2 Hammersley(uint32_t i, uint32_t N);
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;

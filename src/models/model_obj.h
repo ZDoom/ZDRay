@@ -73,9 +73,9 @@ private:
 		OBJSurface(FTextureID skin): numTris(0), numFaces(0), vbStart(0), faceStart(0), tris(nullptr), skin(skin) {}
 	};
 
-	TArray<Vec3> verts;
-	TArray<Vec3> norms;
-	TArray<Vec2> uvs;
+	TArray<vec3> verts;
+	TArray<vec3> norms;
+	TArray<vec2> uvs;
 	TArray<OBJFace> faces;
 	TArray<OBJSurface> surfaces;
 	FScanner sc;
@@ -87,11 +87,11 @@ private:
 	void ConstructSurfaceTris(OBJSurface &surf);
 	void AddVertFaces();
 	void TriangulateQuad(const OBJFace &quad, OBJFace *tris);
-	Vec3 RealignVector(Vec3 vecToRealign);
-	Vec2 FixUV(Vec2 vecToRealign);
-	Vec3 CalculateNormalFlat(unsigned int surfIdx, unsigned int triIdx);
-	Vec3 CalculateNormalFlat(OBJTriRef otr);
-	Vec3 CalculateNormalSmooth(unsigned int vidx, unsigned int smoothGroup);
+	vec3 RealignVector(vec3 vecToRealign);
+	vec2 FixUV(vec2 vecToRealign);
+	vec3 CalculateNormalFlat(unsigned int surfIdx, unsigned int triIdx);
+	vec3 CalculateNormalFlat(OBJTriRef otr);
+	vec3 CalculateNormalSmooth(unsigned int vidx, unsigned int smoothGroup);
 public:
 	FOBJModel(): hasMissingNormals(false), hasSmoothGroups(false), vertFaces(nullptr) {}
 	~FOBJModel();

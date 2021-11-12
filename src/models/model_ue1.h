@@ -85,15 +85,15 @@ private:
 	// converted data structures
 	struct UE1Vertex
 	{
-		Vec3 Pos, Normal;
+		vec3 Pos, Normal;
 		TArray<int> P;	// polys that reference this vertex, used in normal computation to save time
 		int nP;	// count of those polys
 	};
 	struct UE1Poly
 	{
 		int V[3];
-		Vec2 C[3];
-		TArray<Vec3> Normals;
+		vec2 C[3];
+		TArray<vec3> Normals;
 	};
 	struct UE1Group
 	{

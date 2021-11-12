@@ -519,7 +519,7 @@ void FProcessor::ParseSector(IntSector *sec)
 	}
 	else
 	{
-		float scale = 1.0f / sec->ceilingplane.Normal().Length();
+		float scale = 1.0f / length(sec->ceilingplane.Normal());
 		sec->ceilingplane.a *= scale;
 		sec->ceilingplane.b *= scale;
 		sec->ceilingplane.c *= scale;
@@ -536,7 +536,7 @@ void FProcessor::ParseSector(IntSector *sec)
 	}
 	else
 	{
-		float scale = 1.0f / sec->floorplane.Normal().Length();
+		float scale = 1.0f / length(sec->floorplane.Normal());
 		sec->floorplane.a *= scale;
 		sec->floorplane.b *= scale;
 		sec->floorplane.c *= scale;

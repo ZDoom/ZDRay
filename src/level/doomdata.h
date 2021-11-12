@@ -250,8 +250,6 @@ struct IntVertex
 };
 
 class BBox;
-class Vec3;
-class Vec2;
 struct vertex_t;
 struct Surface;
 struct ThingLight;
@@ -265,8 +263,8 @@ struct FloatVertex
 struct ThingLight
 {
 	IntThing        *mapThing;
-	Vec2            origin;
-	Vec3            rgb;
+	vec2            origin;
+	vec3            rgb;
 	float           intensity;
 	float           innerAngleCos;
 	float           outerAngleCos;
@@ -276,14 +274,14 @@ struct ThingLight
 	IntSector       *sector;
 	MapSubsectorEx  *ssect;
 
-	Vec3 LightOrigin() const
+	vec3 LightOrigin() const
 	{
 		float originZ;
 		if (!bCeiling)
 			originZ = sector->floorplane.zAt(origin.x, origin.y) + height;
 		else
 			originZ = sector->ceilingplane.zAt(origin.x, origin.y) - height;
-		return Vec3(origin.x, origin.y, originZ);
+		return vec3(origin.x, origin.y, originZ);
 	}
 
 	float LightRadius() const
@@ -291,31 +289,31 @@ struct ThingLight
 		return radius + radius; // 2.0 because gzdoom's dynlights do this and we want them to match
 	}
 
-	float SpotAttenuation(const Vec3& dir) const
+	float SpotAttenuation(const vec3& dir) const
 	{
 		float spotAttenuation = 1.0f;
 		if (outerAngleCos > -1.0f)
 		{
 			float negPitch = -radians(mapThing->pitch);
 			float xyLen = std::cos(negPitch);
-			Vec3 spotDir;
+			vec3 spotDir;
 			spotDir.x = -std::cos(radians(mapThing->angle)) * xyLen;
 			spotDir.y = -std::sin(radians(mapThing->angle)) * xyLen;
 			spotDir.z = -std::sin(negPitch);
-			float cosDir = Vec3::Dot(dir, spotDir);
+			float cosDir = dot(dir, spotDir);
 			spotAttenuation = smoothstep(outerAngleCos, innerAngleCos, cosDir);
 			spotAttenuation = std::max(spotAttenuation, 0.0f);
 		}
 		return spotAttenuation;
 	}
 
-	Vec3 SpotDir() const
+	vec3 SpotDir() const
 	{
 		if (outerAngleCos > -1.0f)
 		{
 			float negPitch = -radians(mapThing->pitch);
 			float xyLen = std::cos(negPitch);
-			Vec3 spotDir;
+			vec3 spotDir;
 			spotDir.x = -std::cos(radians(mapThing->angle)) * xyLen;
 			spotDir.y = -std::sin(radians(mapThing->angle)) * xyLen;
 			spotDir.z = -std::sin(negPitch);
@@ -323,7 +321,7 @@ struct ThingLight
 		}
 		else
 		{
-			return Vec3(0.0f);
+			return vec3(0.0f);
 		}
 	}
 
@@ -337,7 +335,7 @@ struct SurfaceLightDef
 {
 	float           distance;
 	float           intensity;
-	Vec3            rgb;
+	vec3            rgb;
 };
 
 enum mapFlags_t
@@ -387,8 +385,8 @@ struct FLevel
 	TArray<SurfaceLightDef> SurfaceLights;
 	TArray<int> ThingLightProbes;
 
-	Vec3 defaultSunColor;
-	Vec3 defaultSunDirection;
+	vec3 defaultSunColor;
+	vec3 defaultSunDirection;
 	int Samples;
 	int LightBounce;
 	float GridSize;
@@ -404,15 +402,15 @@ struct FLevel
 	int NumSectors() const { return Sectors.Size(); }
 	int NumThings() const { return Things.Size(); }
 
-	const Vec3 &GetSunColor() const;
-	const Vec3 &GetSunDirection() const;
+	const vec3 &GetSunColor() const;
+	const vec3 &GetSunDirection() const;
 	IntSector *GetFrontSector(const IntSideDef *side);
 	IntSector *GetBackSector(const IntSideDef *side);
 	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
 	FloatVertex GetSegVertex(int index);
 
-	Vec3 GetLightProbePosition(int index);
+	vec3 GetLightProbePosition(int index);
 
 private:
 	void CheckSkySectors();

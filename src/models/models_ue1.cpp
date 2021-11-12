@@ -96,14 +96,14 @@ void FUE1Model::LoadGeometry()
 			if ( dxverts != NULL )
 			{
 				// convert padded XYZ16
-				Vert.Pos = Vec3(dxverts[j+i*numVerts].x,
+				Vert.Pos = vec3(dxverts[j+i*numVerts].x,
 					dxverts[j+i*numVerts].z,
 					(float)-dxverts[j+i*numVerts].y);
 			}
 			else
 			{
 				// convert packed XY11Z10
-				Vert.Pos = Vec3(unpackuvert(averts[j+i*numVerts],0),
+				Vert.Pos = vec3(unpackuvert(averts[j+i*numVerts],0),
 					unpackuvert(averts[j+i*numVerts],2),
 					-unpackuvert(averts[j+i*numVerts],1));
 			}
@@ -123,14 +123,14 @@ void FUE1Model::LoadGeometry()
 			Poly.V[j] = dpolys[i].vertices[j];
 		// unpack coords
 		for ( int j=0; j<3; j++ )
-			Poly.C[j] = Vec2(dpolys[i].uv[j][0]/255.f,dpolys[i].uv[j][1]/255.f);
+			Poly.C[j] = vec2(dpolys[i].uv[j][0]/255.f,dpolys[i].uv[j][1]/255.f);
 		// compute facet normals
 		for ( int j=0; j<numFrames; j++ )
 		{
-			Vec3 dir[2];
+			vec3 dir[2];
 			dir[0] = verts[Poly.V[1]+numVerts*j].Pos-verts[Poly.V[0]+numVerts*j].Pos;
 			dir[1] = verts[Poly.V[2]+numVerts*j].Pos-verts[Poly.V[0]+numVerts*j].Pos;
-			Poly.Normals.Push((Vec3::Cross(dir[0],dir[1])).Unit());
+			Poly.Normals.Push(normalize(cross(dir[0],dir[1])));
 			// since we're iterating frames, also set references for later
 			for ( int k=0; k<3; k++ )
 			{
@@ -148,10 +148,10 @@ void FUE1Model::LoadGeometry()
 	{
 		for ( int j=0; j<numVerts; j++ )
 		{
-			Vec3 nsum = Vec3(0,0,0);
+			vec3 nsum = vec3(0,0,0);
 			for ( int k=0; k<verts[j+numVerts*i].nP; k++ )
 				nsum += polys[verts[j+numVerts*i].P[k]].Normals[i];
-			verts[j+numVerts*i].Normal = Vec3(nsum.Unit());
+			verts[j+numVerts*i].Normal = normalize(nsum);
 		}
 	}
 	// populate poly groups (subdivided by texture number and type)
@@ -281,7 +281,7 @@ void FUE1Model::BuildVertexBuffer( FModelRenderer *renderer )
 				for ( int l=0; l<3; l++ )
 				{
 					UE1Vertex V = verts[polys[groups[j].P[k]].V[l]+i*numVerts];
-					Vec2 C = polys[groups[j].P[k]].C[l];
+					vec2 C = polys[groups[j].P[k]].C[l];
 					FModelVertex *vert = &vptr[vidx++];
 					vert->Set(V.Pos.x,V.Pos.y,V.Pos.z,C.x,C.y);
 					if ( groups[j].type&PT_Curvy )	// use facet normal

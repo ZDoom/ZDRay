@@ -73,7 +73,7 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 	if (task.id >= 0)
 	{
 		Surface* surface = mesh->surfaces[task.id].get();
-		Vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+		vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
 		state.StartPosition = pos;
 		state.StartSurface = surface;
 	}
@@ -134,7 +134,7 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 
 void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 {
-	Vec3 origin;
+	vec3 origin;
 	Surface* surface;
 	if (state.PassType == 2)
 	{
@@ -147,7 +147,7 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 		surface = state.StartSurface;
 	}
 
-	Vec3 incoming(0.0f, 0.0f, 0.0f);
+	vec3 incoming(0.0f, 0.0f, 0.0f);
 	float incomingAttenuation = 1.0f;
 
 	if (state.PassType == 0)
@@ -166,7 +166,7 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 		if (state.PassType == 1)
 			incomingAttenuation = 1.0f / float(state.SampleCount);
 
-		Vec3 normal;
+		vec3 normal;
 		if (surface)
 		{
 			normal = surface->plane.Normal();
@@ -175,19 +175,19 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 		{
 			switch (state.SampleIndex % 6)
 			{
-			case 0: normal = Vec3( 1.0f,  0.0f,  0.0f); break;
-			case 1: normal = Vec3(-1.0f,  0.0f,  0.0f); break;
-			case 2: normal = Vec3( 0.0f,  1.0f,  0.0f); break;
-			case 3: normal = Vec3( 0.0f, -1.0f,  0.0f); break;
-			case 4: normal = Vec3( 0.0f,  0.0f,  1.0f); break;
-			case 5: normal = Vec3( 0.0f,  0.0f, -1.0f); break;
+			case 0: normal = vec3( 1.0f,  0.0f,  0.0f); break;
+			case 1: normal = vec3(-1.0f,  0.0f,  0.0f); break;
+			case 2: normal = vec3( 0.0f,  1.0f,  0.0f); break;
+			case 3: normal = vec3( 0.0f, -1.0f,  0.0f); break;
+			case 4: normal = vec3( 0.0f,  0.0f,  1.0f); break;
+			case 5: normal = vec3( 0.0f,  0.0f, -1.0f); break;
 			}
 		}
 
-		Vec3 H = ImportanceSample(state.HemisphereVec, normal);
-		Vec3 L = Vec3::Normalize(H * (2.0f * Vec3::Dot(normal, H)) - normal);
+		vec3 H = ImportanceSample(state.HemisphereVec, normal);
+		vec3 L = normalize(H * (2.0f * dot(normal, H)) - normal);
 
-		float NdotL = std::max(Vec3::Dot(normal, L), 0.0f);
+		float NdotL = std::max(dot(normal, L), 0.0f);
 
 		const float p = (float)(1 / (2 * 3.14159265359));
 		incomingAttenuation *= NdotL / p;
@@ -195,19 +195,19 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 		state.EndTrace = true;
 		if (NdotL > 0.0f)
 		{
-			Vec3 start = origin + normal * 0.1f;
-			Vec3 end = start + L * 32768.0f;
+			vec3 start = origin + normal * 0.1f;
+			vec3 end = start + L * 32768.0f;
 			LevelTraceHit hit = Trace(start, end);
 			if (hit.fraction < 1.0f)
 			{
 				state.EndTrace = false;
 				surface = hit.hitSurface;
-				Vec3 hitPosition = start * (1.0f - hit.fraction) + end * hit.fraction;
+				vec3 hitPosition = start * (1.0f - hit.fraction) + end * hit.fraction;
 
 				CPUEmissiveSurface emissive = GetEmissive(surface);
 				if (emissive.Distance > 0.0f)
 				{
-					float hitDistance = (hitPosition - origin).Length();
+					float hitDistance = length(hitPosition - origin);
 					float attenuation = std::max(1.0f - (hitDistance / emissive.Distance), 0.0f);
 					incoming += emissive.Color * (emissive.Intensity * attenuation * incomingAttenuation);
 				}
@@ -227,15 +227,15 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 
 void CPURaytracer::RunLightTrace(CPUTraceState& state)
 {
-	Vec3 incoming = state.Output;
+	vec3 incoming = state.Output;
 	float incomingAttenuation = state.OutputAttenuation;
 	if (incomingAttenuation <= 0.0f)
 		return;
 
 	Surface* surface = state.Surf;
 
-	Vec3 origin = state.Position;
-	Vec3 normal;
+	vec3 origin = state.Position;
+	vec3 normal;
 	if (surface)
 	{
 		normal = surface->plane.Normal();
@@ -251,17 +251,17 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 		float attenuation = 0.0f;
 		if (state.PassType == 0 && surface)
 		{
-			Vec3 e0 = Vec3::Normalize(Vec3::Cross(normal, std::abs(normal.x) < std::abs(normal.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f)));
-			Vec3 e1 = Vec3::Cross(normal, e0);
-			e0 = Vec3::Cross(normal, e1);
+			vec3 e0 = normalize(cross(normal, std::abs(normal.x) < std::abs(normal.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f)));
+			vec3 e1 = cross(normal, e0);
+			e0 = cross(normal, e1);
 
 			for (uint32_t i = 0; i < state.SampleCount; i++)
 			{
-				Vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
-				Vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
+				vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
+				vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
-				Vec3 start = origin2;
-				Vec3 end = start + state.SunDir * dist;
+				vec3 start = origin2;
+				vec3 end = start + state.SunDir * dist;
 				LevelTraceHit hit = Trace(start, end);
 				if (hit.fraction < 1.0f && hit.hitSurface->bSky)
 					attenuation += 1.0f;
@@ -270,8 +270,8 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 		}
 		else
 		{
-			Vec3 start = origin;
-			Vec3 end = start + state.SunDir * dist;
+			vec3 start = origin;
+			vec3 end = start + state.SunDir * dist;
 			LevelTraceHit hit = Trace(start, end);
 			attenuation = (hit.fraction < 1.0f && hit.hitSurface->bSky) ? 1.0f : 0.0f;
 		}
@@ -282,21 +282,21 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 	{
 		const CPULightInfo& light = Lights.data()[j]; // MSVC vector operator[] is very slow
 
-		float dist = (light.Origin - origin).Length();
+		float dist = length(light.Origin - origin);
 		if (dist > minDistance && dist < light.Radius)
 		{
-			Vec3 dir = Vec3::Normalize(light.Origin - origin);
+			vec3 dir = normalize(light.Origin - origin);
 
 			float distAttenuation = std::max(1.0f - (dist / light.Radius), 0.0f);
 			float angleAttenuation = 1.0f;
 			if (surface)
 			{
-				angleAttenuation = std::max(Vec3::Dot(normal, dir), 0.0f);
+				angleAttenuation = std::max(dot(normal, dir), 0.0f);
 			}
 			float spotAttenuation = 1.0f;
 			if (light.OuterAngleCos > -1.0f)
 			{
-				float cosDir = Vec3::Dot(dir, light.SpotDir);
+				float cosDir = dot(dir, light.SpotDir);
 				spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
 				spotAttenuation = std::max(spotAttenuation, 0.0f);
 			}
@@ -308,13 +308,13 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 
 				if (state.PassType == 0 && surface)
 				{
-					Vec3 e0 = Vec3::Normalize(Vec3::Cross(normal, std::abs(normal.x) < std::abs(normal.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f)));
-					Vec3 e1 = Vec3::Cross(normal, e0);
-					e0 = Vec3::Cross(normal, e1);
+					vec3 e0 = normalize(cross(normal, std::abs(normal.x) < std::abs(normal.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f)));
+					vec3 e1 = cross(normal, e0);
+					e0 = cross(normal, e1);
 					for (uint32_t i = 0; i < state.SampleCount; i++)
 					{
-						Vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
-						Vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
+						vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
+						vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
 						LevelTraceHit hit = Trace(origin2, light.Origin);
 						if (hit.fraction == 1.0f)
@@ -338,20 +338,20 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 	state.Output = incoming;
 }
 
-Vec3 CPURaytracer::ImportanceSample(const Vec3& HemisphereVec, Vec3 N)
+vec3 CPURaytracer::ImportanceSample(const vec3& HemisphereVec, vec3 N)
 {
 	// from tangent-space vector to world-space sample vector
-	Vec3 up = std::abs(N.x) < std::abs(N.y) ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f);
-	Vec3 tangent = Vec3::Normalize(Vec3::Cross(up, N));
-	Vec3 bitangent = Vec3::Cross(N, tangent);
+	vec3 up = std::abs(N.x) < std::abs(N.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f);
+	vec3 tangent = normalize(cross(up, N));
+	vec3 bitangent = cross(N, tangent);
 
-	Vec3 sampleVec = tangent * HemisphereVec.x + bitangent * HemisphereVec.y + N * HemisphereVec.z;
-	return Vec3::Normalize(sampleVec);
+	vec3 sampleVec = tangent * HemisphereVec.x + bitangent * HemisphereVec.y + N * HemisphereVec.z;
+	return normalize(sampleVec);
 }
 
-Vec2 CPURaytracer::Hammersley(uint32_t i, uint32_t N)
+vec2 CPURaytracer::Hammersley(uint32_t i, uint32_t N)
 {
-	return Vec2(float(i) / float(N), RadicalInverse_VdC(i));
+	return vec2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
 float CPURaytracer::RadicalInverse_VdC(uint32_t bits)
@@ -371,12 +371,12 @@ void CPURaytracer::CreateHemisphereVectors()
 		HemisphereVectors.reserve(bounceSampleCount);
 		for (int i = 0; i < bounceSampleCount; i++)
 		{
-			Vec2 Xi = Hammersley(i, bounceSampleCount);
-			Vec3 H;
+			vec2 Xi = Hammersley(i, bounceSampleCount);
+			vec3 H;
 			H.x = Xi.x * 2.0f - 1.0f;
 			H.y = Xi.y * 2.0f - 1.0f;
 			H.z = RadicalInverse_VdC(i) + 0.01f;
-			H.Normalize();
+			H = normalize(H);
 			HemisphereVectors.push_back(H);
 		}
 	}
@@ -440,13 +440,13 @@ CPUEmissiveSurface CPURaytracer::GetEmissive(Surface* surface)
 	{
 		info.Distance = 0.0f;
 		info.Intensity = 0.0f;
-		info.Color = Vec3(0.0f, 0.0f, 0.0f);
+		info.Color = vec3(0.0f, 0.0f, 0.0f);
 	}
 
 	return info;
 }
 
-LevelTraceHit CPURaytracer::Trace(const Vec3& startVec, const Vec3& endVec)
+LevelTraceHit CPURaytracer::Trace(const vec3& startVec, const vec3& endVec)
 {
 	TraceHit hit = TriangleMeshShape::find_first_hit(CollisionMesh.get(), startVec, endVec);
 
@@ -476,7 +476,7 @@ LevelTraceHit CPURaytracer::Trace(const Vec3& startVec, const Vec3& endVec)
 	return trace;
 }
 
-bool CPURaytracer::TraceAnyHit(const Vec3& startVec, const Vec3& endVec)
+bool CPURaytracer::TraceAnyHit(const vec3& startVec, const vec3& endVec)
 {
 	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
 }

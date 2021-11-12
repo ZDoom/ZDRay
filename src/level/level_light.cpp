@@ -85,8 +85,8 @@ void FLevel::SetupLights()
 	}
 
 	// GG to whoever memset'ed FLevel
-	defaultSunColor = Vec3(1, 1, 1);
-	defaultSunDirection = Vec3(0.45f, 0.3f, 0.9f);
+	defaultSunColor = vec3(1, 1, 1);
+	defaultSunDirection = vec3(0.45f, 0.3f, 0.9f);
 	Samples = 8;
 	LightBounce = 1;
 	GridSize = 32.0f;
@@ -101,8 +101,8 @@ void FLevel::SetupLights()
 		else if (thing->type == 9890) // ZDRayInfo
 		{
 			uint32_t lightcolor = 0xffffff;
-			Vec3 sundir(0.0f, 0.0f, 0.0f);
-			Vec3 suncolor(1.0f, 1.0f, 1.0f);
+			vec3 sundir(0.0f, 0.0f, 0.0f);
+			vec3 suncolor(1.0f, 1.0f, 1.0f);
 
 			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 			{
@@ -144,9 +144,9 @@ void FLevel::SetupLights()
 				}
 			}
 
-			if (Vec3::Dot(sundir, sundir) > 0.01f)
+			if (dot(sundir, sundir) > 0.01f)
 			{
-				sundir.Normalize();
+				sundir = normalize(sundir);
 				suncolor.x = ((lightcolor >> 16) & 0xff) / 255.0f;
 				suncolor.y = ((lightcolor >> 8) & 0xff) / 255.0f;
 				suncolor.z = (lightcolor & 0xff) / 255.0f;
@@ -183,12 +183,12 @@ void FLevel::CheckSkySectors()
 	}
 }
 
-const Vec3 &FLevel::GetSunColor() const
+const vec3 &FLevel::GetSunColor() const
 {
 	return defaultSunColor;
 }
 
-const Vec3 &FLevel::GetSunDirection() const
+const vec3 &FLevel::GetSunDirection() const
 {
 	return defaultSunDirection;
 }
@@ -235,8 +235,8 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	MapNodeEx   *node;
 	int         side;
 	int         nodenum;
-	Vec3     dp1;
-	Vec3     dp2;
+	vec3     dp1;
+	vec3     dp2;
 	float       d;
 
 	// single subsector is a special case
@@ -251,15 +251,15 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	{
 		node = &GLNodes[nodenum];
 
-		Vec3 pt1(F(node->x), F(node->y), 0);
-		Vec3 pt2(F(node->dx), F(node->dy), 0);
-		//Vec3 pt1(F(node->x << 16), F(node->y << 16), 0);
-		//Vec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
-		Vec3 pos(F(x << 16), F(y << 16), 0);
+		vec3 pt1(F(node->x), F(node->y), 0);
+		vec3 pt2(F(node->dx), F(node->dy), 0);
+		//vec3 pt1(F(node->x << 16), F(node->y << 16), 0);
+		//vec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
+		vec3 pos(F(x << 16), F(y << 16), 0);
 
 		dp1 = pt1 - pos;
 		dp2 = (pt2 + pt1) - pos;
-		d = dp1.Cross(dp2).z;
+		d = cross(dp1, dp2).z;
 
 		side = FLOATSIGNBIT(d);
 
@@ -338,7 +338,8 @@ void FLevel::CreateLights()
 			thingLight.bCeiling = false;
 			thingLight.ssect = PointInSubSector(x, y);
 			thingLight.sector = GetSectorFromSubSector(thingLight.ssect);
-			thingLight.origin.Set(x, y);
+			thingLight.origin.x = x;
+			thingLight.origin.y = y;
 
 			ThingLights.Push(thingLight);
 		}
@@ -464,7 +465,7 @@ void FLevel::CreateLights()
 	printf("Surface lights: %i\n", (int)SurfaceLights.Size());
 }
 
-Vec3 FLevel::GetLightProbePosition(int index)
+vec3 FLevel::GetLightProbePosition(int index)
 {
 	int thingIndex = ThingLightProbes[index];
 	const IntThing& thing = Things[thingIndex];
@@ -482,5 +483,5 @@ Vec3 FLevel::GetLightProbePosition(int index)
 			z = sector->floorplane.zAt(x, y) + thing.height;
 		}
 	}
-	return Vec3(x, y, z);
+	return vec3(x, y, z);
 }

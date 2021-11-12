@@ -10,13 +10,13 @@ struct CPUTraceTask
 
 struct CPULightInfo
 {
-	Vec3 Origin;
+	vec3 Origin;
 	float Radius;
 	float Intensity;
 	float InnerAngleCos;
 	float OuterAngleCos;
-	Vec3 SpotDir;
-	Vec3 Color;
+	vec3 SpotDir;
+	vec3 Color;
 };
 
 struct CPUTraceState
@@ -25,19 +25,19 @@ struct CPUTraceState
 	uint32_t SampleCount;
 	uint32_t PassType;
 	uint32_t LightCount;
-	Vec3 SunDir;
+	vec3 SunDir;
 	float SampleDistance;
-	Vec3 SunColor;
+	vec3 SunColor;
 	float SunIntensity;
-	Vec3 HemisphereVec;
+	vec3 HemisphereVec;
 
-	Vec3 StartPosition;
+	vec3 StartPosition;
 	Surface* StartSurface;
 
-	Vec3 Position;
+	vec3 Position;
 	Surface* Surf;
 
-	Vec3 Output;
+	vec3 Output;
 	float OutputAttenuation;
 
 	bool EndTrace;
@@ -47,13 +47,13 @@ struct CPUEmissiveSurface
 {
 	float Distance;
 	float Intensity;
-	Vec3 Color;
+	vec3 Color;
 };
 
 struct LevelTraceHit
 {
-	Vec3 start;
-	Vec3 end;
+	vec3 start;
+	vec3 end;
 	float fraction;
 
 	Surface* hitSurface;
@@ -79,19 +79,19 @@ private:
 	void CreateHemisphereVectors();
 	void CreateLights();
 
-	LevelTraceHit Trace(const Vec3& startVec, const Vec3& endVec);
-	bool TraceAnyHit(const Vec3& startVec, const Vec3& endVec);
+	LevelTraceHit Trace(const vec3& startVec, const vec3& endVec);
+	bool TraceAnyHit(const vec3& startVec, const vec3& endVec);
 
-	static Vec3 ImportanceSample(const Vec3& HemisphereVec, Vec3 N);
+	static vec3 ImportanceSample(const vec3& HemisphereVec, vec3 N);
 
 	static float RadicalInverse_VdC(uint32_t bits);
-	static Vec2 Hammersley(uint32_t i, uint32_t N);
+	static vec2 Hammersley(uint32_t i, uint32_t N);
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;
 
 	LevelMesh* mesh = nullptr;
-	std::vector<Vec3> HemisphereVectors;
+	std::vector<vec3> HemisphereVectors;
 	std::vector<CPULightInfo> Lights;
 
 	std::unique_ptr<TriangleMeshShape> CollisionMesh;

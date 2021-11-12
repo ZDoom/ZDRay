@@ -37,14 +37,14 @@ public:
 	short Read16();
 	int Read32();
 	float ReadFloat();
-	Vec3 ReadVector();
+	vec3 ReadVector();
 	std::string ReadString();
 
 	void Write8(const uint8_t val);
 	void Write16(const short val);
 	void Write32(const int val);
 	void WriteFloat(const float val);
-	void WriteVector(const Vec3 &val);
+	void WriteVector(const vec3 &val);
 	void WriteString(const std::string &val);
 
 	int GetOffsetValue(int id);

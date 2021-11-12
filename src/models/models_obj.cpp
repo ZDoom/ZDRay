@@ -111,15 +111,15 @@ bool FOBJModel::Load(const char* fn, int lumpnum, const char* buffer, int length
 	{
 		if (sc.Compare("v")) // Vertex
 		{
-			ParseVector<Vec3, 3>(this->verts);
+			ParseVector<vec3, 3>(this->verts);
 		}
 		else if (sc.Compare("vn")) // Vertex normal
 		{
-			ParseVector<Vec3, 3>(this->norms);
+			ParseVector<vec3, 3>(this->norms);
 		}
 		else if (sc.Compare("vt")) // UV Coordinates
 		{
-			ParseVector<Vec2, 2>(this->uvs);
+			ParseVector<vec2, 2>(this->uvs);
 		}
 		else if (sc.Compare("usemtl"))
 		{
@@ -223,7 +223,7 @@ bool FOBJModel::Load(const char* fn, int lumpnum, const char* buffer, int length
 
 	if (uvs.Size() == 0)
 	{ // Needed so that OBJs without UVs can work
-		uvs.Push(Vec2(0.0, 0.0));
+		uvs.Push(vec2(0.0, 0.0));
 	}
 
 	return true;
@@ -395,9 +395,9 @@ void FOBJModel::BuildVertexBuffer(FModelRenderer *renderer)
 				int uvidx = (curSide.uvref >= 0 && (unsigned int)curSide.uvref < uvs.Size()) ? curSide.uvref : 0;
 				int nidx = curSide.normref;
 
-				Vec3 curVvec = RealignVector(verts[vidx]);
-				Vec2 curUvec = FixUV(uvs[uvidx]);
-				Vec3 nvec;
+				vec3 curVvec = RealignVector(verts[vidx]);
+				vec2 curUvec = FixUV(uvs[uvidx]);
+				vec3 nvec;
 
 				mdv->Set(curVvec.x, curVvec.y, curVvec.z, curUvec.x, curUvec.y);
 
@@ -526,7 +526,7 @@ void FOBJModel::AddVertFaces() {
  * @param vecToRealign The vector to re-align
  * @return The re-aligned vector
  */
-inline Vec3 FOBJModel::RealignVector(Vec3 vecToRealign)
+inline vec3 FOBJModel::RealignVector(vec3 vecToRealign)
 {
 	vecToRealign.z *= -1;
 	return vecToRealign;
@@ -538,7 +538,7 @@ inline Vec3 FOBJModel::RealignVector(Vec3 vecToRealign)
  * @param vecToRealign The vector to fix
  * @return The fixed UV coordinate vector
  */
-inline Vec2 FOBJModel::FixUV(Vec2 vecToRealign)
+inline vec2 FOBJModel::FixUV(vec2 vecToRealign)
 {
 	vecToRealign.y *= -1;
 	return vecToRealign;
@@ -551,7 +551,7 @@ inline Vec2 FOBJModel::FixUV(Vec2 vecToRealign)
  * @param triIdx The triangle Index
  * @return The surface normal vector
  */
-Vec3 FOBJModel::CalculateNormalFlat(unsigned int surfIdx, unsigned int triIdx)
+vec3 FOBJModel::CalculateNormalFlat(unsigned int surfIdx, unsigned int triIdx)
 {
 	// https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
 	int curVert = surfaces[surfIdx].tris[triIdx].sides[0].vertref;
@@ -559,9 +559,9 @@ Vec3 FOBJModel::CalculateNormalFlat(unsigned int surfIdx, unsigned int triIdx)
 	int lastVert = surfaces[surfIdx].tris[triIdx].sides[1].vertref;
 
 	// Cross-multiply the U-vector and V-vector
-	Vec3 curVvec = RealignVector(verts[curVert]);
-	Vec3 uvec = RealignVector(verts[nextVert]) - curVvec;
-	Vec3 vvec = RealignVector(verts[lastVert]) - curVvec;
+	vec3 curVvec = RealignVector(verts[curVert]);
+	vec3 uvec = RealignVector(verts[nextVert]) - curVvec;
+	vec3 vvec = RealignVector(verts[lastVert]) - curVvec;
 
 	return uvec ^ vvec;
 }
@@ -572,7 +572,7 @@ Vec3 FOBJModel::CalculateNormalFlat(unsigned int surfIdx, unsigned int triIdx)
  * @param otr A reference to the surface, and a triangle within that surface, as an OBJTriRef
  * @return The surface normal vector
  */
-Vec3 FOBJModel::CalculateNormalFlat(OBJTriRef otr)
+vec3 FOBJModel::CalculateNormalFlat(OBJTriRef otr)
 {
 	return CalculateNormalFlat(otr.surf, otr.tri);
 }
@@ -583,18 +583,18 @@ Vec3 FOBJModel::CalculateNormalFlat(OBJTriRef otr)
  * @param vidx The index of the vertex in the array of vertices
  * @param smoothGroup The smooth group number
  */
-Vec3 FOBJModel::CalculateNormalSmooth(unsigned int vidx, unsigned int smoothGroup)
+vec3 FOBJModel::CalculateNormalSmooth(unsigned int vidx, unsigned int smoothGroup)
 {
 	unsigned int connectedFaces = 0;
 	TArray<OBJTriRef>& vTris = vertFaces[vidx];
 
-	Vec3 vNormal(0,0,0);
+	vec3 vNormal(0,0,0);
 	for (size_t face = 0; face < vTris.Size(); face++)
 	{
 		OBJFace& tri = surfaces[vTris[face].surf].tris[vTris[face].tri];
 		if (tri.smoothGroup == smoothGroup)
 		{
-			Vec3 fNormal = CalculateNormalFlat(vTris[face]);
+			vec3 fNormal = CalculateNormalFlat(vTris[face]);
 			connectedFaces += 1;
 			vNormal += fNormal;
 		}
