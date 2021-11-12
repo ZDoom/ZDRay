@@ -35,7 +35,7 @@ struct CPUTraceState
 	Surface* StartSurface;
 
 	Vec3 Position;
-	Surface* Surface;
+	Surface* Surf;
 
 	Vec3 Output;
 	float OutputAttenuation;

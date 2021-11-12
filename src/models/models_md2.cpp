@@ -30,10 +30,11 @@
 #include "modelrenderer.h"
 #include "m_swap.h"
 #include <string.h>
+#include <cmath>
 
 namespace
 {
-	const double M_PI = 3.14159265358979323846;	// matches value in gcc v2 math.h
+	const double MM_PI = 3.14159265358979323846;	// matches value in gcc v2 math.h
 }
 
 #ifdef _MSC_VER
@@ -56,13 +57,13 @@ static float   avertexnormals[NUMVERTEXNORMALS][3] = {
 
 static void UnpackVector(unsigned short packed, float vec[3])
 {
-	float   yaw = (packed & 511) / 512.0f * 2 * M_PI;
-	float   pitch = ((packed >> 9) / 127.0f - 0.5f) * M_PI;
-	float   cosp = (float) cos(pitch);
+	float   yaw = (packed & 511) / 512.0f * 2 * MM_PI;
+	float   pitch = ((packed >> 9) / 127.0f - 0.5f) * MM_PI;
+	float   cosp = (float) std::cos(pitch);
 
-	vec[VX] = (float) cos(yaw) * cosp;
-	vec[VY] = (float) sin(yaw) * cosp;
-	vec[VZ] = (float) sin(pitch);
+	vec[VX] = (float) std::cos(yaw) * cosp;
+	vec[VY] = (float) std::sin(yaw) * cosp;
+	vec[VZ] = (float) std::sin(pitch);
 }
 
 

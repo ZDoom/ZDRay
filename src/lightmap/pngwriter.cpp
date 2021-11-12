@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <memory>
 #include <cmath>
+#include <string.h>
 
 void PNGWriter::save(const std::string& filename, int width, int height, int bytes_per_pixel, void* pixels)
 {

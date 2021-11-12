@@ -9,6 +9,7 @@
 
 VulkanDevice::VulkanDevice(int vk_device, bool vk_debug) : vk_device(vk_device), vk_debug(vk_debug)
 {
+	#ifdef WIN32
 	if (HMODULE mod = GetModuleHandle(TEXT("renderdoc.dll")))
 	{
 		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
@@ -16,6 +17,7 @@ VulkanDevice::VulkanDevice(int vk_device, bool vk_debug) : vk_device(vk_device),
 		if (ret != 1)
 			renderdoc = nullptr;
 	}
+	#endif
 
 	try
 	{
@@ -491,8 +493,8 @@ std::vector<const char *> VulkanDevice::getPlatformExtensions()
 {
 	return
 	{
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+		VK_KHR_SURFACE_EXTENSION_NAME/*,
+		VK_KHR_XLIB_SURFACE_EXTENSION_NAME*/
 	};
 }
 #endif

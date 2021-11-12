@@ -1,5 +1,6 @@
 #pragma once
 #include "model.h"
+#include <climits>
 
 #define MD3_MAGIC			0x33504449
 

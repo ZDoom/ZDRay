@@ -29,7 +29,7 @@
 
 namespace
 {
-	const double M_PI = 3.14159265358979323846;	// matches value in gcc v2 math.h
+	const double MM_PI = 3.14159265358979323846;	// matches value in gcc v2 math.h
 }
 
 #define MAX_QPATH 64
@@ -48,8 +48,8 @@ static void UnpackVector(unsigned short packed, float & nx, float & ny, float & 
 {
 	double lat = ( packed >> 8 ) & 0xff;
 	double lng = ( packed & 0xff );
-	lat *= M_PI/128;
-	lng *= M_PI/128;
+	lat *= MM_PI/128;
+	lng *= MM_PI/128;
 
 	nx = std::cos(lat) * std::sin(lng);
 	ny = std::sin(lat) * std::sin(lng);

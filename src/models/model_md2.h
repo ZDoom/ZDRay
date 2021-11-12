@@ -1,5 +1,6 @@
 #pragma once
 #include "model.h"
+#include <climits>
 
 #define MD2_MAGIC			0x32504449
 #define DMD_MAGIC			0x4D444D44

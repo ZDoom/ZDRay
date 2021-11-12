@@ -139,7 +139,7 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 	if (state.PassType == 2)
 	{
 		origin = state.Position;
-		surface = state.Surface;
+		surface = state.Surf;
 	}
 	else
 	{
@@ -220,7 +220,7 @@ void CPURaytracer::RunBounceTrace(CPUTraceState& state)
 	}
 
 	state.Position = origin;
-	state.Surface = surface;
+	state.Surf = surface;
 	state.Output = incoming;
 	state.OutputAttenuation = incomingAttenuation;
 }
@@ -232,7 +232,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 	if (incomingAttenuation <= 0.0f)
 		return;
 
-	Surface* surface = state.Surface;
+	Surface* surface = state.Surf;
 
 	Vec3 origin = state.Position;
 	Vec3 normal;

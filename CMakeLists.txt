@@ -398,6 +398,11 @@ if(MSVC)
 	set_source_files_properties(${THIRDPARTY_SOURCES} PROPERTIES COMPILE_FLAGS "/wd4244 /wd4267 /wd4005 /wd4018 -D_CRT_SECURE_NO_WARNINGS")
 endif()
 
+if (WIN32)
+else()
+set(PLATFORM_LIB "dl")
+endif()
+
 if( CMAKE_COMPILER_IS_GNUCXX )
 	set( ZDRAY_LIBS "${ZLIB_LIBRARIES}" pthread )
 endif( CMAKE_COMPILER_IS_GNUCXX )
@@ -419,7 +424,7 @@ set( CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${REL_C_F
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
 
 add_executable( zdray ${SOURCES} ${HEADERS} ${THIRDPARTY_SOURCES} )
-target_link_libraries( zdray ${ZDRAY_LIBS} ${PROF_LIB} )
+target_link_libraries( zdray ${ZDRAY_LIBS} ${PROF_LIB} ${PLATFORM_LIB} )
 include_directories( src "${ZLIB_INCLUDE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
 
 source_group("Sources" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/.+")
