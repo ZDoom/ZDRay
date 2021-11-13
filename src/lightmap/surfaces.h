@@ -33,6 +33,7 @@
 #include <cstring>
 
 #include "framework/tarray.h"
+#include "framework/halffloat.h"
 #include "lightmap/collision.h"
 
 struct MapSubsectorEx;
@@ -79,53 +80,39 @@ class LightmapTexture
 public:
 	LightmapTexture(int width, int height) : textureWidth(width), textureHeight(height)
 	{
-		mPixels.resize(width * height * 3);
-		allocBlocks.resize(width);
+#ifdef _DEBUG
+		mPixels.resize(width * height * 3, floatToHalf(0.5f));
+#else
+		mPixels.resize(width * height * 3, 0);
+#endif
+		allocBlocks.resize(height);
 	}
 
 	bool MakeRoomForBlock(const int width, const int height, int* x, int* y)
 	{
-		int bestRow1 = textureHeight;
-
-		for (int i = 0; i <= textureWidth - width; i++)
+		int startY = 0;
+		int startX = 0;
+		for (int i = 0; i < textureHeight; i++)
 		{
-			int bestRow2 = 0;
-
-			int j;
-			for (j = 0; j < width; j++)
+			startX = std::max(startX, allocBlocks[i]);
+			int available = textureWidth - startX;
+			if (available < width)
 			{
-				if (allocBlocks[i + j] >= bestRow1)
-				{
-					break;
-				}
-
-				if (allocBlocks[i + j] > bestRow2)
-				{
-					bestRow2 = allocBlocks[i + j];
-				}
+				startY = i + 1;
+				startX = 0;
 			}
-
-			// found a free block
-			if (j == width)
+			else if (i - startY + 1 == height)
 			{
-				*x = i;
-				*y = bestRow1 = bestRow2;
+				for (int yy = 0; yy < height; yy++)
+				{
+					allocBlocks[startY + yy] = startX + width;
+				}
+				*x = startX;
+				*y = startY;
+				return true;
 			}
 		}
-
-		if (bestRow1 + height > textureHeight)
-		{
-			// no room
-			return false;
-		}
-
-		// store row offset
-		for (int i = 0; i < width; i++)
-		{
-			allocBlocks[*x + i] = bestRow1 + height;
-		}
-
-		return true;
+		return false;
 	}
 
 	int Width() const { return textureWidth; }

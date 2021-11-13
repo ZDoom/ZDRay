@@ -246,9 +246,15 @@ BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
 
 void LevelMesh::CreateTextures()
 {
+	std::vector<Surface*> sortedSurfaces;
+	sortedSurfaces.reserve(surfaces.size());
 	for (auto& surf : surfaces)
+		sortedSurfaces.push_back(surf.get());
+	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->lightmapDims[1] > b->lightmapDims[1]; });
+
+	for (Surface* surf : sortedSurfaces)
 	{
-		FinishSurface(surf.get());
+		FinishSurface(surf);
 	}
 }
 
@@ -328,12 +334,12 @@ void LevelMesh::FinishSurface(Surface* surface)
 				color *= 0.5f;
 
 				// get texture offset
-				int offs = (((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+				int offs = ((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
 
 				// convert RGB to bytes
-				currentTexture[offs + x * 3 + 0] = floatToHalf(colorSamples[y * sampleWidth + x].x);
-				currentTexture[offs + x * 3 + 1] = floatToHalf(colorSamples[y * sampleWidth + x].y);
-				currentTexture[offs + x * 3 + 2] = floatToHalf(colorSamples[y * sampleWidth + x].z);
+				currentTexture[offs + x * 3 + 0] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].x, -65000.0f, 65000.0f));
+				currentTexture[offs + x * 3 + 1] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].y, -65000.0f, 65000.0f));
+				currentTexture[offs + x * 3 + 2] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].z, -65000.0f, 65000.0f));
 			}
 		}
 #else
@@ -343,12 +349,12 @@ void LevelMesh::FinishSurface(Surface* surface)
 			for (int j = 0; j < sampleWidth; j++)
 			{
 				// get texture offset
-				int offs = (((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3);
+				int offs = ((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
 
 				// convert RGB to bytes
-				currentTexture[offs + j * 3 + 0] = floatToHalf(colorSamples[i * sampleWidth + j].x);
-				currentTexture[offs + j * 3 + 1] = floatToHalf(colorSamples[i * sampleWidth + j].y);
-				currentTexture[offs + j * 3 + 2] = floatToHalf(colorSamples[i * sampleWidth + j].z);
+				currentTexture[offs + j * 3 + 0] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].x, -65000.0f, 65000.0f));
+				currentTexture[offs + j * 3 + 1] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].y, -65000.0f, 65000.0f));
+				currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, -65000.0f, 65000.0f));
 			}
 		}
 #endif

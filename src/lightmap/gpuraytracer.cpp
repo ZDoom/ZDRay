@@ -280,8 +280,12 @@ void GPURaytracer::SubmitCommands()
 	submit.addCommandBuffer(cmdbuffer.get());
 	submit.execute(device.get(), device->graphicsQueue, submitFence.get());
 
-	vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device->device, 1, &submitFence->fence);
+	VkResult result = vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+	if (result != VK_SUCCESS)
+		throw std::runtime_error("vkWaitForFences failed");
+	result = vkResetFences(device->device, 1, &submitFence->fence);
+	if (result != VK_SUCCESS)
+		throw std::runtime_error("vkResetFences failed");
 	cmdbuffer.reset();
 }
 
