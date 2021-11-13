@@ -222,7 +222,7 @@ void GPURaytracer::UploadTasks(const TraceTask* tasks, size_t size)
 void GPURaytracer::BeginTracing()
 {
 	uniformsIndex = 0;
-	mappedUniforms = (Uniforms*)uniformTransferBuffer->Map(0, uniformStructs * sizeof(Uniforms));
+	mappedUniforms = (uint8_t*)uniformTransferBuffer->Map(0, uniformStructs * uniformStructStride);
 
 	cmdbuffer->copyBuffer(uniformTransferBuffer.get(), uniformBuffer.get());
 	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline.get());
@@ -236,7 +236,7 @@ void GPURaytracer::RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddre
 		BeginTracing();
 	}
 
-	mappedUniforms[uniformsIndex] = uniforms;
+	*reinterpret_cast<Uniforms*>(mappedUniforms + uniformStructStride * uniformsIndex) = uniforms;
 
 	if (uniformsIndex == 0)
 	{
@@ -252,7 +252,7 @@ void GPURaytracer::RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddre
 		barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 	}
 
-	uint32_t offset = (uint32_t)(uniformsIndex * sizeof(Uniforms));
+	uint32_t offset = (uint32_t)(uniformsIndex * uniformStructStride);
 	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get(), 1, &offset);
 	cmdbuffer->traceRays(&rgenShader, &missRegion, &hitRegion, &callRegion, rayTraceImageSize, rayTraceImageSize, 1);
 
@@ -809,15 +809,18 @@ void GPURaytracer::CreatePipeline()
 
 void GPURaytracer::CreateDescriptorSet()
 {
+	VkDeviceSize align = device->physicalDevice.properties.limits.minUniformBufferOffsetAlignment;
+	uniformStructStride = (sizeof(Uniforms) + align - 1) / align * align;
+
 	BufferBuilder uniformbuilder;
 	uniformbuilder.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-	uniformbuilder.setSize(uniformStructs * sizeof(Uniforms));
+	uniformbuilder.setSize(uniformStructs * uniformStructStride);
 	uniformBuffer = uniformbuilder.create(device.get());
 	uniformBuffer->SetDebugName("uniformBuffer");
 
 	BufferBuilder uniformtransferbuilder;
 	uniformtransferbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	uniformtransferbuilder.setSize(uniformStructs * sizeof(Uniforms));
+	uniformtransferbuilder.setSize(uniformStructs * uniformStructStride);
 	uniformTransferBuffer = uniformtransferbuilder.create(device.get());
 	uniformTransferBuffer->SetDebugName("uniformTransferBuffer");
 

@@ -83,13 +83,14 @@ private:
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;
-	const int uniformStructs = 256;
 	int rayTraceImageSize = 1024;
 
 	LevelMesh* mesh = nullptr;
 
-	Uniforms* mappedUniforms = nullptr;
+	uint8_t* mappedUniforms = nullptr;
 	int uniformsIndex = 0;
+	int uniformStructs = 256;
+	VkDeviceSize uniformStructStride = sizeof(Uniforms);
 
 	std::unique_ptr<VulkanDevice> device;
 
