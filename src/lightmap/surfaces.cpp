@@ -171,17 +171,17 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	}
 
 	// clamp width
-	if (width > textureWidth)
+	if (width > textureWidth - 2)
 	{
-		tCoords[0] *= ((float)textureWidth / (float)width);
-		width = textureWidth;
+		tCoords[0] *= ((float)(textureWidth - 2) / (float)width);
+		width = (textureWidth - 2);
 	}
 
 	// clamp height
-	if (height > textureHeight)
+	if (height > textureHeight - 2)
 	{
-		tCoords[1] *= ((float)textureHeight / (float)height);
-		height = textureHeight;
+		tCoords[1] *= ((float)(textureHeight - 2) / (float)height);
+		height = (textureHeight - 2);
 	}
 
 	surface->lightmapCoords.resize(surface->numVerts * 2);
@@ -250,7 +250,7 @@ void LevelMesh::CreateTextures()
 	sortedSurfaces.reserve(surfaces.size());
 	for (auto& surf : surfaces)
 		sortedSurfaces.push_back(surf.get());
-	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->lightmapDims[1] > b->lightmapDims[1]; });
+	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->lightmapDims[1] < b->lightmapDims[1]; });
 
 	for (Surface* surf : sortedSurfaces)
 	{
@@ -299,7 +299,11 @@ void LevelMesh::FinishSurface(Surface* surface)
 	else
 	{
 		int x = 0, y = 0;
-		uint16_t* currentTexture = AllocTextureRoom(surface, &x, &y);
+		surface->lightmapNum = AllocTextureRoom(sampleWidth + 2, sampleHeight + 2, &x, &y);
+		x++;
+		y++;
+
+		uint16_t* currentTexture = textures[surface->lightmapNum]->Pixels();
 
 		// calculate texture coordinates
 		for (int i = 0; i < surface->numVerts; i++)
@@ -361,10 +365,8 @@ void LevelMesh::FinishSurface(Surface* surface)
 	}
 }
 
-uint16_t* LevelMesh::AllocTextureRoom(Surface* surface, int* x, int* y)
+int LevelMesh::AllocTextureRoom(int width, int height, int* x, int* y)
 {
-	int width = surface->lightmapDims[0];
-	int height = surface->lightmapDims[1];
 	int numTextures = textures.size();
 
 	int k;
@@ -385,8 +387,7 @@ uint16_t* LevelMesh::AllocTextureRoom(Surface* surface, int* x, int* y)
 		}
 	}
 
-	surface->lightmapNum = k;
-	return textures[surface->lightmapNum]->Pixels();
+	return k;
 }
 
 void LevelMesh::CreateLightProbes(FLevel& map)

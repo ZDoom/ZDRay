@@ -85,7 +85,7 @@ public:
 #else
 		mPixels.resize(width * height * 3, 0);
 #endif
-		allocBlocks.resize(height);
+		allocBlocks.resize(width);
 	}
 
 	bool MakeRoomForBlock(const int width, const int height, int* x, int* y)
@@ -168,7 +168,7 @@ private:
 	void BuildSurfaceParams(Surface* surface);
 	BBox GetBoundsFromSurface(const Surface* surface);
 	void FinishSurface(Surface* surface);
-	uint16_t* AllocTextureRoom(Surface* surface, int* x, int* y);
+	int AllocTextureRoom(int width, int height, int* x, int* y);
 
 	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);
 };
