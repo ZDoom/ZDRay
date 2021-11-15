@@ -30,7 +30,7 @@
 #include "framework/halffloat.h"
 #include "framework/binfile.h"
 #include "level/level.h"
-#include "surfaces.h"
+#include "levelmesh.h"
 #include "pngwriter.h"
 #include <map>
 

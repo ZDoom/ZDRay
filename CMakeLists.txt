@@ -124,27 +124,46 @@ set( SOURCES
 	src/main.cpp
 	src/commandline/getopt.c
 	src/commandline/getopt1.c
+	src/commandline/getopt.h
 	src/framework/halffloat.cpp
 	src/framework/binfile.cpp
 	src/framework/zstring.cpp
 	src/framework/zstrformat.cpp
 	src/framework/utf8.cpp
 	src/framework/utf8.h
+	src/framework/tarray.h
+	src/framework/templates.h
+	src/framework/zdray.h
+	src/framework/xs_Float.h
+	src/framework/halffloat.h
+	src/framework/binfile.h
 	src/blockmapbuilder/blockmapbuilder.cpp
+	src/blockmapbuilder/blockmapbuilder.h
 	src/level/level.cpp
 	src/level/level_udmf.cpp
 	src/level/level_light.cpp
+	src/level/doomdata.h
+	src/level/level.h
+	src/level/workdata.h
 	src/parse/sc_man.cpp
+	src/parse/sc_man.h
 	src/wad/wad.cpp
+	src/wad/wad.h
 	src/nodebuilder/nodebuild.cpp
 	src/nodebuilder/nodebuild_events.cpp
 	src/nodebuilder/nodebuild_extract.cpp
 	src/nodebuilder/nodebuild_gl.cpp
 	src/nodebuilder/nodebuild_utility.cpp
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
+	src/nodebuilder/nodebuild.h
 	src/lightmap/pngwriter.cpp
-	src/lightmap/surfaces.cpp
+	src/lightmap/pngwriter.h
+	src/lightmap/levelmesh.cpp
+	src/lightmap/levelmesh.h
+	src/lightmap/lightmaptexture.cpp
+	src/lightmap/lightmaptexture.h
 	src/lightmap/collision.cpp
+	src/lightmap/collision.h
 	src/lightmap/delauneytriangulator.cpp
 	src/lightmap/delauneytriangulator.h
 	src/lightmap/vulkandevice.cpp
@@ -171,6 +190,10 @@ set( SOURCES
 	src/math/angle.cpp
 	src/math/bounds.cpp
 	src/math/mathlib.cpp
+	src/math/mat.h
+	src/math/quaternion.h
+	src/math/vec.h
+	src/math/mathlib.h
 	src/models/model.cpp
 	src/models/model.h
 	src/models/model_md2.h
@@ -183,31 +206,7 @@ set( SOURCES
 	src/models/models_obj.cpp
 	src/models/models_ue1.cpp
 	src/models/tab_anorms.h
-)
-
-set( HEADERS
-	src/commandline/getopt.h
-	src/blockmapbuilder/blockmapbuilder.h
-	src/nodebuilder/nodebuild.h
-	src/level/doomdata.h
-	src/level/level.h
-	src/level/workdata.h
-	src/parse/sc_man.h
-	src/wad/wad.h
 	src/platform/windows/resource.h
-	src/framework/tarray.h
-	src/framework/templates.h
-	src/framework/zdray.h
-	src/framework/xs_Float.h
-	src/framework/halffloat.h
-	src/framework/binfile.h
-	src/lightmap/pngwriter.h
-	src/lightmap/surfaces.h
-	src/lightmap/collision.h
-	src/math/mat.h
-	src/math/quaternion.h
-	src/math/vec.h
-	src/math/mathlib.h
 )
 
 set(THIRDPARTY_SOURCES
@@ -412,7 +411,7 @@ set( CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} ${REL_C_FLAGS}" )
 set( CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${REL_C_FLAGS}" )
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
 
-add_executable( zdray ${SOURCES} ${HEADERS} ${THIRDPARTY_SOURCES} )
+add_executable( zdray ${SOURCES} ${THIRDPARTY_SOURCES} )
 target_link_libraries( zdray ${ZDRAY_LIBS} ${PROF_LIB} ${PLATFORM_LIB} )
 include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
 

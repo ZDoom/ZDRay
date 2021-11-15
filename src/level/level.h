@@ -7,7 +7,7 @@
 #include "framework/tarray.h"
 #include "nodebuilder/nodebuild.h"
 #include "blockmapbuilder/blockmapbuilder.h"
-#include "lightmap/surfaces.h"
+#include "lightmap/levelmesh.h"
 #include <miniz/miniz.h>
 
 #define DEFINE_SPECIAL(name, num, min, max, map) name = num,

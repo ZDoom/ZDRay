@@ -1,6 +1,6 @@
 
 #include "math/mathlib.h"
-#include "surfaces.h"
+#include "levelmesh.h"
 #include "level/level.h"
 #include "cpuraytracer.h"
 #include "framework/binfile.h"
