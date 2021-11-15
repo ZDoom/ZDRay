@@ -10,6 +10,8 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
+#include <condition_variable>
+#include <atomic>
 
 extern bool VKDebug;
 extern int NumThreads;
@@ -491,17 +493,41 @@ void CPURaytracer::RunJob(int count, std::function<void(int)> callback)
 
 	numThreads = std::min(numThreads, count);
 
+	std::condition_variable condvar;
+	std::mutex m;
+	int threadsleft = 0;
+
+	{
+		std::unique_lock<std::mutex> lock(m);
+		threadsleft = numThreads;
+	}
+
 	std::vector<std::thread> threads;
 	for (int threadIndex = 0; threadIndex < numThreads; threadIndex++)
 	{
-		threads.push_back(std::thread([=]() {
+		threads.push_back(std::thread([&]() {
 
 			for (int i = threadIndex; i < count; i += numThreads)
 			{
 				callback(i);
 			}
 
+			std::unique_lock<std::mutex> lock(m);
+			threadsleft--;
+			lock.unlock();
+			condvar.notify_all();
+
 		}));
+	}
+
+	{
+		std::unique_lock<std::mutex> lock(m);
+		while (threadsleft != 0)
+		{
+			condvar.wait_for(lock, std::chrono::milliseconds(500), [&]() { return threadsleft == 0; });
+			printf(".");
+		}
+		printf("\n");
 	}
 
 	for (int i = 0; i < numThreads; i++)
