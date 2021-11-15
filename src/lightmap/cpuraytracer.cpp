@@ -3,16 +3,17 @@
 #include "surfaces.h"
 #include "level/level.h"
 #include "cpuraytracer.h"
-#include "worker.h"
 #include "framework/binfile.h"
 #include "framework/templates.h"
 #include "framework/halffloat.h"
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <thread>
 #include <zlib.h>
 
 extern bool VKDebug;
+extern int NumThreads;
 
 CPURaytracer::CPURaytracer()
 {
@@ -60,7 +61,7 @@ void CPURaytracer::Raytrace(LevelMesh* level)
 
 	printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
 
-	Worker::RunJob((int)tasks.size(), [=](int id) { RaytraceTask(tasks[id]); });
+	RunJob((int)tasks.size(), [=](int id) { RaytraceTask(tasks[id]); });
 
 	printf("\nRaytrace complete\n");
 }
@@ -479,4 +480,31 @@ LevelTraceHit CPURaytracer::Trace(const vec3& startVec, const vec3& endVec)
 bool CPURaytracer::TraceAnyHit(const vec3& startVec, const vec3& endVec)
 {
 	return TriangleMeshShape::find_any_hit(CollisionMesh.get(), startVec, endVec);
+}
+
+void CPURaytracer::RunJob(int count, std::function<void(int)> callback)
+{
+	int numThreads = NumThreads;
+	if (numThreads <= 0)
+		numThreads = std::thread::hardware_concurrency();
+	if (numThreads <= 0)
+		numThreads = 4;
+
+	numThreads = std::min(numThreads, count);
+
+	std::vector<std::thread> threads;
+	for (int threadIndex = 0; threadIndex < numThreads; threadIndex++)
+	{
+		threads.push_back(std::thread([=]() {
+
+			for (int i = threadIndex; i < count; i += numThreads)
+			{
+				callback(i);
+			}
+
+		}));
+	}
+
+	for (int i = 0; i < numThreads; i++)
+		threads[i].join();
 }

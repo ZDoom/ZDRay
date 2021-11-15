@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <functional>
+
 class LevelMesh;
 
 struct CPUTraceTask
@@ -86,6 +88,8 @@ private:
 
 	static float RadicalInverse_VdC(uint32_t bits);
 	static vec2 Hammersley(uint32_t i, uint32_t N);
+
+	static void RunJob(int count, std::function<void(int i)> callback);
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;

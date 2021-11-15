@@ -3,7 +3,6 @@
 #include "surfaces.h"
 #include "level/level.h"
 #include "gpuraytracer.h"
-#include "worker.h"
 #include "framework/binfile.h"
 #include "framework/templates.h"
 #include "framework/halffloat.h"

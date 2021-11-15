@@ -156,7 +156,6 @@ set( SOURCES
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
 	src/lightmap/pngwriter.cpp
 	src/lightmap/surfaces.cpp
-	src/lightmap/worker.cpp
 	src/lightmap/collision.cpp
 	src/lightmap/delauneytriangulator.cpp
 	src/lightmap/delauneytriangulator.h
@@ -216,7 +215,6 @@ set( HEADERS
 	src/framework/binfile.h
 	src/lightmap/pngwriter.h
 	src/lightmap/surfaces.h
-	src/lightmap/worker.h
 	src/lightmap/collision.h
 	src/math/mat.h
 	src/math/quaternion.h
