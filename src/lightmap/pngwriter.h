@@ -74,5 +74,5 @@ private:
 	void write_data();
 	void write_chunk(const char name[4], const void* data, int size);
 	void write(const void* data, int size);
-	size_t compress(DataBuffer* out, const DataBuffer* data, bool raw);
+	size_t compressdata(DataBuffer* out, const DataBuffer* data, bool raw);
 };

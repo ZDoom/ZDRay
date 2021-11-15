@@ -11,7 +11,6 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
-#include <zlib.h>
 #include "glsl_rgen_bounce.h"
 #include "glsl_rgen_light.h"
 #include "glsl_rchit_bounce.h"

@@ -40,6 +40,11 @@
 #include "zstring.h"
 #include "utf8.h"
 
+#ifdef _MSC_VER
+// This FString class came from a newer GZD that uses size_t, while TArray and friends still use int in the older zdbsp codebase.
+#pragma warning(disable: 4267) // warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+#endif
+
 extern uint16_t lowerforupper[65536];
 extern uint16_t upperforlower[65536];
 

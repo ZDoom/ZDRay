@@ -55,8 +55,6 @@ if( CMAKE_COMPILER_IS_GNUCXX )
 	set( PROFILE 0 CACHE INT "1=Generate profile coverage info, 2=Use it" )
 endif( CMAKE_COMPILER_IS_GNUCXX )
 
-find_package( ZLIB )
-
 if( MSVC )
 	# Eliminate unreferenced functions and data
 	# Perform identical COMDAT folding
@@ -107,16 +105,6 @@ endif( CMAKE_COMPILER_IS_GNUCXX )
 #	set( ALL_C_FLAGS "${ALL_C_FLAGS} -Wno-deprecated-declarations -Wno-format" )
 #endif( WIN32 AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 
-if( ZLIB_FOUND )
-	message( STATUS "Using system zlib" )
-else( ZLIB_FOUND )
-	message( STATUS "Using internal zlib" )
-	add_subdirectory( zlib )
-	set( ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/zlib )
-	set( ZLIB_LIBRARIES z )
-	set( ZLIB_LIBRARY z )
-endif( ZLIB_FOUND )
-
 if( BACKPATCH )
 	add_definitions( -DBACKPATCH )
 endif( BACKPATCH )
@@ -131,7 +119,7 @@ if( NOT STRNICMP_EXISTS )
 	add_definitions( -Dstrnicmp=strncasecmp )
 endif( NOT STRNICMP_EXISTS )
 
-set( ZDRAY_LIBS "${ZLIB_LIBRARIES}" )
+set( ZDRAY_LIBS "" )
 set( SOURCES
 	src/main.cpp
 	src/commandline/getopt.c
@@ -223,6 +211,8 @@ set( HEADERS
 )
 
 set(THIRDPARTY_SOURCES
+	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.h
+	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.c
 	${CMAKE_SOURCE_DIR}/thirdparty/vk_mem_alloc/vk_mem_alloc.h
 	${CMAKE_SOURCE_DIR}/thirdparty/vk_mem_alloc/vk_mem_alloc.cpp
 	${CMAKE_SOURCE_DIR}/thirdparty/volk/volk.c
@@ -403,7 +393,7 @@ set(PLATFORM_LIB "-ldl -lpthread")
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCXX )
-	set( ZDRAY_LIBS "${ZLIB_LIBRARIES}" pthread )
+	set( ZDRAY_LIBS pthread )
 endif( CMAKE_COMPILER_IS_GNUCXX )
 
 set( CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${REL_LINKER_FLAGS}" )
@@ -424,7 +414,7 @@ set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
 
 add_executable( zdray ${SOURCES} ${HEADERS} ${THIRDPARTY_SOURCES} )
 target_link_libraries( zdray ${ZDRAY_LIBS} ${PROF_LIB} ${PLATFORM_LIB} )
-include_directories( src "${ZLIB_INCLUDE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
+include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
 
 source_group("Sources" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/.+")
 source_group("Sources\\BlockmapBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/blockmapbuilder/.+")
@@ -445,3 +435,4 @@ source_group("thirdparty\\ShaderCompiler" REGULAR_EXPRESSION "${CMAKE_CURRENT_SO
 source_group("thirdparty\\vk_mem_alloc" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vk_mem_alloc/.+")
 source_group("thirdparty\\volk" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/volk/.+")
 source_group("thirdparty\\vulkan" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vulkan/.+")
+source_group("thirdparty\\miniz" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/miniz/.+")

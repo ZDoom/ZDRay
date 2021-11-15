@@ -10,7 +10,6 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-#include <zlib.h>
 
 extern bool VKDebug;
 extern int NumThreads;

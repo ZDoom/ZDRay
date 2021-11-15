@@ -7,7 +7,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <zlib.h>
+#include <miniz/miniz.h>
 #include <stdexcept>
 #include <memory>
 #include <cmath>
@@ -142,7 +142,7 @@ void PNGWriter::write_data()
 	}
 
 	auto idat = std::make_unique<DataBuffer>(idat_uncompressed->size * 125 / 100);
-	idat->size = (int)compress(idat.get(), idat_uncompressed.get(), false);
+	idat->size = (int)compressdata(idat.get(), idat_uncompressed.get(), false);
 
 	write_chunk("IDAT", idat->data, (int)idat->size);
 }
@@ -174,7 +174,7 @@ void PNGWriter::write(const void *data, int size)
 	fwrite(data, size, 1, file);
 }
 
-size_t PNGWriter::compress(DataBuffer *out, const DataBuffer *data, bool raw)
+size_t PNGWriter::compressdata(DataBuffer *out, const DataBuffer *data, bool raw)
 {
 	if (data->size > (size_t)0xffffffff || out->size > (size_t)0xffffffff)
 		throw std::runtime_error("Data is too big");
