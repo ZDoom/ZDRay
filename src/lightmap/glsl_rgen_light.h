@@ -22,7 +22,7 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint SampleIndex;
 	uint SampleCount;
 	uint PassType;
-	uint LightCount;
+	uint Padding0;
 	vec3 SunDir;
 	float SampleDistance;
 	vec3 SunColor;
@@ -58,6 +58,13 @@ struct LightInfo
 layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
 layout(set = 0, binding = 7) buffer LightBuffer { LightInfo lights[]; };
 
+layout(push_constant) uniform PushConstants
+{
+	uint LightStart;
+	uint LightEnd;
+	ivec2 pushPadding;
+};
+
 vec2 Hammersley(uint i, uint N);
 float RadicalInverse_VdC(uint bits);
 
@@ -80,7 +87,7 @@ void main()
 
 	const float minDistance = 0.01;
 
-	// Sun light
+	if (LightStart == 0) // Sun light
 	{
 		const float dist = 32768.0;
 
@@ -109,7 +116,7 @@ void main()
 		incoming.rgb += SunColor * (attenuation * SunIntensity * incoming.w);
 	}
 
-	for (uint j = 0; j < LightCount; j++)
+	for (uint j = LightStart; j < LightEnd; j++)
 	{
 		LightInfo light = lights[j];
 

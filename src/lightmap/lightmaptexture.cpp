@@ -1,5 +1,6 @@
 
 #include "lightmaptexture.h"
+#include "framework/halffloat.h"
 #include <algorithm>
 
 LightmapTexture::LightmapTexture(int width, int height) : textureWidth(width), textureHeight(height)

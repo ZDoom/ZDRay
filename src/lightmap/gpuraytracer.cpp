@@ -99,7 +99,6 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 			Uniforms uniforms = {};
 			uniforms.SampleDistance = (float)mesh->samples;
-			uniforms.LightCount = mesh->map->ThingLights.Size();
 			uniforms.SunDir = mesh->map->GetSunDirection();
 			uniforms.SunColor = mesh->map->GetSunColor();
 			uniforms.SunIntensity = 1.0f;
@@ -110,7 +109,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 			RunTrace(uniforms, rgenBounceRegion);
 
 			uniforms.SampleCount = coverageSampleCount;
-			RunTrace(uniforms, rgenLightRegion);
+			RunTrace(uniforms, rgenLightRegion, 0, mesh->map->ThingLights.Size());
 
 			for (uint32_t i = 0; i < (uint32_t)bounceSampleCount; i++)
 			{
@@ -123,7 +122,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 				for (int bounce = 0; bounce < mesh->map->LightBounce; bounce++)
 				{
 					uniforms.SampleCount = coverageSampleCount;
-					RunTrace(uniforms, rgenLightRegion);
+					RunTrace(uniforms, rgenLightRegion, 0, mesh->map->ThingLights.Size());
 
 					uniforms.PassType = 2;
 					uniforms.SampleIndex = (i + bounce) % uniforms.SampleCount;
@@ -230,7 +229,7 @@ void GPURaytracer::BeginTracing()
 	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline.get());
 }
 
-void GPURaytracer::RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader)
+void GPURaytracer::RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader, int lightStart, int lightEnd)
 {
 	if (uniformsIndex == uniformStructs)
 	{
@@ -240,25 +239,42 @@ void GPURaytracer::RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddre
 
 	*reinterpret_cast<Uniforms*>(mappedUniforms + uniformStructStride * uniformsIndex) = uniforms;
 
+	uint32_t offset = (uint32_t)(uniformsIndex * uniformStructStride);
+	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get(), 1, &offset);
+
+	bool needbarrier = true;
 	if (uniformsIndex == 0)
 	{
 		PipelineBarrier barrier;
 		barrier.addBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 		barrier.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 		barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+		needbarrier = false;
 	}
-	else
-	{
-		PipelineBarrier barrier;
-		barrier.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-		barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
-	}
-
-	uint32_t offset = (uint32_t)(uniformsIndex * uniformStructStride);
-	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout.get(), 0, descriptorSet.get(), 1, &offset);
-	cmdbuffer->traceRays(&rgenShader, &missRegion, &hitRegion, &callRegion, rayTraceImageSize, rayTraceImageSize, 1);
-
 	uniformsIndex++;
+
+	const int maxLights = 50;
+
+	do
+	{
+		int count = std::min(lightEnd - lightStart, maxLights);
+
+		if (needbarrier)
+		{
+			PipelineBarrier barrier;
+			barrier.addImage(positionsImage.get(), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+			barrier.execute(cmdbuffer.get(), VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+		}
+
+		PushConstants constants = {};
+		constants.LightStart = lightStart;
+		constants.LightEnd = lightStart + count;
+		cmdbuffer->pushConstants(pipelineLayout.get(), VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, (uint32_t)sizeof(PushConstants), &constants);
+		cmdbuffer->traceRays(&rgenShader, &missRegion, &hitRegion, &callRegion, rayTraceImageSize, rayTraceImageSize, 1);
+
+		needbarrier = true;
+		lightStart += count;
+	} while (lightStart < lightEnd);
 }
 
 void GPURaytracer::EndTracing()
@@ -708,6 +724,7 @@ void GPURaytracer::CreatePipeline()
 
 	PipelineLayoutBuilder layoutbuilder;
 	layoutbuilder.addSetLayout(descriptorSetLayout.get());
+	layoutbuilder.addPushConstantRange(VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, sizeof(PushConstants));
 	pipelineLayout = layoutbuilder.create(device.get());
 	pipelineLayout->SetDebugName("pipelineLayout");
 

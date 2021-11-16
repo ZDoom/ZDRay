@@ -11,13 +11,20 @@ struct Uniforms
 	uint32_t SampleIndex;
 	uint32_t SampleCount;
 	uint32_t PassType;
-	uint32_t LightCount;
+	uint32_t Padding0;
 	vec3 SunDir;
 	float SampleDistance;
 	vec3 SunColor;
 	float SunIntensity;
 	vec3 HemisphereVec;
 	float Padding1;
+};
+
+struct PushConstants
+{
+	uint32_t LightStart;
+	uint32_t LightEnd;
+	ivec2 pushPadding;
 };
 
 struct SurfaceInfo
@@ -71,7 +78,7 @@ private:
 
 	void UploadTasks(const TraceTask* tasks, size_t size);
 	void BeginTracing();
-	void RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader);
+	void RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader, int lightStart = 0, int lightEnd = 0);
 	void EndTracing();
 	void DownloadTasks(const TraceTask* tasks, size_t size);
 	void SubmitCommands();

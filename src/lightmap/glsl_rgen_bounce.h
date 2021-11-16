@@ -22,7 +22,7 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint SampleIndex;
 	uint SampleCount;
 	uint PassType;
-	uint LightCount;
+	uint Padding0;
 	vec3 SunDir;
 	float SampleDistance;
 	vec3 SunColor;
@@ -42,6 +42,13 @@ struct SurfaceInfo
 };
 
 layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
+
+layout(push_constant) uniform PushConstants
+{
+	uint LightStart;
+	uint LightEnd;
+	ivec2 pushPadding;
+};
 
 vec3 ImportanceSample(vec3 N);
 
