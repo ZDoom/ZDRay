@@ -92,6 +92,7 @@ private:
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;
+	const int ambientSampleCount = 2048;
 	int rayTraceImageSize = 1024;
 
 	LevelMesh* mesh = nullptr;
@@ -120,9 +121,9 @@ private:
 	std::unique_ptr<VulkanBuffer> tlAccelStructBuffer;
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
 
-	std::unique_ptr<VulkanShader> rgenBounce, rgenLight;
-	std::unique_ptr<VulkanShader> rmissBounce, rmissLight, rmissSun;
-	std::unique_ptr<VulkanShader> rchitBounce, rchitLight, rchitSun;
+	std::unique_ptr<VulkanShader> rgenBounce, rgenLight, rgenAmbient;
+	std::unique_ptr<VulkanShader> rmissBounce, rmissLight, rmissSun, rmissAmbient;
+	std::unique_ptr<VulkanShader> rchitBounce, rchitLight, rchitSun, rchitAmbient;
 
 	std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
 
@@ -131,7 +132,7 @@ private:
 	std::unique_ptr<VulkanBuffer> shaderBindingTable;
 	std::unique_ptr<VulkanBuffer> sbtTransferBuffer;
 
-	VkStridedDeviceAddressRegionKHR rgenBounceRegion = {}, rgenLightRegion = {};
+	VkStridedDeviceAddressRegionKHR rgenBounceRegion = {}, rgenLightRegion = {}, rgenAmbientRegion = {};
 	VkStridedDeviceAddressRegionKHR missRegion = {};
 	VkStridedDeviceAddressRegionKHR hitRegion = {};
 	VkStridedDeviceAddressRegionKHR callRegion = {};

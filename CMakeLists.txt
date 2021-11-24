@@ -178,11 +178,14 @@ set( SOURCES
 	src/lightmap/glsl_rchit_bounce.h
 	src/lightmap/glsl_rchit_light.h
 	src/lightmap/glsl_rchit_sun.h
+	src/lightmap/glsl_rchit_ambient.h
 	src/lightmap/glsl_rgen_bounce.h
 	src/lightmap/glsl_rgen_light.h
+	src/lightmap/glsl_rgen_ambient.h
 	src/lightmap/glsl_rmiss_bounce.h
 	src/lightmap/glsl_rmiss_light.h
 	src/lightmap/glsl_rmiss_sun.h
+	src/lightmap/glsl_rmiss_ambient.h
 	src/lightmap/cpuraytracer.cpp
 	src/lightmap/cpuraytracer.h
 	src/math/mat.cpp

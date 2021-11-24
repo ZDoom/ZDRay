@@ -15,12 +15,15 @@
 #include <mutex>
 #include "glsl_rgen_bounce.h"
 #include "glsl_rgen_light.h"
+#include "glsl_rgen_ambient.h"
 #include "glsl_rchit_bounce.h"
 #include "glsl_rchit_light.h"
 #include "glsl_rchit_sun.h"
+#include "glsl_rchit_ambient.h"
 #include "glsl_rmiss_bounce.h"
 #include "glsl_rmiss_light.h"
 #include "glsl_rmiss_sun.h"
+#include "glsl_rmiss_ambient.h"
 
 extern bool VKDebug;
 
@@ -131,6 +134,11 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 					RunTrace(uniforms, rgenBounceRegion);
 				}
 			}
+
+			uniforms.PassType = 0;
+			uniforms.SampleIndex = 0;
+			uniforms.SampleCount = ambientSampleCount;
+			RunTrace(uniforms, rgenAmbientRegion);
 
 			EndTracing();
 			DownloadTasks(tasks.data() + startTask, numTasks);
@@ -652,12 +660,15 @@ void GPURaytracer::CreateShaders()
 {
 	rgenBounce = CompileRayGenShader(glsl_rgen_bounce, "rgen.bounce");
 	rgenLight = CompileRayGenShader(glsl_rgen_light, "rgen.light");
+	rgenAmbient = CompileRayGenShader(glsl_rgen_ambient, "rgen.ambient");
 	rchitBounce = CompileClosestHitShader(glsl_rchit_bounce, "rchit.bounce");
 	rchitLight = CompileClosestHitShader(glsl_rchit_light, "rchit.light");
 	rchitSun = CompileClosestHitShader(glsl_rchit_sun, "rchit.sun");
+	rchitAmbient = CompileClosestHitShader(glsl_rchit_ambient, "rchit.ambient");
 	rmissBounce = CompileMissShader(glsl_rmiss_bounce, "rmiss.bounce");
 	rmissLight = CompileMissShader(glsl_rmiss_light, "rmiss.light");
 	rmissSun = CompileMissShader(glsl_rmiss_sun, "rmiss.sun");
+	rmissAmbient = CompileMissShader(glsl_rmiss_ambient, "rmiss.ambient");
 }
 
 std::unique_ptr<VulkanShader> GPURaytracer::CompileRayGenShader(const char* code, const char* name)
@@ -733,20 +744,26 @@ void GPURaytracer::CreatePipeline()
 	builder.setMaxPipelineRayRecursionDepth(1);
 	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, rgenBounce.get());
 	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, rgenLight.get());
+	builder.addShader(VK_SHADER_STAGE_RAYGEN_BIT_KHR, rgenAmbient.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissBounce.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissLight.get());
 	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissSun.get());
+	builder.addShader(VK_SHADER_STAGE_MISS_BIT_KHR, rmissAmbient.get());
 	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, rchitBounce.get());
 	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, rchitLight.get());
 	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, rchitSun.get());
+	builder.addShader(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, rchitAmbient.get());
 	builder.addRayGenGroup(0);
 	builder.addRayGenGroup(1);
-	builder.addMissGroup(2);
+	builder.addRayGenGroup(2);
 	builder.addMissGroup(3);
 	builder.addMissGroup(4);
-	builder.addTrianglesHitGroup(5);
-	builder.addTrianglesHitGroup(6);
+	builder.addMissGroup(5);
+	builder.addMissGroup(6);
 	builder.addTrianglesHitGroup(7);
+	builder.addTrianglesHitGroup(8);
+	builder.addTrianglesHitGroup(9);
+	builder.addTrianglesHitGroup(10);
 	pipeline = builder.create(device.get());
 	pipeline->SetDebugName("pipeline");
 
@@ -760,20 +777,15 @@ void GPURaytracer::CreatePipeline()
 			return value;
 	};
 
-	VkDeviceSize raygenCount = 2;
-	VkDeviceSize missCount = 3;
-	VkDeviceSize hitCount = 3;
+	VkDeviceSize raygenCount = 3;
+	VkDeviceSize missCount = 4;
+	VkDeviceSize hitCount = 4;
 
 	VkDeviceSize handleSize = rtProperties.shaderGroupHandleSize;
 	VkDeviceSize handleSizeAligned = align_up(handleSize, rtProperties.shaderGroupHandleAlignment);
 
 	VkDeviceSize rgenStride = align_up(handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
 	VkDeviceSize rgenSize = rgenStride * raygenCount;
-
-	rgenBounceRegion.stride = rgenStride;
-	rgenBounceRegion.size = rgenStride;
-	rgenLightRegion.stride = rgenStride;
-	rgenLightRegion.size = rgenStride;
 
 	missRegion.stride = handleSizeAligned;
 	missRegion.size = align_up(missCount * handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
@@ -823,8 +835,14 @@ void GPURaytracer::CreatePipeline()
 	info.buffer = shaderBindingTable->buffer;
 	VkDeviceAddress sbtAddress = vkGetBufferDeviceAddress(device->device, &info);
 
-	rgenBounceRegion.deviceAddress = sbtAddress + rgenOffset;
-	rgenLightRegion.deviceAddress = sbtAddress + rgenOffset + rgenStride;
+	int i = 0;
+	for (VkStridedDeviceAddressRegionKHR* region : { &rgenBounceRegion, &rgenLightRegion, &rgenAmbientRegion })
+	{
+		region->stride = rgenStride;
+		region->size = rgenStride;
+		region->deviceAddress = sbtAddress + rgenOffset + rgenStride * i;
+		i++;
+	}
 	missRegion.deviceAddress = sbtAddress + missOffset;
 	hitRegion.deviceAddress = sbtAddress + hitOffset;
 }
