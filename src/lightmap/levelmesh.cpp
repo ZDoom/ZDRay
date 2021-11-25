@@ -135,10 +135,10 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	// round off dimentions
 	for (i = 0; i < 3; i++)
 	{
-		bounds.min[i] = samples * Math::Floor(bounds.min[i] / samples);
-		bounds.max[i] = samples * Math::Ceil(bounds.max[i] / samples);
+		bounds.min[i] = samples * (Math::Floor(bounds.min[i] / samples) - 1);
+		bounds.max[i] = samples * (Math::Ceil(bounds.max[i] / samples) + 1);
 
-		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples + 1;
+		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples;
 	}
 
 	tCoords[0] = vec3(0.0f);
@@ -184,7 +184,32 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 		height = (textureHeight - 2);
 	}
 
-	surface->lightmapCoords.resize(surface->numVerts * 2);
+	surface->lightmapCoords.resize(surface->numVerts);
+	for (i = 0; i < surface->numVerts; i++)
+	{
+		vec3 tDelta = surface->verts[i] - bounds.min;
+		surface->lightmapCoords[i].x = dot(tDelta, tCoords[0]);
+		surface->lightmapCoords[i].y = dot(tDelta, tCoords[1]);
+	}
+
+	/*
+	surface->coveragemask.resize(width * height);
+	if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+	{
+		int count = surfaces[i]->numVerts;
+		for (i = 0; i < count; i++)
+		{
+			MarkEdge(surface, i, i + 1 % count);
+		}
+	}
+	else // triangle strip
+	{
+		MarkEdge(surface, 0, 2);
+		MarkEdge(surface, 2, 3);
+		MarkEdge(surface, 3, 1);
+		MarkEdge(surface, 1, 0);
+	}
+	*/
 
 	surface->textureCoords[0] = tCoords[0];
 	surface->textureCoords[1] = tCoords[1];
@@ -209,10 +234,8 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	surface->lightmapSteps[0] = tCoords[0] * (float)samples;
 	surface->lightmapSteps[1] = tCoords[1] * (float)samples;
 
-	int sampleWidth = surface->lightmapDims[0];
-	int sampleHeight = surface->lightmapDims[1];
-	surface->samples.resize(sampleWidth * sampleHeight);
-	surface->indirect.resize(sampleWidth * sampleHeight);
+	surface->samples.resize(width * height);
+	surface->indirect.resize(width * height);
 }
 
 BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
@@ -305,12 +328,13 @@ void LevelMesh::FinishSurface(Surface* surface)
 
 		uint16_t* currentTexture = textures[surface->lightmapNum]->Pixels();
 
-		// calculate texture coordinates
+		// calculate final texture coordinates
 		for (int i = 0; i < surface->numVerts; i++)
 		{
-			vec3 tDelta = surface->verts[i] - surface->bounds.min;
-			surface->lightmapCoords[i * 2 + 0] = (dot(tDelta, surface->textureCoords[0]) + x + 0.5f) / (float)textureWidth;
-			surface->lightmapCoords[i * 2 + 1] = (dot(tDelta, surface->textureCoords[1]) + y + 0.5f) / (float)textureHeight;
+			auto& u = surface->lightmapCoords[i].x;
+			auto& v = surface->lightmapCoords[i].y;
+			u = (u + x) / (float)textureWidth;
+			v = (v + y) / (float)textureHeight;
 		}
 
 		surface->lightmapOffs[0] = x;
@@ -881,33 +905,33 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 		{
 			for (int j = count - 1; j >= 0; j--)
 			{
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2]);
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2 + 1]);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].x);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].y);
 			}
 		}
 		else if (surfaces[i]->type == ST_CEILING)
 		{
 			for (int j = 0; j < count; j++)
 			{
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2]);
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j * 2 + 1]);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].x);
+				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].y);
 			}
 		}
 		else
 		{
 			// zdray uses triangle strip internally, lump/gzd uses triangle fan
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0]);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0].x);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[4]);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[5]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2].x);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[6]);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[7]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3].x);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2]);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3]);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1].x);
+			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1].y);
 		}
 	}
 
@@ -954,7 +978,7 @@ void LevelMesh::Export(std::string filename)
 			int uvindex = MeshUVIndex[vertexidx];
 
 			outvertices[vertexidx] = MeshVertices[vertexidx];
-			outuv[vertexidx] = vec2(surface->lightmapCoords[uvindex * 2], surface->lightmapCoords[uvindex * 2 + 1]);
+			outuv[vertexidx] = surface->lightmapCoords[uvindex];
 			outnormal[vertexidx] = surface->plane.Normal();
 			outface.Push(vertexidx);
 

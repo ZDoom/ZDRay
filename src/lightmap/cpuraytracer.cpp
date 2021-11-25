@@ -377,7 +377,7 @@ void CPURaytracer::CreateHemisphereVectors()
 			vec3 H;
 			H.x = Xi.x * 2.0f - 1.0f;
 			H.y = Xi.y * 2.0f - 1.0f;
-			H.z = RadicalInverse_VdC(i) + 0.01f;
+			H.z = 1.5f - length(Xi);
 			H = normalize(H);
 			HemisphereVectors.push_back(H);
 		}

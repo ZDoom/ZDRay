@@ -84,7 +84,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		vec3 H;
 		H.x = Xi.x * 2.0f - 1.0f;
 		H.y = Xi.y * 2.0f - 1.0f;
-		H.z = RadicalInverse_VdC(i) + 0.01f;
+		H.z = 1.5f - length(Xi);
 		H = normalize(H);
 		HemisphereVectors.push_back(H);
 	}
@@ -191,7 +191,7 @@ void GPURaytracer::UploadTasks(const TraceTask* tasks, size_t size)
 		if (task.id >= 0)
 		{
 			Surface* surface = mesh->surfaces[task.id].get();
-			vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+			vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (task.x + 0.5f) + surface->lightmapSteps[1] * (task.y + 0.5f);
 			startPositions[i] = vec4(pos, (float)task.id);
 		}
 		else

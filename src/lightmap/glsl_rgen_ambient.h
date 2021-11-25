@@ -80,7 +80,7 @@ void main()
 		for (uint i = 0; i < SampleCount; i++)
 		{
 			vec2 Xi = Hammersley(i, SampleCount);
-			vec3 H = normalize(vec3(Xi.x * 2.0f - 1.0f, Xi.y * 2.0f - 1.0f, RadicalInverse_VdC(i) + 0.01f));
+			vec3 H = normalize(vec3(Xi.x * 2.0f - 1.0f, Xi.y * 2.0f - 1.0f, 1.5 - length(Xi)));
 			vec3 L = H.x * tangent + H.y * bitangent + H.z * N;
 			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 3, 0, 3, origin, minDistance, L, 32768, 0);
 			ambience += clamp(payload.hitAttenuation / aoDistance, 0.0, 1.0);

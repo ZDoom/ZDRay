@@ -64,7 +64,8 @@ struct Surface
 	BBox bounds;
 	int numVerts;
 	std::vector<vec3> verts;
-	std::vector<float> lightmapCoords;
+	std::vector<vec2> lightmapCoords;
+	//std::vector<bool> coveragemask;
 	std::vector<vec3> samples;
 	std::vector<vec3> indirect;
 	SurfaceType type;
