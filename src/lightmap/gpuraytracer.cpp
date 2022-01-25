@@ -13,6 +13,7 @@
 #include <limits>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 #include "glsl_rgen_bounce.h"
 #include "glsl_rgen_light.h"
 #include "glsl_rgen_ambient.h"

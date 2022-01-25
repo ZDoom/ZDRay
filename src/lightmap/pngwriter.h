@@ -13,7 +13,7 @@ public:
 		DataBuffer(int size) : size(size) { data = new uint8_t[size]; }
 		~DataBuffer() { delete[] data; }
 		int size;
-		void* data;
+		uint8_t* data;
 	};
 
 private:
