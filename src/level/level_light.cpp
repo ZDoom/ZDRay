@@ -104,24 +104,21 @@ void FLevel::SetupLights()
 			vec3 sundir(0.0f, 0.0f, 0.0f);
 			vec3 suncolor(1.0f, 1.0f, 1.0f);
 
+			// to do: is the math here correct?
+			float sdx = (float)std::cos(radians(thing->angle)) * (float)std::cos(radians(thing->pitch));
+			float sdy = (float)std::sin(radians(thing->angle)) * (float)std::cos(radians(thing->pitch));
+			float sdz = (float)-std::sin(radians(thing->pitch));
+			sundir.x = -sdx;
+			sundir.y = -sdy;
+			sundir.z = -sdz;
+			//printf("sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
+
 			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 			{
 				const UDMFKey& key = thing->props[propIndex];
 				if (!stricmp(key.key, "suncolor"))
 				{
 					lightcolor = atoi(key.value);
-				}
-				else if (!stricmp(key.key, "sundirx"))
-				{
-					sundir.x = atof(key.value);
-				}
-				else if (!stricmp(key.key, "sundiry"))
-				{
-					sundir.y = atof(key.value);
-				}
-				else if (!stricmp(key.key, "sundirz"))
-				{
-					sundir.z = atof(key.value);
 				}
 				else if (!stricmp(key.key, "sampledistance"))
 				{
