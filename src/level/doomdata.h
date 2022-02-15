@@ -260,6 +260,11 @@ struct FloatVertex
 	float y;
 };
 
+#define THING_POINTLIGHT_STATIC	9876
+#define THING_SPOTLIGHT_STATIC	9881
+#define THING_LIGHTPROBE		9875
+#define THING_ZDRAYINFO			9890
+
 struct ThingLight
 {
 	IntThing        *mapThing;

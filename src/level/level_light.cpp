@@ -94,11 +94,11 @@ void FLevel::SetupLights()
 	for (int i = 0; i < (int)Things.Size(); ++i)
 	{
 		IntThing* thing = &Things[i];
-		if (thing->type == 9875) // LightProbe
+		if (thing->type == THING_LIGHTPROBE)
 		{
 			ThingLightProbes.Push(i);
 		}
-		else if (thing->type == 9890) // ZDRayInfo
+		else if (thing->type == THING_ZDRAYINFO)
 		{
 			uint32_t lightcolor = 0xffffff;
 			vec3 sundir(0.0f, 0.0f, 0.0f);
@@ -290,7 +290,7 @@ void FLevel::CreateLights()
 		IntThing *thing = &Things[i];
 
 		// skip things that aren't actually static point lights or static spotlights
-		if (thing->type != 9876 && thing->type != 9881)
+		if (thing->type != THING_POINTLIGHT_STATIC && thing->type != THING_SPOTLIGHT_STATIC)
 			continue;
 
 		uint32_t lightcolor = 0xffffff;
@@ -299,28 +299,42 @@ void FLevel::CreateLights()
 		float innerAngleCos = -1.0f;
 		float outerAngleCos = -1.0f;
 
+		// need to process point lights and spot lights differently due to their
+		// inconsistent arg usage...
+		if (thing->type == THING_POINTLIGHT_STATIC)
+		{
+			int r = thing->args[0];
+			int g = thing->args[1];
+			int b = thing->args[2];
+			int rgb = r;
+			rgb = rgb << 8;
+			rgb |= g;
+			rgb = rgb << 8;
+			rgb |= b;
+			lightcolor = (uint32_t)rgb;
+		}
+		else if (thing->type == THING_SPOTLIGHT_STATIC)
+		{
+			lightcolor = (uint32_t)thing->args[0];
+
+			// to do: UDB's color picker will assign the color as a hex string, stored
+			// in the arg0str field. detect this, so that it can be converted into an int
+
+			innerAngleCos = std::cos((float)thing->args[1] * 3.14159265359f / 180.0f);
+			outerAngleCos = std::cos((float)thing->args[2] * 3.14159265359f / 180.0f);
+		}
+
+		// this is known as "intensity" on dynamic lights (and in UDB)
+		lightdistance = thing->args[3];
+
 		for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 		{
 			const UDMFKey &key = thing->props[propIndex];
-			if (!stricmp(key.key, "lightcolor"))
-			{
-				lightcolor = atoi(key.value);
-			}
-			else if (!stricmp(key.key, "lightintensity"))
+
+			// static light intensity (not to be confused with dynamic lights' intensity, which is actually static light distance
+			if (!stricmp(key.key, "lightintensity"))
 			{
 				lightintensity = atof(key.value);
-			}
-			else if (!stricmp(key.key, "lightdistance"))
-			{
-				lightdistance = atof(key.value);
-			}
-			else if (!stricmp(key.key, "lightinnerangle") && thing->type == 9881)
-			{
-				innerAngleCos = std::cos(atof(key.value) * 3.14159265359f / 180.0f);
-			}
-			else if (!stricmp(key.key, "lightouterangle") && thing->type == 9881)
-			{
-				outerAngleCos = std::cos(atof(key.value) * 3.14159265359f / 180.0f);
 			}
 		}
 
