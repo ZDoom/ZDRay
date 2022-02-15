@@ -505,7 +505,7 @@ void CPURaytracer::RunJob(int count, std::function<void(int)> callback)
 	std::vector<std::thread> threads;
 	for (int threadIndex = 0; threadIndex < numThreads; threadIndex++)
 	{
-		threads.push_back(std::thread([&]() {
+		threads.push_back(std::thread([&, threadIndex]() {
 
 			for (int i = threadIndex; i < count; i += numThreads)
 			{
