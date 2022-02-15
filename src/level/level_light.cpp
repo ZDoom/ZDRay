@@ -289,6 +289,10 @@ void FLevel::CreateLights()
 	{
 		IntThing *thing = &Things[i];
 
+		// skip things that aren't actually static point lights or static spotlights
+		if (thing->type != 9876 && thing->type != 9881)
+			continue;
+
 		uint32_t lightcolor = 0xffffff;
 		float lightintensity = 1.0f;
 		float lightdistance = 0.0f;
@@ -310,11 +314,11 @@ void FLevel::CreateLights()
 			{
 				lightdistance = atof(key.value);
 			}
-			else if (!stricmp(key.key, "lightinnerangle"))
+			else if (!stricmp(key.key, "lightinnerangle") && thing->type == 9881)
 			{
 				innerAngleCos = std::cos(atof(key.value) * 3.14159265359f / 180.0f);
 			}
-			else if (!stricmp(key.key, "lightouterangle"))
+			else if (!stricmp(key.key, "lightouterangle") && thing->type == 9881)
 			{
 				outerAngleCos = std::cos(atof(key.value) * 3.14159265359f / 180.0f);
 			}
