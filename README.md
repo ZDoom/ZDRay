@@ -61,22 +61,16 @@ thing // ZDRayInfo (ZDRay properties for the map)
 	gridsize = &lt;float&gt; (default: 32, grid density for the automatic light probes)
 }
 
-thing // Static point light
+thing // Static point light (Light color and distance properties use the same args as dynamic lights)
 {
 	type = 9876;
-	lightcolor = &lt;int&gt; (color)
 	lightintensity = &lt;float&gt; (default: 1)
-	lightdistance = &lt;float&gt; (default: 0, no light)
 }
 
-thing // Static spotlight
+thing // Static spotlight (Light color, distance and angle properties use the same args as dynamic lights)
 {
 	type = 9881;
-	lightcolor = &lt;int&gt; (color)
 	lightintensity = &lt;float&gt; (default: 1)
-	lightdistance = &lt;float&gt; (default: 0, no light)
-	lightinnerangle = &lt;float&gt; (default: 180)
-	lightouterangle = &lt;float&gt; (default: 180)
 }
 
 thing // LightProbe (light sampling point for actors)
