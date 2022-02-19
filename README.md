@@ -61,13 +61,11 @@ thing // ZDRayInfo (ZDRay properties for the map)
 thing // Static point light (Light color and distance properties use the same args as dynamic lights)
 {
 	type = 9876;
-	lightintensity = &lt;float&gt; (default: 1)
 }
 
 thing // Static spotlight (Light color, distance and angle properties use the same args as dynamic lights)
 {
 	type = 9881;
-	lightintensity = &lt;float&gt; (default: 1)
 }
 
 thing // LightProbe (light sampling point for actors)
