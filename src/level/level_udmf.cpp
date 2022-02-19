@@ -219,6 +219,11 @@ void FProcessor::ParseThing(IntThing *th)
 		{
 			th->args[4] = CheckInt(key);
 		}
+		th->alpha = 1.0f;
+		if (!stricmp(key, "alpha"))
+		{
+			th->alpha = CheckFloat(key);
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};

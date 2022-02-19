@@ -324,16 +324,8 @@ void FLevel::CreateLights()
 		// this is known as "intensity" on dynamic lights (and in UDB)
 		lightdistance = thing->args[3];
 
-		for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
-		{
-			const UDMFKey &key = thing->props[propIndex];
-
-			// static light intensity (not to be confused with dynamic lights' intensity, which is actually static light distance
-			if (!stricmp(key.key, "lightintensity"))
-			{
-				lightintensity = atof(key.value);
-			}
-		}
+		// static light intensity (not to be confused with dynamic lights' intensity, which is actually static light distance
+		lightintensity = thing->alpha;
 
 		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
 		{

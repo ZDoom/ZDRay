@@ -220,6 +220,7 @@ struct MapThing2
 	short		angle;
 	short		type;
 	short		flags;
+	float		alpha;
 	uint8_t		special;
 	uint8_t		args[5];
 };
@@ -239,6 +240,7 @@ struct IntThing
 
 	short pitch; // UDMF
 	float height; // UDMF
+	float alpha;
 
 	TArray<UDMFKey> props;
 };

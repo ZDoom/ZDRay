@@ -150,6 +150,7 @@ void FProcessor::LoadThings ()
 			Level.Things[i].args[3] = Things[i].args[3];
 			Level.Things[i].args[4] = Things[i].args[4];
 			Level.Things[i].pitch = 0;
+			Level.Things[i].alpha = Things[i].alpha;
 		}
 		delete[] Things;
 	}
@@ -174,6 +175,7 @@ void FProcessor::LoadThings ()
 			Level.Things[i].args[3] = 0;
 			Level.Things[i].args[4] = 0;
 			Level.Things[i].pitch = 0;
+			Level.Things[i].alpha = 1.0f;
 		}
 		delete[] mt;
 	}
