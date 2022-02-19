@@ -52,10 +52,6 @@ Usage: zdray [options] sourcefile.wad
 thing // ZDRayInfo (ZDRay properties for the map)
 {
 	type = 9890;
-	suncolor = &lt;int&gt; (color)
-	sampledistance = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
-	bounces = &lt;int&gt; (default: 1, how many times light bounces off walls)
-	gridsize = &lt;float&gt; (default: 32, grid density for the automatic light probes)
 }
 
 thing // Static point light (Light color and distance properties use the same args as dynamic lights)

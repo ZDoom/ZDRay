@@ -113,33 +113,24 @@ void FLevel::SetupLights()
 			sundir.z = -sdz;
 			//printf("sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
 
-			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
-			{
-				const UDMFKey& key = thing->props[propIndex];
-				if (!stricmp(key.key, "suncolor"))
-				{
-					lightcolor = atoi(key.value);
-				}
-				else if (!stricmp(key.key, "sampledistance"))
-				{
-					Samples = atoi(key.value);
-					if (Samples <= 0) Samples = 1;
-					if (Samples > 128) Samples = 128;
-					Samples = Math::RoundPowerOfTwo(Samples);
-				}
-				else if (!stricmp(key.key, "bounces"))
-				{
-					LightBounce = atoi(key.value);
-					if (LightBounce < 0) LightBounce = 0;
-					if (LightBounce > 8) LightBounce = 8;
-				}
-				else if (!stricmp(key.key, "gridsize"))
-				{
-					GridSize = atof(key.value);
-					if (GridSize < 0.f) GridSize = 0.f;
-					if (GridSize > 1024.f) GridSize = 1024.f;
-				}
-			}
+			// sun color
+			lightcolor = thing->args[0];
+
+			// sample distance
+			Samples = thing->args[1];
+			if (Samples <= 0) Samples = 1;
+			if (Samples > 128) Samples = 128;
+			Samples = Math::RoundPowerOfTwo(Samples);
+
+			// number of light bounces
+			LightBounce = thing->args[2];
+			if (LightBounce < 0) LightBounce = 0;
+			if (LightBounce > 8) LightBounce = 8;
+
+			// auto probe grid size
+			GridSize = thing->args[3];
+			if (GridSize < 0.f) GridSize = 0.f;
+			if (GridSize > 1024.f) GridSize = 1024.f;
 
 			if (dot(sundir, sundir) > 0.01f)
 			{
