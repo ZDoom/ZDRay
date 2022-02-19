@@ -370,15 +370,15 @@ void FLevel::CreateLights()
 			for (unsigned int propIndex = 0; propIndex < line->props.Size(); propIndex++)
 			{
 				const UDMFKey &key = line->props[propIndex];
-				if (!stricmp(key.key, "lightcolor"))
+				if (!stricmp(key.key, "lightcolorline"))
 				{
 					lightcolor = atoi(key.value);
 				}
-				else if (!stricmp(key.key, "lightintensity"))
+				else if (!stricmp(key.key, "lightintensityline"))
 				{
 					lightintensity = atof(key.value);
 				}
-				else if (!stricmp(key.key, "lightdistance"))
+				else if (!stricmp(key.key, "lightdistanceline"))
 				{
 					lightdistance = atof(key.value);
 				}

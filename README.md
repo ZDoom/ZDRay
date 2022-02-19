@@ -75,9 +75,9 @@ thing // LightProbe (light sampling point for actors)
 
 linedef // Line emissive surface
 {
-	lightcolor = &lt;int&gt; (color, default: white)
-	lightintensity = &lt;float&gt; (default: 1)
-	lightdistance = &lt;float&gt; (default: 0, no light)
+	lightcolorline = &lt;int&gt; (color, default: white)
+	lightintensityline = &lt;float&gt; (default: 1)
+	lightdistanceline = &lt;float&gt; (default: 0, no light)
 }
 
 sector // Sector plane emissive surface
