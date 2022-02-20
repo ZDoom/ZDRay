@@ -42,7 +42,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 {
 	mesh = level;
 
-	printf("Building vulkan acceleration structures\n");
+	printf("Building Vulkan acceleration structures\n");
 
 	if (device->renderdoc)
 		device->renderdoc->StartFrameCapture(0, 0);

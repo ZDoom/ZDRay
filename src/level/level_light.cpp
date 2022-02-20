@@ -111,7 +111,8 @@ void FLevel::SetupLights()
 			sundir.x = -sdx;
 			sundir.y = -sdy;
 			sundir.z = -sdz;
-			//printf("sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
+
+			printf("Sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
 
 			// sun color
 			lightcolor = thing->args[0];

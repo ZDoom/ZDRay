@@ -46,12 +46,12 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	textureWidth = textureSize;
 	textureHeight = textureSize;
 
-	printf("------------- Building side surfaces -------------\n");
+	printf("\n------------- Building side surfaces -------------\n");
 
 	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
 	{
 		CreateSideSurfaces(doomMap, &doomMap.Sides[i]);
-		printf("sides: %i / %i\r", i + 1, doomMap.Sides.Size());
+		printf("Sides: %i / %i\r", i + 1, doomMap.Sides.Size());
 	}
 
 	printf("\nSide surfaces: %i\n", (int)surfaces.size());
@@ -60,7 +60,7 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 
 	printf("Surfaces total: %i\n\n", (int)surfaces.size());
 
-	printf("Building level mesh..\n\n");
+	printf("Building level mesh...\n\n");
 
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
@@ -786,11 +786,11 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 
 void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 {
-	printf("------------- Building subsector surfaces -------------\n");
+	printf("\n------------- Building subsector surfaces -------------\n");
 
 	for (int i = 0; i < doomMap.NumGLSubsectors; i++)
 	{
-		printf("subsectors: %i / %i\r", i + 1, doomMap.NumGLSubsectors);
+		printf("Subsectors: %i / %i\r", i + 1, doomMap.NumGLSubsectors);
 
 		MapSubsectorEx *sub = &doomMap.GLSubsectors[i];
 
