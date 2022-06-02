@@ -3,6 +3,7 @@
 
 #include "framework/tarray.h"
 #include "framework/templates.h"
+#include "framework/zstring.h"
 #include "math/mathlib.h"
 #include <memory>
 #include <cmath>
@@ -237,6 +238,7 @@ struct IntThing
 	short		flags;
 	int			special;
 	int			args[5];
+	FString		arg0str;
 
 	short pitch; // UDMF
 	float height; // UDMF

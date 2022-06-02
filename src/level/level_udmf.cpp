@@ -224,6 +224,11 @@ void FProcessor::ParseThing(IntThing *th)
 		{
 			th->alpha = CheckFloat(key);
 		}
+		if (!stricmp(key, "arg0str"))
+		{
+			th->arg0str = value;
+			th->arg0str.StripChars("\"");
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};

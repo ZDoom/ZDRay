@@ -116,6 +116,15 @@ void FLevel::SetupLights()
 
 			// sun color
 			lightcolor = thing->args[0];
+			/*
+			// disabled for now, because I'm unsure if UDB will use the color picker interface for the sun color
+			if (thing->arg0str.Len() > 0)
+			{
+				FString hex = "0x" + thing->arg0str;
+				int rgb = hex.ToULong();
+				lightcolor = (uint32_t)rgb;
+			}
+			*/
 
 			// sample distance
 			Samples = thing->args[1];
@@ -306,8 +315,14 @@ void FLevel::CreateLights()
 		{
 			lightcolor = (uint32_t)thing->args[0];
 
-			// to do: UDB's color picker will assign the color as a hex string, stored
+			// UDB's color picker will assign the color as a hex string, stored
 			// in the arg0str field. detect this, so that it can be converted into an int
+			if (thing->arg0str.Len() > 0)
+			{
+				FString hex = "0x" + thing->arg0str;
+				int rgb = hex.ToULong();
+				lightcolor = (uint32_t)rgb;
+			}
 
 			innerAngleCos = std::cos((float)thing->args[1] * 3.14159265359f / 180.0f);
 			outerAngleCos = std::cos((float)thing->args[2] * 3.14159265359f / 180.0f);
