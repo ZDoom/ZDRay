@@ -138,8 +138,8 @@ void FLevel::SetupLights()
 			if (LightBounce > 8) LightBounce = 8;
 
 			// auto probe grid size
-			GridSize = thing->args[3];
-			if (GridSize < 0.f) GridSize = 0.f;
+			GridSize = thing->args[3] ? thing->args[3] : 64.0f;
+			if (GridSize < 1.f) GridSize = 1.f;
 			if (GridSize > 1024.f) GridSize = 1024.f;
 
 			if (dot(sundir, sundir) > 0.01f)
