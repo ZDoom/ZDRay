@@ -42,7 +42,7 @@
 LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 {
 	map = &doomMap;
-	samples = sampleDistance;
+	defaultSamples = sampleDistance;
 	textureWidth = textureSize;
 	textureHeight = textureSize;
 
@@ -132,13 +132,16 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	plane = &surface->plane;
 	bounds = GetBoundsFromSurface(surface);
 
+	if (surface->sampleDimension < 0) surface->sampleDimension = 1;
+	surface->sampleDimension = Math::RoundPowerOfTwo(surface->sampleDimension);
+
 	// round off dimentions
 	for (i = 0; i < 3; i++)
 	{
-		bounds.min[i] = samples * (Math::Floor(bounds.min[i] / samples) - 1);
-		bounds.max[i] = samples * (Math::Ceil(bounds.max[i] / samples) + 1);
+		bounds.min[i] = surface->sampleDimension * (Math::Floor(bounds.min[i] / surface->sampleDimension) - 1);
+		bounds.max[i] = surface->sampleDimension * (Math::Ceil(bounds.max[i] / surface->sampleDimension) + 1);
 
-		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / samples;
+		roundedSize[i] = (bounds.max[i] - bounds.min[i]) / surface->sampleDimension;
 	}
 
 	tCoords[0] = vec3(0.0f);
@@ -151,22 +154,22 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	case Plane::AXIS_YZ:
 		width = (int)roundedSize.y;
 		height = (int)roundedSize.z;
-		tCoords[0].y = 1.0f / samples;
-		tCoords[1].z = 1.0f / samples;
+		tCoords[0].y = 1.0f / surface->sampleDimension;
+		tCoords[1].z = 1.0f / surface->sampleDimension;
 		break;
 
 	case Plane::AXIS_XZ:
 		width = (int)roundedSize.x;
 		height = (int)roundedSize.z;
-		tCoords[0].x = 1.0f / samples;
-		tCoords[1].z = 1.0f / samples;
+		tCoords[0].x = 1.0f / surface->sampleDimension;
+		tCoords[1].z = 1.0f / surface->sampleDimension;
 		break;
 
 	case Plane::AXIS_XY:
 		width = (int)roundedSize.x;
 		height = (int)roundedSize.y;
-		tCoords[0].x = 1.0f / samples;
-		tCoords[1].y = 1.0f / samples;
+		tCoords[0].x = 1.0f / surface->sampleDimension;
+		tCoords[1].y = 1.0f / surface->sampleDimension;
 		break;
 	}
 
@@ -231,8 +234,8 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	surface->lightmapDims[0] = width;
 	surface->lightmapDims[1] = height;
 	surface->lightmapOrigin = tOrigin;
-	surface->lightmapSteps[0] = tCoords[0] * (float)samples;
-	surface->lightmapSteps[1] = tCoords[1] * (float)samples;
+	surface->lightmapSteps[0] = tCoords[0] * (float)surface->sampleDimension;
+	surface->lightmapSteps[1] = tCoords[1] * (float)surface->sampleDimension;
 
 	surface->samples.resize(width * height);
 	surface->indirect.resize(width * height);
@@ -518,11 +521,14 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			float texWidth = 128.0f;
 			float texHeight = 128.0f;
 
+			IntSideDef* otherSide = &doomMap.Sides[side->line->sidenum[0]] == side ? &doomMap.Sides[side->line->sidenum[1]] : &doomMap.Sides[side->line->sidenum[0]];
+
 			auto surf = std::make_unique<Surface>();
 			surf->material = "texture";
 			surf->type = ST_MIDDLESIDE;
 			surf->typeIndex = typeIndex;
 			surf->controlSector = xfloor;
+			surf->sampleDimension = (surf->sampleDimension = otherSide->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
 			surf->numVerts = 4;
 			surf->verts.resize(4);
 			surf->verts[0].x = surf->verts[2].x = v2.x;
@@ -588,6 +594,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = typeIndex;
 				surf->controlSector = nullptr;
+				surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceBottom()) ? surf->sampleDimension : defaultSamples;
 
 				float texZ = surf->verts[0].z;
 
@@ -646,6 +653,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->typeIndex = typeIndex;
 				surf->bSky = bSky;
 				surf->controlSector = nullptr;
+				surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceTop()) ? surf->sampleDimension : defaultSamples;
 
 				float texZ = surf->verts[0].z;
 
@@ -692,6 +700,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = typeIndex;
 		surf->controlSector = nullptr;
+		surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
 
 		float texZ = surf->verts[0].z;
 
@@ -712,6 +721,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor)
 {
 	auto surf = std::make_unique<Surface>();
+	surf->sampleDimension = sector->sampleDistanceFloor ? sector->sampleDistanceFloor : defaultSamples;
 	surf->material = sector->data.floorpic;
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
@@ -750,6 +760,7 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 {
 	auto surf = std::make_unique<Surface>();
 	surf->material = sector->data.ceilingpic;
+	surf->sampleDimension = sector->sampleDistanceCeiling ? sector->sampleDistanceCeiling : defaultSamples;
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
 	surf->uvs.resize(surf->numVerts);

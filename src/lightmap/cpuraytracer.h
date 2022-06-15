@@ -29,7 +29,6 @@ struct CPUTraceState
 	uint32_t PassType;
 	uint32_t LightCount;
 	vec3 SunDir;
-	float SampleDistance;
 	vec3 SunColor;
 	float SunIntensity;
 	vec3 HemisphereVec;

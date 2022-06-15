@@ -87,7 +87,7 @@ void FLevel::SetupLights()
 	// GG to whoever memset'ed FLevel
 	defaultSunColor = vec3(1, 1, 1);
 	defaultSunDirection = vec3(0.45f, 0.3f, 0.9f);
-	Samples = 8;
+	DefaultSamples = 8;
 	LightBounce = 0;
 	GridSize = 32.0f;
 
@@ -128,10 +128,10 @@ void FLevel::SetupLights()
 				}
 				else if (!stricmp(key.key, "lm_sampledistance"))
 				{
-					Samples = atoi(key.value);
-					if (Samples < 8) Samples = 8;
-					if (Samples > 128) Samples = 128;
-					Samples = Math::RoundPowerOfTwo(Samples);
+					DefaultSamples = atoi(key.value);
+					if (DefaultSamples < 8) DefaultSamples = 8;
+					if (DefaultSamples > 128) DefaultSamples = 128;
+					DefaultSamples = Math::RoundPowerOfTwo(DefaultSamples);
 				}
 				/*
 				// light bounces temporarily disabled

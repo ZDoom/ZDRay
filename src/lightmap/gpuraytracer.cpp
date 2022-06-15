@@ -103,7 +103,6 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 			BeginTracing();
 
 			Uniforms uniforms = {};
-			uniforms.SampleDistance = (float)mesh->samples;
 			uniforms.SunDir = mesh->map->GetSunDirection();
 			uniforms.SunColor = mesh->map->GetSunColor();
 			uniforms.SunIntensity = 1.0f;
@@ -403,6 +402,8 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 			info.EmissiveIntensity = 0.0f;
 			info.EmissiveColor = vec3(0.0f, 0.0f, 0.0f);
 		}
+
+		info.SamplingDistance = surface->sampleDimension;
 		surfaces.push_back(info);
 	}
 

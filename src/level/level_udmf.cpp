@@ -365,6 +365,10 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 	sd->midtexture[1] = 0;
 	sd->bottomtexture[0] = '-';
 	sd->bottomtexture[1] = 0;
+	sd->sampleDistance = 0;
+	sd->sampleDistanceTop = 0;
+	sd->sampleDistanceMiddle = 0;
+	sd->sampleDistanceBottom = 0;
 	while (!SC_CheckString("}"))
 	{
 		const char *value;
@@ -396,6 +400,22 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 		{
 			sd->rowoffset = CheckInt(key);
 		}
+		else if (stricmp(key, "lm_sampledist") == 0)
+		{
+			sd->sampleDistance = CheckInt(key);
+		}
+		else if (stricmp(key, "lm_sampledist_top") == 0)
+		{
+			sd->sampleDistanceTop = CheckInt(key);
+		}
+		else if (stricmp(key, "lm_sampledist_mid") == 0)
+		{
+			sd->sampleDistanceMiddle = CheckInt(key);
+		}
+		else if (stricmp(key, "lm_sampledist_bot") == 0)
+		{
+			sd->sampleDistanceBottom = CheckInt(key);
+		}
 
 		// now store the key in its unprocessed form
 		UDMFKey k = {key, value};
@@ -414,6 +434,8 @@ void FProcessor::ParseSector(IntSector *sec)
 	std::vector<int> moreids;
 	memset(&sec->data, 0, sizeof(sec->data));
 	sec->data.lightlevel = 160;
+	sec->sampleDistanceCeiling = 0;
+	sec->sampleDistanceFloor = 0;
 
 	int ceilingplane = 0, floorplane = 0;
 
@@ -513,6 +535,14 @@ void FProcessor::ParseSector(IntSector *sec)
 				}
 				free(workstring);
 			}
+		}
+		else if (stricmp(key, "lm_sampledist_floor") == 0)
+		{
+			sec->sampleDistanceFloor = CheckInt(key);
+		}
+		else if (stricmp(key, "lm_sampledist_ceiling") == 0)
+		{
+			sec->sampleDistanceCeiling = CheckInt(key);
 		}
 
 		// now store the key in its unprocessed form

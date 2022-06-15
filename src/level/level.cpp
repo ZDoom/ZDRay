@@ -694,7 +694,7 @@ void FProcessor::BuildNodes()
 void FProcessor::BuildLightmaps()
 {
 	Level.SetupLights();
-	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.Samples, LMDims);
+	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.DefaultSamples, LMDims);
 
 	std::unique_ptr<GPURaytracer> gpuraytracer;
 	if (!CPURaytrace)
