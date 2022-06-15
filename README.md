@@ -7,9 +7,9 @@ that it can also bake lights. Once ZDRay has processed the level WAD it is ready
 ZDRay is based on zdbsp for the node generation and originally used dlight for the lightmap generation. Special thanks to Randi Heit,
 Samuel Villarreal, Christoph Oelckers and anyone else involved in creating or maintaining those tools.
 
-The ray tracing code has been completely rewritten since. It now supports bounces and can do the ray tracing on the GPU. GPU ray
-tracing requires a graphics card that has support for the Vulkan ray tracing API (for example, nvidia 10 series and higher). ZDRay
-will automatically fall back to CPU tracing if no compatible GPU is found.
+The ray tracing code has been completely rewritten since. It can now do ray tracing on the GPU. GPU ray tracing requires a graphics
+card that has support for the Vulkan ray tracing API (for example, nvidia 10 series and higher). ZDRay will automatically fall back
+to CPU tracing if no compatible GPU is found.
 
 ## ZDRay Usage
 
