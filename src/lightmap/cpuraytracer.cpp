@@ -60,11 +60,12 @@ void CPURaytracer::Raytrace(LevelMesh* level)
 	CreateHemisphereVectors();
 	CreateLights();
 
-	printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
+	//printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
+	printf("Ray tracing in progress...\n");
 
 	RunJob((int)tasks.size(), [=](int id) { RaytraceTask(tasks[id]); });
 
-	printf("\nRaytrace complete\n");
+	printf("\nRay tracing complete\n");
 }
 
 void CPURaytracer::RaytraceTask(const CPUTraceTask& task)

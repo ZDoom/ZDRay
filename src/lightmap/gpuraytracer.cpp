@@ -90,7 +90,8 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		HemisphereVectors.push_back(H);
 	}
 
-	printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
+	//printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
+	printf("Ray tracing in progress...\n");
 
 	RunWithProgressDots([&]() {
 		size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
@@ -149,7 +150,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	if (device->renderdoc)
 		device->renderdoc->EndFrameCapture(0, 0);
 
-	printf("Raytrace complete\n");
+	printf("Ray trace complete\n");
 }
 
 void GPURaytracer::CreateVulkanObjects()

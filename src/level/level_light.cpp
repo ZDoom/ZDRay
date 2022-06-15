@@ -88,7 +88,7 @@ void FLevel::SetupLights()
 	defaultSunColor = vec3(1, 1, 1);
 	defaultSunDirection = vec3(0.45f, 0.3f, 0.9f);
 	Samples = 8;
-	LightBounce = 1;
+	LightBounce = 0;
 	GridSize = 32.0f;
 
 	for (int i = 0; i < (int)Things.Size(); ++i)
@@ -132,10 +132,12 @@ void FLevel::SetupLights()
 			if (Samples > 128) Samples = 128;
 			Samples = Math::RoundPowerOfTwo(Samples);
 
-			// number of light bounces
+			/*
+			// number of light bounces (temporarily disabled)
 			LightBounce = thing->args[2];
 			if (LightBounce < 0) LightBounce = 0;
 			if (LightBounce > 8) LightBounce = 8;
+			*/
 
 			// auto probe grid size
 			GridSize = thing->args[3] ? thing->args[3] : 64.0f;
