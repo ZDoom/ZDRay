@@ -118,9 +118,11 @@ void FLevel::SetupLights()
 			{
 				const UDMFKey &key = thing->props[propIndex];
 
-				if (!stricmp(key.key, "zdraysuncolor") && key.value)
+				if (!stricmp(key.key, "zdraysuncolor"))
 				{
 					FString hex = FString("0x") + FString(key.value);
+					hex.StripChars("\"");
+					printf("Sun color: %s\n", hex);
 					int rgb = hex.ToULong();
 					lightcolor = (uint32_t)rgb;
 				}
