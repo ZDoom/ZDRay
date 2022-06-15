@@ -52,9 +52,9 @@ Usage: zdray [options] sourcefile.wad
 thing // ZDRayInfo (ZDRay properties for the map)
 {
 	type = 9890;
-	zdraysuncolor = &lt;string&gt; (hex color, default: "FFFFFF")
-	zdraysampledistance = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
-	zdraygridsize = &lt;float&gt; (default: 32, grid density for the automatic light probes)
+	lm_suncolor = &lt;string&gt; (hex color, default: "FFFFFF")
+	lm_sampledistance = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
+	lm_gridsize = &lt;float&gt; (default: 32, grid density for the automatic light probes)
 }
 
 thing // Static point light (Light color and distance properties use the same args as dynamic lights)

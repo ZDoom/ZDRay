@@ -118,7 +118,7 @@ void FLevel::SetupLights()
 			{
 				const UDMFKey &key = thing->props[propIndex];
 
-				if (!stricmp(key.key, "zdraysuncolor"))
+				if (!stricmp(key.key, "lm_suncolor"))
 				{
 					FString hex = FString("0x") + FString(key.value);
 					hex.StripChars("\"");
@@ -126,7 +126,7 @@ void FLevel::SetupLights()
 					int rgb = hex.ToULong();
 					lightcolor = (uint32_t)rgb;
 				}
-				else if (!stricmp(key.key, "zdraysampledistance"))
+				else if (!stricmp(key.key, "lm_sampledistance"))
 				{
 					Samples = atoi(key.value);
 					if (Samples < 8) Samples = 8;
@@ -135,14 +135,14 @@ void FLevel::SetupLights()
 				}
 				/*
 				// light bounces temporarily disabled
-				else if (!stricmp(key.key, "zdraybounces"))
+				else if (!stricmp(key.key, "lm_bounces"))
 				{
 					LightBounce = atoi(key.value);
 					if (LightBounce < 0) LightBounce = 0;
 					if (LightBounce > 8) LightBounce = 8;
 				}
 				*/
-				else if (!stricmp(key.key, "zdraygridsize"))
+				else if (!stricmp(key.key, "lm_gridsize"))
 				{
 					GridSize = atof(key.value) ? atof(key.value) : 64.f;
 					if (GridSize < 1.f) GridSize = 1.f;
@@ -429,15 +429,15 @@ void FLevel::CreateLights()
 		for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
 		{
 			const UDMFKey &key = sector->props[propIndex];
-			if (!stricmp(key.key, "lightcolorfloor"))
+			if (!stricmp(key.key, "lm_lightcolorfloor"))
 			{
 				lightcolor = atoi(key.value);
 			}
-			else if (!stricmp(key.key, "lightintensityfloor"))
+			else if (!stricmp(key.key, "lm_lightintensityfloor"))
 			{
 				lightintensity = atof(key.value);
 			}
-			else if (!stricmp(key.key, "lightdistancefloor"))
+			else if (!stricmp(key.key, "lm_lightdistancefloor"))
 			{
 				lightdistance = atof(key.value);
 			}
@@ -461,15 +461,15 @@ void FLevel::CreateLights()
 		for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
 		{
 			const UDMFKey &key = sector->props[propIndex];
-			if (!stricmp(key.key, "lightcolorceiling"))
+			if (!stricmp(key.key, "lm_lightcolorceiling"))
 			{
 				lightcolor = atoi(key.value);
 			}
-			else if (!stricmp(key.key, "lightintensityceiling"))
+			else if (!stricmp(key.key, "lm_lightintensityceiling"))
 			{
 				lightintensity = atof(key.value);
 			}
-			else if (!stricmp(key.key, "lightdistanceceiling"))
+			else if (!stricmp(key.key, "lm_lightdistanceceiling"))
 			{
 				lightdistance = atof(key.value);
 			}
