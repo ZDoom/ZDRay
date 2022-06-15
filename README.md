@@ -52,7 +52,7 @@ Usage: zdray [options] sourcefile.wad
 thing // ZDRayInfo (ZDRay properties for the map)
 {
 	type = 9890;
-	lm_suncolor = &lt;string&gt; (hex color, default: "FFFFFF")
+	lm_suncolor = &lt;string&gt; (default: "FFFFFF", hex color value of the sun)
 	lm_sampledistance = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
 	lm_gridsize = &lt;float&gt; (default: 32, grid density for the automatic light probes)
 }
