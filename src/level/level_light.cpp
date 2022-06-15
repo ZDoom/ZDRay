@@ -114,35 +114,39 @@ void FLevel::SetupLights()
 
 			printf("Sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
 
-			// sun color
-			lightcolor = thing->args[0];
-			/*
-			// disabled for now, because I'm unsure if UDB will use the color picker interface for the sun color
-			if (thing->arg0str.Len() > 0)
+			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 			{
-				FString hex = "0x" + thing->arg0str;
-				int rgb = hex.ToULong();
-				lightcolor = (uint32_t)rgb;
+				const UDMFKey &key = thing->props[propIndex];
+
+				if (!stricmp(key.key, "zdraysuncolor") && key.value)
+				{
+					FString hex = FString("0x") + FString(key.value);
+					int rgb = hex.ToULong();
+					lightcolor = (uint32_t)rgb;
+				}
+				else if (!stricmp(key.key, "zdraysampledistance"))
+				{
+					Samples = atoi(key.value);
+					if (Samples < 8) Samples = 8;
+					if (Samples > 128) Samples = 128;
+					Samples = Math::RoundPowerOfTwo(Samples);
+				}
+				/*
+				// light bounces temporarily disabled
+				else if (!stricmp(key.key, "zdraybounces"))
+				{
+					LightBounce = atoi(key.value);
+					if (LightBounce < 0) LightBounce = 0;
+					if (LightBounce > 8) LightBounce = 8;
+				}
+				*/
+				else if (!stricmp(key.key, "zdraygridsize"))
+				{
+					GridSize = atof(key.value) ? atof(key.value) : 64.f;
+					if (GridSize < 1.f) GridSize = 1.f;
+					if (GridSize > 1024.f) GridSize = 1024.f;
+				}
 			}
-			*/
-
-			// sample distance
-			Samples = thing->args[1];
-			if (Samples <= 0) Samples = 1;
-			if (Samples > 128) Samples = 128;
-			Samples = Math::RoundPowerOfTwo(Samples);
-
-			/*
-			// number of light bounces (temporarily disabled)
-			LightBounce = thing->args[2];
-			if (LightBounce < 0) LightBounce = 0;
-			if (LightBounce > 8) LightBounce = 8;
-			*/
-
-			// auto probe grid size
-			GridSize = thing->args[3] ? thing->args[3] : 64.0f;
-			if (GridSize < 1.f) GridSize = 1.f;
-			if (GridSize > 1024.f) GridSize = 1024.f;
 
 			if (dot(sundir, sundir) > 0.01f)
 			{
