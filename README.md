@@ -68,22 +68,4 @@ thing // LightProbe (light sampling point for actors)
 {
 	type = 9875;
 }
-
-linedef // Line emissive surface
-{
-	lightcolorline = &lt;int&gt; (color, default: white)
-	lightintensityline = &lt;float&gt; (default: 1)
-	lightdistanceline = &lt;float&gt; (default: 0, no light)
-}
-
-sector // Sector plane emissive surface
-{
-	lightcolorfloor = &lt;int&gt; (color, default: white)
-	lightintensityfloor = &lt;float&gt; (default: 1)
-	lightdistancefloor = &lt;float&gt; (default: 0, no light)
-
-	lightcolorceiling = &lt;int&gt; (color, default: white)
-	lightintensityceiling = &lt;float&gt; (default: 1)
-	lightdistanceceiling = &lt;float&gt; (default: 0, no light)
-}
 </pre>

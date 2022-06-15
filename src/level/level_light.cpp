@@ -363,7 +363,7 @@ void FLevel::CreateLights()
 
 	printf("Thing lights: %i\n", (int)ThingLights.Size());
 
-	// add surface lights
+	// add surface lights (temporarily disabled)
 	for (unsigned int i = 0; i < Sides.Size(); i++)
 	{
 		IntSideDef *side = &Sides[i];
@@ -376,6 +376,7 @@ void FLevel::CreateLights()
 			float lightintensity = 1.0f;
 			float lightdistance = 0.0f;
 
+			/*
 			for (unsigned int propIndex = 0; propIndex < line->props.Size(); propIndex++)
 			{
 				const UDMFKey &key = line->props[propIndex];
@@ -403,6 +404,7 @@ void FLevel::CreateLights()
 				desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 				side->lightdef = SurfaceLights.Push(desc);
 			}
+			*/
 		}
 	}
 
@@ -417,6 +419,7 @@ void FLevel::CreateLights()
 		float lightintensity = 1.0f;
 		float lightdistance = 0.0f;
 
+		/*
 		for (unsigned int propIndex = 0; propIndex < sector->props.Size(); propIndex++)
 		{
 			const UDMFKey &key = sector->props[propIndex];
@@ -476,9 +479,10 @@ void FLevel::CreateLights()
 			desc.rgb.z = (lightcolor & 0xff) / 255.0f;
 			sector->ceilinglightdef = SurfaceLights.Push(desc);
 		}
+		*/
 	}
 
-	printf("Surface lights: %i\n", (int)SurfaceLights.Size());
+	//printf("Surface lights: %i\n", (int)SurfaceLights.Size());
 }
 
 vec3 FLevel::GetLightProbePosition(int index)
