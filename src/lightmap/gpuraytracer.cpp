@@ -93,10 +93,11 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	//printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
 	printf("Ray tracing in progress...\n");
 
-	RunWithProgressDots([&]() {
+	RunAsync([&]() {
 		size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
 		for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
 		{
+			printf("\r%.1f%%\t%d/%d", double(startTask) / double(tasks.size()) * 100, startTask, tasks.size());
 			size_t numTasks = std::min(tasks.size() - startTask, maxTasks);
 			UploadTasks(tasks.data() + startTask, numTasks);
 
@@ -144,6 +145,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 			EndTracing();
 			DownloadTasks(tasks.data() + startTask, numTasks);
 		}
+		printf("\r%.1f%%\t%d/%d\n", 100.0, tasks.size(), tasks.size());
 	});
 
 	if (device->renderdoc)
@@ -971,7 +973,7 @@ float GPURaytracer::RadicalInverse_VdC(uint32_t bits)
 	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
 }
 
-void GPURaytracer::RunWithProgressDots(std::function<void()> callback)
+void GPURaytracer::RunAsync(std::function<void()> callback)
 {
 	std::exception_ptr e;
 	std::condition_variable condvar;
@@ -1003,9 +1005,7 @@ void GPURaytracer::RunWithProgressDots(std::function<void()> callback)
 		while (!stop)
 		{
 			condvar.wait_for(lock, std::chrono::milliseconds(500), [&]() { return stop; });
-			printf(".");
 		}
-		printf("\n");
 	}
 
 	t.join();
