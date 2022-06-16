@@ -60,6 +60,15 @@ struct IntSideDef
 
 	IntLineDef *line;
 
+	int sampleDistance;
+	int sampleDistanceTop;
+	int sampleDistanceMiddle;
+	int sampleDistanceBottom;
+
+	inline int GetSampleDistanceTop() const { return sampleDistanceTop ? sampleDistanceTop : sampleDistance; }
+	inline int GetSampleDistanceMiddle() const { return sampleDistanceMiddle ? sampleDistanceMiddle : sampleDistance; }
+	inline int GetSampleDistanceBottom() const { return sampleDistanceBottom ? sampleDistanceBottom : sampleDistance; }
+
 	TArray<UDMFKey> props;
 };
 
@@ -118,6 +127,9 @@ struct IntSector
 
 	Plane ceilingplane;
 	Plane floorplane;
+
+	int sampleDistanceCeiling;
+	int sampleDistanceFloor;
 
 	int floorlightdef;
 	int ceilinglightdef;
@@ -396,7 +408,7 @@ struct FLevel
 
 	vec3 defaultSunColor;
 	vec3 defaultSunDirection;
-	int Samples;
+	int DefaultSamples;
 	int LightBounce;
 	float GridSize;
 

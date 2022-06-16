@@ -17,7 +17,8 @@ struct SurfaceInfo
 	vec3 EmissiveColor;
 	float EmissiveIntensity;
 	float Sky;
-	float Padding0, Padding1, Padding2;
+	float SamplingDistance;
+	float Padding1, Padding2;
 };
 
 layout(location = 0) rayPayloadInEXT hitPayload payload;

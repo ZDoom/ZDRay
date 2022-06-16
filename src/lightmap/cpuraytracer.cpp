@@ -87,7 +87,6 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 		state.StartSurface = nullptr;
 	}
 
-	state.SampleDistance = (float)mesh->samples;
 	state.LightCount = mesh->map->ThingLights.Size();
 	state.SunDir = mesh->map->GetSunDirection();
 	state.SunColor = mesh->map->GetSunColor();
@@ -260,7 +259,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 
 			for (uint32_t i = 0; i < state.SampleCount; i++)
 			{
-				vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
+				vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * float(surface->sampleDimension);
 				vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
 				vec3 start = origin2;
@@ -316,7 +315,7 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 					e0 = cross(normal, e1);
 					for (uint32_t i = 0; i < state.SampleCount; i++)
 					{
-						vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * state.SampleDistance;
+						vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * float(surface->sampleDimension);
 						vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
 						LevelTraceHit hit = Trace(origin2, light.Origin);

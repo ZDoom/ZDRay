@@ -74,6 +74,7 @@ struct Surface
 	bool bSky;
 	std::vector<vec2> uvs;
 	std::string material;
+	int sampleDimension;
 };
 
 class LightProbeSample
@@ -99,7 +100,7 @@ public:
 
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 
-	int samples = 16;
+	int defaultSamples = 16;
 	int textureWidth = 128;
 	int textureHeight = 128;
 

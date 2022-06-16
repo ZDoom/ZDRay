@@ -24,11 +24,11 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint PassType;
 	uint Padding0;
 	vec3 SunDir;
-	float SampleDistance;
+	float Padding1;
 	vec3 SunColor;
 	float SunIntensity;
 	vec3 HemisphereVec;
-	float Padding1;
+	float Padding2;
 };
 
 struct SurfaceInfo
@@ -38,7 +38,8 @@ struct SurfaceInfo
 	vec3 EmissiveColor;
 	float EmissiveIntensity;
 	float Sky;
-	float Padding0, Padding1, Padding2;
+	float SamplingDistance;
+	float Padding1, Padding2;
 };
 
 layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };

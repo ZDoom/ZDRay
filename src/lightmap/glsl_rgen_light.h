@@ -24,11 +24,11 @@ layout(set = 0, binding = 4) uniform Uniforms
 	uint PassType;
 	uint Padding0;
 	vec3 SunDir;
-	float SampleDistance;
+	float Padding1;
 	vec3 SunColor;
 	float SunIntensity;
 	vec3 HemisphereVec;
-	float Padding1;
+	float Padding2;
 };
 
 struct SurfaceInfo
@@ -38,7 +38,8 @@ struct SurfaceInfo
 	vec3 EmissiveColor;
 	float EmissiveIntensity;
 	float Sky;
-	float Padding0, Padding1, Padding2;
+	float SamplingDistance;
+	float Padding1, Padding2;
 };
 
 struct LightInfo
@@ -100,7 +101,7 @@ void main()
 
 			for (uint i = 0; i < SampleCount; i++)
 			{
-				vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
+				vec2 offset = (Hammersley(i, SampleCount) - 0.5) * surfaces[surfaceIndex].SamplingDistance;
 				vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
 
 				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, SunDir, dist, 0);
@@ -151,7 +152,7 @@ void main()
 					e0 = cross(normal, e1);
 					for (uint i = 0; i < SampleCount; i++)
 					{
-						vec2 offset = (Hammersley(i, SampleCount) - 0.5) * SampleDistance;
+						vec2 offset = (Hammersley(i, SampleCount) - 0.5) * surfaces[surfaceIndex].SamplingDistance;
 						vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
 
 						float dist2 = distance(light.Origin, origin2);
