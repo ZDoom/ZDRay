@@ -89,7 +89,7 @@ private:
 	static float RadicalInverse_VdC(uint32_t bits);
 	static vec2 Hammersley(uint32_t i, uint32_t N);
 
-	static void RunWithProgressDots(std::function<void()> callback);
+	static void RunAsync(std::function<void()> callback);
 
 	const int coverageSampleCount = 256;
 	const int bounceSampleCount = 2048;

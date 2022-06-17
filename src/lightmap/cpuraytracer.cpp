@@ -507,9 +507,21 @@ void CPURaytracer::RunJob(int count, std::function<void(int)> callback)
 	{
 		threads.push_back(std::thread([&, threadIndex]() {
 
-			for (int i = threadIndex; i < count; i += numThreads)
+			if (threadIndex == 0)
 			{
-				callback(i);
+				for (int i = 0; i < count; i += numThreads)
+				{
+					if((i / numThreads) % 8192 == 0)
+						printf("\r%.1f%%\t%d/%d", double(i) / double(count) * 100, i, count);
+					callback(i);
+				}
+			}
+			else
+			{
+				for (int i = threadIndex; i < count; i += numThreads)
+				{
+					callback(i);
+				}
 			}
 
 			std::unique_lock<std::mutex> lock(m);
@@ -525,9 +537,8 @@ void CPURaytracer::RunJob(int count, std::function<void(int)> callback)
 		while (threadsleft != 0)
 		{
 			condvar.wait_for(lock, std::chrono::milliseconds(500), [&]() { return threadsleft == 0; });
-			printf(".");
 		}
-		printf("\n");
+		printf("\r%.1f%%\t%d/%d\n", 100.0, count, count);
 	}
 
 	for (int i = 0; i < numThreads; i++)
