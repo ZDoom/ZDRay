@@ -94,6 +94,7 @@ public:
 		AXIS_XY
 	};
 
+	void Set(float a, float b, float c, float d);
 	const vec3 &Normal() const;
 	vec3 &Normal();
 	Plane &SetNormal(const vec3 &normal);

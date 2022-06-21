@@ -21,6 +21,7 @@
 #include "level/level.h"
 #include "lightmap/cpuraytracer.h"
 #include "lightmap/gpuraytracer.h"
+#include "math/vec.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
@@ -46,19 +47,6 @@ enum
     PO_SPAWN_TYPE,
     PO_SPAWNCRUSH_TYPE,
 	PO_SPAWNHURT_TYPE,
-	
-	// Thing numbers used to define slopes
-	SMT_VavoomFloor = 1500,
-	SMT_VavoomCeiling = 1501,
-	SMT_VertexFloorZ = 1504,
-	SMT_VertexCeilingZ = 1505,
-	SMT_SlopeFloorPointLine = 9500,
-	SMT_SlopeCeilingPointLine = 9501,
-	SMT_SetFloorSlope = 9502,
-	SMT_SetCeilingSlope = 9503,
-	SMT_CopyFloorPlane = 9510,
-	SMT_CopyCeilingPlane = 9511,
-	
 };
 
 FLevel::FLevel ()
@@ -549,6 +537,22 @@ void FLevel::RemoveExtraSectors ()
 	delete[] remap;
 }
 
+int FLevel::FindFirstSectorFromTag(int tag)
+{
+	for (unsigned i = 0; i < Sectors.Size(); ++i)
+	{
+		for (auto& sectorTag : Sectors[i].tags)
+		{
+			if (sectorTag == tag)
+			{
+				return i;
+			}
+		}
+	}
+
+	return -1;
+}
+
 void FProcessor::GetPolySpots ()
 {
 	if (Extended && CheckPolyobjs)
@@ -599,6 +603,65 @@ void FProcessor::GetPolySpots ()
 				}
 			}
 		}
+	}
+}
+
+void FLevel::PostLoadInitialization()
+{
+	CheckSkySectors();
+
+	for (unsigned int i = 0; i < Sectors.Size(); i++)
+		Sectors[i].controlsector = false;
+
+	for (unsigned int i = 0; i < Sides.Size(); i++)
+		Sides[i].line = nullptr;
+
+	for (unsigned int i = 0; i < Lines.Size(); i++)
+	{
+		IntLineDef* line = &Lines[i];
+
+		// Link sides to lines
+		if (line->sidenum[0] < Sides.Size())
+			Sides[line->sidenum[0]].line = line;
+		if (line->sidenum[1] < Sides.Size())
+			Sides[line->sidenum[1]].line = line;
+
+		if (line->special == Sector_Set3DFloor)
+		{
+			int sectorTag = line->args[0];
+			int type = line->args[1];
+			int opacity = line->args[3];
+
+			if (opacity > 0)
+			{
+				IntSector* controlsector = &Sectors[Sides[Lines[i].sidenum[0]].sector];
+				controlsector->controlsector = true;
+
+				for (unsigned int j = 0; j < Sectors.Size(); j++)
+				{
+					for (unsigned t = 0; t < Sectors[j].tags.Size(); t++)
+					{
+						if (Sectors[j].tags[t] == sectorTag)
+						{
+							Sectors[j].x3dfloors.Push(controlsector);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Set front and back sector pointer
+	for (auto& side : Sides)
+	{
+		auto& sector = Sectors[side.sector];
+		auto line = side.line;
+
+		sector.lines.Push(line);
+
+		line->frontsector = (line->sidenum[0] != NO_INDEX) ? &Sectors[Sides[line->sidenum[0]].sector] : nullptr;
+		line->backsector = (line->sidenum[1] != NO_INDEX) ? &Sectors[Sides[line->sidenum[1]].sector] : nullptr;
 	}
 }
 
@@ -693,7 +756,15 @@ void FProcessor::BuildNodes()
 
 void FProcessor::BuildLightmaps()
 {
+	Level.PostLoadInitialization();
+
+	SpawnSlopeMakers(&Level.Things[0], &Level.Things[Level.Things.Size()], nullptr);
+	CopySlopes();
+
+	SetSlopes();
+
 	Level.SetupLights();
+
 	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.DefaultSamples, LMDims);
 
 	std::unique_ptr<GPURaytracer> gpuraytracer;

@@ -69,6 +69,15 @@ private:
 	void GetPolySpots();
 	void SetLineID(IntLineDef *ld);
 
+	void SetSlopes();
+	void CopySlopes();
+	void AlignPlane(IntSector* sec, IntLineDef* line, int which);
+	void SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt, const int* oldvertextable);
+	void SpawnSlopeMakers(IntThing* firstmt, IntThing* lastmt, const int* oldvertextable);
+	void CopyPlane(int tag, IntSector* dest, bool copyCeil);
+	void CopyPlane(int tag, const dvec2& pos, bool copyCeil);
+
+
 	MapNodeEx *NodesToEx(const MapNode *nodes, int count);
 	MapSubsectorEx *SubsectorsToEx(const MapSubsector *ssec, int count);
 	MapSegGLEx *SegGLsToEx(const MapSegGL *segs, int count);
