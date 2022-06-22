@@ -539,7 +539,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			surf->verts[1].z = xfloor->floorplane.zAt(v1.x, v1.y);
 			surf->verts[2].z = xfloor->ceilingplane.zAt(v2.x, v2.y);
 			surf->verts[3].z = xfloor->ceilingplane.zAt(v1.x, v1.y);
-			surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+			surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2], surf->verts[3]);
 			surf->plane.SetDistance(surf->verts[0]);
 
 			float texZ = surf->verts[0].z;
@@ -589,7 +589,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->verts[2].z = v1BottomBack;
 				surf->verts[3].z = v2BottomBack;
 
-				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2], surf->verts[3]);
 				surf->plane.SetDistance(surf->verts[0]);
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = typeIndex;
@@ -647,7 +647,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->verts[2].z = v1Top;
 				surf->verts[3].z = v2Top;
 
-				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+				surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2], surf->verts[3]);
 				surf->plane.SetDistance(surf->verts[0]);
 				surf->type = ST_UPPERSIDE;
 				surf->typeIndex = typeIndex;
@@ -695,7 +695,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->verts[2].z = v1Top;
 		surf->verts[3].z = v2Top;
 
-		surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2]);
+		surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2], surf->verts[3]);
 		surf->plane.SetDistance(surf->verts[0]);
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = typeIndex;
