@@ -613,11 +613,11 @@ void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
 		}
 		if (!stricmp(key, "zfloor"))
 		{
-			vtp->zfloor = CheckFixed(key);
+			vtp->zfloor = CheckFloat(key);
 		}
 		else if (!stricmp(key, "zceiling"))
 		{
-			vtp->zceiling = CheckFixed(key);
+			vtp->zceiling = CheckFloat(key);
 		}
 
 		// now store the key in its unprocessed form

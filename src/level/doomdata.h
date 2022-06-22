@@ -92,6 +92,8 @@ struct MapLineDef2
 	uint16_t	sidenum[2];
 };
 
+struct IntSector;
+
 struct IntLineDef
 {
 	uint32_t v1;
@@ -103,6 +105,8 @@ struct IntLineDef
 
 	TArray<UDMFKey> props;
 	TArray<int> ids;
+
+	IntSector *frontsector, *backsector;
 };
 
 struct MapSector
@@ -139,6 +143,8 @@ struct IntSector
 	bool skySector;
 
 	TArray<UDMFKey> props;
+
+	TArray<IntLineDef*> lines;
 };
 
 struct MapSubsector
@@ -263,6 +269,9 @@ struct IntVertex
 {
 	TArray<UDMFKey> props;
 	double zfloor = 100000, zceiling = 100000;
+
+	inline bool HasZFloor() const { return zfloor != 100000; }
+	inline bool HasZCeiling() const { return zceiling != 100000; }
 };
 
 class BBox;
@@ -416,6 +425,9 @@ struct FLevel
 	void RemoveExtraLines ();
 	void RemoveExtraSides ();
 	void RemoveExtraSectors ();
+
+	void PostLoadInitialization();
+
 	void SetupLights();
 
 	int NumSides() const { return Sides.Size(); }
@@ -433,6 +445,9 @@ struct FLevel
 
 	vec3 GetLightProbePosition(int index);
 
+	int FindFirstSectorFromTag(int tag);
+
+	inline IntSector* PointInSector(const dvec2& pos) { return GetSectorFromSubSector(PointInSubSector(int(pos.x), int(pos.y))); }
 private:
 	void CheckSkySectors();
 	void CreateLights();

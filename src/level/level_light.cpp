@@ -40,50 +40,6 @@
 
 void FLevel::SetupLights()
 {
-	CheckSkySectors();
-
-	for (unsigned int i = 0; i < Sectors.Size(); i++)
-		Sectors[i].controlsector = false;
-
-	for (unsigned int i = 0; i < Sides.Size(); i++)
-		Sides[i].line = nullptr;
-
-	for (unsigned int i = 0; i < Lines.Size(); i++)
-	{
-		IntLineDef *line = &Lines[i];
-
-		// Link sides to lines
-		if (line->sidenum[0] < Sides.Size())
-			Sides[line->sidenum[0]].line = line;
-		if (line->sidenum[1] < Sides.Size())
-			Sides[line->sidenum[1]].line = line;
-
-		if (line->special == Sector_Set3DFloor)
-		{
-			int sectorTag = line->args[0];
-			int type = line->args[1];
-			int opacity = line->args[3];
-
-			if (opacity > 0)
-			{
-				IntSector *controlsector = &Sectors[Sides[Lines[i].sidenum[0]].sector];
-				controlsector->controlsector = true;
-
-				for (unsigned int j = 0; j < Sectors.Size(); j++)
-				{
-					for (unsigned t = 0; t < Sectors[j].tags.Size(); t++)
-					{
-						if (Sectors[j].tags[t] == sectorTag)
-						{
-							Sectors[j].x3dfloors.Push(controlsector);
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
 	// GG to whoever memset'ed FLevel
 	defaultSunColor = vec3(1, 1, 1);
 	defaultSunDirection = vec3(0.45f, 0.3f, 0.9f);

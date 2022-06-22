@@ -142,6 +142,7 @@ set( SOURCES
 	src/level/level.cpp
 	src/level/level_udmf.cpp
 	src/level/level_light.cpp
+	src/level/level_slopes.cpp
 	src/level/doomdata.h
 	src/level/level.h
 	src/level/workdata.h

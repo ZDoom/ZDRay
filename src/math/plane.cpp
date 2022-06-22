@@ -66,6 +66,14 @@ Plane::Plane(const Plane &plane)
 	this->d = plane.d;
 }
 
+void Plane::Set(float a, float b, float c, float d)
+{
+	this->a = a;
+	this->b = b;
+	this->c = c;
+	this->d = d;
+}
+
 Plane &Plane::SetNormal(const vec3 &normal)
 {
 	Normal() = normal;
@@ -76,6 +84,37 @@ Plane &Plane::SetNormal(const vec3 &pt1, const vec3 &pt2, const vec3 &pt3)
 {
 	Normal() = normalize(cross(pt2 - pt1, pt3 - pt2));
 	return *this;
+}
+
+Plane& Plane::SetNormal(const vec3& v1, const vec3& v2, const vec3& v3, const vec3& v4)
+{
+	// Handle cases where two vertices share the same position
+
+	// TODO fix this hack
+	// Certain vertex positions are close enough to cause NaN, but aren't equal
+	auto iv1 = ivec3(v1);
+	auto iv2 = ivec3(v2);
+	auto iv3 = ivec3(v3);
+	auto iv4 = ivec3(v4);
+
+	if (iv1 == iv3)
+	{
+		return SetNormal(v1, v2, v4);
+	}
+	else if (iv2 == iv4)
+	{
+		return SetNormal(v1, v2, v3);
+	}
+	else if (iv1 == iv2)
+	{
+		return SetNormal(v2, v3, v4);
+	}
+	else if (iv2 == iv3)
+	{
+		return SetNormal(v1, v2, v4);
+	}
+
+	return SetNormal(v1, v2, v3);
 }
 
 vec3 const &Plane::Normal() const

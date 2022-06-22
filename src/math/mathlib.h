@@ -94,10 +94,12 @@ public:
 		AXIS_XY
 	};
 
+	void Set(float a, float b, float c, float d);
 	const vec3 &Normal() const;
 	vec3 &Normal();
 	Plane &SetNormal(const vec3 &normal);
-	Plane &SetNormal(const vec3 &pt1, const vec3 &pt2, const vec3 &pt3);
+	Plane& SetNormal(const vec3& pt1, const vec3& pt2, const vec3& pt3);
+	Plane& SetNormal(const vec3& v1, const vec3& v2, const vec3& v3, const vec3& v4);
 	float Distance(const vec3 &point);
 	Plane &SetDistance(const vec3 &point);
 	bool IsFacing(const float yaw);
