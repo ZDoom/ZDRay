@@ -120,6 +120,12 @@ struct MapSector
 	short	tag;
 };
 
+enum SecPlaneType
+{
+	PLANE_FLOOR,
+	PLANE_CEILING,
+};
+
 struct IntSector
 {
 	// none of the sector properties are used by the node builder
@@ -140,7 +146,14 @@ struct IntSector
 
 	bool controlsector;
 	TArray<IntSector*> x3dfloors;
-	bool skySector;
+
+	union
+	{
+		bool skyPlanes[2];
+		struct { bool skyFloor, skyCeiling; };
+	};
+
+	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }
 
 	TArray<UDMFKey> props;
 
