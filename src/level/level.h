@@ -59,6 +59,8 @@ public:
 	void BuildLightmaps();
 	void Write(FWadWriter &out);
 
+	void DumpMesh();
+
 private:
 	void LoadUDMF();
 	void LoadThings();

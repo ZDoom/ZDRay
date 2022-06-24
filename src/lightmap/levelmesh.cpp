@@ -977,6 +977,8 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 
 void LevelMesh::Export(std::string filename)
 {
+	printf("Exporting mesh \"%s\"\n", filename.c_str());
+
 	// This is so ugly! I had nothing to do with it! ;)
 	std::string mtlfilename = filename;
 	for (int i = 0; i < 3; i++) mtlfilename.pop_back();
@@ -986,14 +988,19 @@ void LevelMesh::Export(std::string filename)
 	TArray<vec2> outuv;
 	TArray<vec3> outnormal;
 	TArray<int> outface;
+	TArray<int> outLightmapId;
 
 	outvertices.Resize(MeshVertices.Size());
 	outuv.Resize(MeshVertices.Size());
 	outnormal.Resize(MeshVertices.Size());
+	outLightmapId.Resize(MeshElements.Size() / 3);
 
 	for (unsigned int surfidx = 0; surfidx < MeshElements.Size() / 3; surfidx++)
 	{
 		Surface* surface = surfaces[MeshSurfaces[surfidx]].get();
+
+		outLightmapId[surfidx] = surface->lightmapNum;
+
 		for (int i = 0; i < 3; i++)
 		{
 			int elementidx = surfidx * 3 + i;
@@ -1004,8 +1011,6 @@ void LevelMesh::Export(std::string filename)
 			outuv[vertexidx] = surface->lightmapCoords[uvindex];
 			outnormal[vertexidx] = surface->plane.Normal();
 			outface.Push(vertexidx);
-
-			//surface->lightmapNum;
 		}
 	}
 
@@ -1017,8 +1022,6 @@ void LevelMesh::Export(std::string filename)
 	buffer += "mtllib ";
 	buffer += mtlfilename;
 	buffer += "\r\n";
-
-	buffer += "usemtl Textured\r\n";
 
 	float scale = 0.01f;
 
@@ -1053,8 +1056,24 @@ void LevelMesh::Export(std::string filename)
 		buffer += "\r\n";
 	}
 
+	int prevLightmap = -1;
+
 	for (unsigned int i = 0; i < outface.Size(); i += 3)
 	{
+		if (prevLightmap != outLightmapId[i/3])
+		{
+			prevLightmap = outLightmapId[i/3];
+
+			if (prevLightmap < 0)
+			{
+				buffer += "usemtl lightmap_none\r\n";
+			}
+			else
+			{
+				buffer += "usemtl lightmap" + std::to_string(prevLightmap) + "\r\n";
+			}
+		}
+
 		std::string e0 = std::to_string(outface[i] + 1);
 		std::string e1 = std::to_string(outface[i + 1] + 1);
 		std::string e2 = std::to_string(outface[i + 2] + 1);
@@ -1086,13 +1105,22 @@ void LevelMesh::Export(std::string filename)
 		fclose(file);
 	}
 
-	std::string mtl = R"(newmtl Textured
-   Ka 1.000 1.000 1.000
-   Kd 1.000 1.000 1.000
-   Ks 0.000 0.000 0.000
-   map_Ka lightmap0.png
-   map_Kd lightmap0.png
-)";
+	std::string mtl = "newtml lightmap_none\r\n"
+		"Ka 0 0 0\r\n"
+		"Kd 0 0 0\r\n"
+		"ks 0 0 0\r\n"
+		"map_Kd lightmap0.png\r\n";
+
+	for (int i = 0; i < textures.size(); i++)
+	{
+		mtl += "\r\nnewmtl lightmap" + std::to_string(i) + "\r\n";
+		mtl +=
+			"Ka 1 1 1\r\n"
+			"Kd 1 1 1\r\n"
+			"Ks 0 0 0\r\n";
+		mtl += "map_Ka lightmap" + std::to_string(i) + ".png\r\n";
+		mtl += "map_Kd lightmap" + std::to_string(i) + ".png\r\n";
+	}
 
 	file = fopen(mtlfilename.c_str(), "wb");
 	if (file)
@@ -1131,4 +1159,6 @@ void LevelMesh::Export(std::string filename)
 		PNGWriter::save("lightmap" + std::to_string(index++) + ".png", w, h, 8, buffer);
 #endif
 	}
+
+	printf("Export complete\n");
 }
