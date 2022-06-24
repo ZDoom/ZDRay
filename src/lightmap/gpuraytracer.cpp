@@ -97,7 +97,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
 		for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
 		{
-			printf("\r%.1f%%\t%d/%d", double(startTask) / double(tasks.size()) * 100, startTask, tasks.size());
+			printf("\r%.1f%%\t%llu/%llu", double(startTask) / double(tasks.size()) * 100, startTask, tasks.size());
 			size_t numTasks = std::min(tasks.size() - startTask, maxTasks);
 			UploadTasks(tasks.data() + startTask, numTasks);
 
@@ -145,7 +145,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 			EndTracing();
 			DownloadTasks(tasks.data() + startTask, numTasks);
 		}
-		printf("\r%.1f%%\t%d/%d\n", 100.0, tasks.size(), tasks.size());
+		printf("\r%.1f%%\t%llu/%llu\n", 100.0, tasks.size(), tasks.size());
 	});
 
 	if (device->renderdoc)
@@ -405,7 +405,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 			info.EmissiveColor = vec3(0.0f, 0.0f, 0.0f);
 		}
 
-		info.SamplingDistance = surface->sampleDimension;
+		info.SamplingDistance = float(surface->sampleDimension);
 		surfaces.push_back(info);
 	}
 

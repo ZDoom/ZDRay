@@ -78,7 +78,7 @@ void FLevel::SetupLights()
 				{
 					FString hex = FString("0x") + FString(key.value);
 					hex.StripChars("\"");
-					printf("Sun color: %s\n", hex);
+					printf("Sun color: %s\n", hex.GetChars());
 					int rgb = hex.ToULong();
 					lightcolor = (uint32_t)rgb;
 				}
