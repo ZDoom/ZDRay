@@ -499,6 +499,50 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	vec2 dx(v2.x - v1.x, v2.y - v1.y);
 	float distance = length(dx);
 
+	// line_horizont consumes everything
+	if (side->line->special == Line_Horizon && front != back)
+	{
+		float texWidth = 128.0f;
+		float texHeight = 128.0f;
+
+		auto surf = std::make_unique<Surface>();
+		surf->material = side->midtexture;
+		surf->numVerts = 4;
+		surf->verts.resize(4);
+		surf->bSky = front->skyFloor || front->skyCeiling;
+
+		surf->verts[0].x = surf->verts[2].x = v1.x;
+		surf->verts[0].y = surf->verts[2].y = v1.y;
+		surf->verts[1].x = surf->verts[3].x = v2.x;
+		surf->verts[1].y = surf->verts[3].y = v2.y;
+		surf->verts[0].z = v1Bottom;
+		surf->verts[1].z = v2Bottom;
+		surf->verts[2].z = v1Top;
+		surf->verts[3].z = v2Top;
+
+		surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2], surf->verts[3]);
+		surf->plane.SetDistance(surf->verts[0]);
+		surf->type = ST_MIDDLESIDE;
+		surf->typeIndex = typeIndex;
+		surf->controlSector = nullptr;
+		surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
+
+		float texZ = surf->verts[0].z;
+
+		surf->uvs.resize(4);
+		surf->uvs[0].x = 0.0f;
+		surf->uvs[1].x = distance / texWidth;
+		surf->uvs[2].x = 0.0f;
+		surf->uvs[3].x = distance / texWidth;
+		surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
+		surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
+		surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
+		surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+
+		surfaces.push_back(std::move(surf));
+		return;
+	}
+
 	if (back)
 	{
 		for (unsigned int j = 0; j < front->x3dfloors.Size(); j++)
