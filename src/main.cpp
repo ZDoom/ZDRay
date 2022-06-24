@@ -117,6 +117,7 @@ int				 NumThreads = 0;
 int				 LMDims = 1024;
 bool			 CPURaytrace = false;
 bool			 VKDebug = false;
+bool			 DumpMesh = false;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -155,10 +156,11 @@ static option long_opts[] =
 	{"size",			required_argument,	0,	'S'},
 	{"cpu-raytrace",	no_argument,		0,	'C'},
 	{"vkdebug",			no_argument,		0,	'D'},
+	{"dump-mesh",		no_argument,		0,	1004},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:CD";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:CD:";
 
 // CODE --------------------------------------------------------------------
 
@@ -242,7 +244,14 @@ int main(int argc, char **argv)
 					builder.BuildNodes();
 					builder.BuildLightmaps();
 					builder.Write(outwad);
+
 					END_COUNTER(t2a, t2b, t2c, "   %.3f seconds.\n")
+
+					if(DumpMesh)
+					{
+						printf("\n");
+						builder.DumpMesh();
+					}
 
 					lump = inwad.LumpAfterMap(lump);
 				}
@@ -445,6 +454,9 @@ static void ParseArgs(int argc, char **argv)
 		case 'D':
 			VKDebug = true;
 			break;
+		case 1004:
+			DumpMesh = true;
+			break;
 		case 1000:
 			ShowUsage();
 			exit(0);
@@ -490,6 +502,7 @@ static void ShowUsage()
 		"  -S, --size=NNN           lightmap texture dimensions for width and height must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -C, --cpu-raytrace       Use the CPU for ray tracing\n"
 		"  -D, --vkdebug            Print messages from the vulkan validation layer\n"
+		"      --dump-mesh          Export level mesh and lightmaps for debugging\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
 		"  -t, --no-timing          Suppress timing information\n"

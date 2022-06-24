@@ -794,6 +794,18 @@ void FProcessor::BuildLightmaps()
 	LightmapMesh->CreateTextures();
 }
 
+void FProcessor::DumpMesh()
+{
+	if (LightmapMesh)
+	{
+		LightmapMesh->Export("levelmesh.obj");
+	}
+	else
+	{
+		printf("Error: no mesh to export\n");
+	}
+}
+
 void FProcessor::Write (FWadWriter &out)
 {
 	if (Level.NumLines() == 0 || Level.NumSides() == 0 || Level.NumSectors() == 0 || Level.NumVertices == 0)
