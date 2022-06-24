@@ -633,7 +633,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			if (front->skyCeiling && back->skyCeiling)
 			{
-				if (front->data.ceilingheight != back->data.ceilingheight && side->toptexture[0] == '-')
+				if (front->data.ceilingheight != back->data.ceilingheight)
 				{
 					bSky = true;
 				}
