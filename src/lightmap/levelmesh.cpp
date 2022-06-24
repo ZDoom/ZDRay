@@ -570,7 +570,17 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		// bottom seg
 		if (v1Bottom < v1BottomBack || v2Bottom < v2BottomBack)
 		{
-			if (side->bottomtexture[0] != '-')
+			bool bSky = false;
+
+			if (front->skyFloor && back->skyFloor)
+			{
+				if (front->data.floorheight != back->data.floorheight && side->bottomtexture[0] == '-')
+				{
+					bSky = true;
+				}
+			}
+
+			if (side->bottomtexture[0] != '-' || bSky)
 			{
 				float texWidth = 128.0f;
 				float texHeight = 128.0f;
@@ -593,6 +603,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->plane.SetDistance(surf->verts[0]);
 				surf->type = ST_LOWERSIDE;
 				surf->typeIndex = typeIndex;
+				surf->bSky = bSky;
 				surf->controlSector = nullptr;
 				surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceBottom()) ? surf->sampleDimension : defaultSamples;
 
@@ -620,7 +631,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		{
 			bool bSky = false;
 
-			if (front->skySector && back->skySector)
+			if (front->skyCeiling && back->skyCeiling)
 			{
 				if (front->data.ceilingheight != back->data.ceilingheight && side->toptexture[0] == '-')
 				{
@@ -726,6 +737,7 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
 	surf->uvs.resize(surf->numVerts);
+	surf->bSky = sector->skyFloor;
 
 	if (!is3DFloor)
 	{
@@ -764,7 +776,7 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 	surf->numVerts = sub->numlines;
 	surf->verts.resize(surf->numVerts);
 	surf->uvs.resize(surf->numVerts);
-	surf->bSky = sector->skySector;
+	surf->bSky = sector->skyCeiling;
 
 	if (!is3DFloor)
 	{

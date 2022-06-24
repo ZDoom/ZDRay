@@ -78,7 +78,7 @@ void FLevel::SetupLights()
 				{
 					FString hex = FString("0x") + FString(key.value);
 					hex.StripChars("\"");
-					printf("Sun color: %s\n", hex);
+					printf("Sun color: %s\n", hex.GetChars());
 					int rgb = hex.ToULong();
 					lightcolor = (uint32_t)rgb;
 				}
@@ -124,23 +124,21 @@ void FLevel::SetupLights()
 
 void FLevel::CheckSkySectors()
 {
-	char name[65];
-
-	for (int i = 0; i < (int)Sectors.Size(); ++i)
+	for (auto& sector : Sectors)
 	{
-		//if (mapDef && mapDef->sunIgnoreTag != 0 && Sectors[i].data.tag == mapDef->sunIgnoreTag)
-		//	continue;
-
-		strncpy(name, Sectors[i].data.ceilingpic, 64);
-		name[64] = 0;
-
-		if (!strncmp(name, "F_SKY001", 64) || !strncmp(name, "F_SKY1", 64) || !strncmp(name, "F_SKY", 64))
+		for (int i = 0; i < 2; ++i)
 		{
-			Sectors[i].skySector = true;
-		}
-		else
-		{
-			Sectors[i].skySector = false;
+			sector.skyPlanes[i] = false;
+
+			//if (mapDef && mapDef->sunIgnoreTag != 0 && sector.data.tag == mapDef->sunIgnoreTag)
+			//	continue;
+
+			const auto name = sector.GetTextureName(i);
+
+			if (!strncmp(name, "F_SKY001", 64) || !strncmp(name, "F_SKY1", 64) || !strncmp(name, "F_SKY", 64))
+			{
+				sector.skyPlanes[i] = true;
+			}
 		}
 	}
 }
