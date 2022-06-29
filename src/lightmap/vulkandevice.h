@@ -103,6 +103,8 @@ public:
 	std::vector<VulkanPhysicalDevice> availableDevices;
 	std::vector<VulkanCompatibleDevice> supportedDevices;
 
+	uint32_t ApiVersion = VK_API_VERSION_1_2;
+
 	RENDERDOC_API_1_4_2* renderdoc = nullptr;
 
 	static void initVolk();

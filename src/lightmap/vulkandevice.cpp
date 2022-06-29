@@ -167,7 +167,7 @@ bool VulkanDevice::supportsDeviceExtension(const char *ext) const
 void VulkanDevice::createAllocator()
 {
 	VmaAllocatorCreateInfo allocinfo = {};
-	allocinfo.vulkanApiVersion = VK_API_VERSION_1_2;
+	allocinfo.vulkanApiVersion = ApiVersion;
 	if (supportsDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) && supportsDeviceExtension(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
 		allocinfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
 	allocinfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
@@ -321,7 +321,7 @@ void VulkanDevice::createInstance()
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "ZDRay";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_2;
+	appInfo.apiVersion = ApiVersion;
 
 	VkInstanceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
