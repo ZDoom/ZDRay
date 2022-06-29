@@ -400,7 +400,7 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 		{
 			sd->rowoffset = CheckInt(key);
 		}
-		else if (stricmp(key, "lm_sampledist") == 0)
+		else if (stricmp(key, "lm_sampledist_line") == 0)
 		{
 			sd->sampleDistance = CheckInt(key);
 		}

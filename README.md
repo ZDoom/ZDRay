@@ -76,7 +76,7 @@ thing // LightProbe (light sampling point for actors)
 linedef
 {
 	// Customizable sampling distance per line surface. Will use the value from the ZDRayInfo actor by default.
-	lm_sampledist = &lt;int&gt; (default: 0)
+	lm_sampledist_line = &lt;int&gt; (default: 0)
 	lm_sampledist_top = &lt;int&gt; (default: 0)
 	lm_sampledist_mid = &lt;int&gt; (default: 0)
 	lm_sampledist_bot = &lt;int&gt; (default: 0)
