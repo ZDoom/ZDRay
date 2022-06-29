@@ -501,7 +501,7 @@ static void ShowUsage()
 		"  -j, --threads=NNN        Number of threads used for raytracing (default %d)\n"
 		"  -S, --size=NNN           lightmap texture dimensions for width and height must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -C, --cpu-raytrace       Use the CPU for ray tracing\n"
-		"  -D, --vkdebug            Print messages from the vulkan validation layer\n"
+		"  -D, --vkdebug            Print messages from the Vulkan validation layer\n"
 		"      --dump-mesh          Export level mesh and lightmaps for debugging\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING

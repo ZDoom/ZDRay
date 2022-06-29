@@ -39,7 +39,8 @@ Usage: zdray [options] sourcefile.wad
   -S, --size=NNN           lightmap texture dimensions for width and height must
                            be in powers of two (1, 2, 4, 8, 16, etc)
   -C, --cpu-raytrace       Use the CPU for ray tracing
-  -D, --vkdebug            Print messages from the vulkan validation layer
+  -D, --vkdebug            Print messages from the Vulkan validation layer
+      --dump-mesh          Export level mesh and lightmaps for debugging
   -w, --warn               Show warning messages
   -t, --no-timing          Suppress timing information
   -V, --version            Display version information
@@ -70,5 +71,21 @@ thing // Static spotlight (Light color, distance and angle properties use the sa
 thing // LightProbe (light sampling point for actors)
 {
 	type = 9875;
+}
+
+linedef
+{
+	// Customizable sampling distance per line surface. Will use the value from the ZDRayInfo actor by default.
+	lm_sampledist = &lt;int&gt; (default: 0)
+	lm_sampledist_top = &lt;int&gt; (default: 0)
+	lm_sampledist_mid = &lt;int&gt; (default: 0)
+	lm_sampledist_bot = &lt;int&gt; (default: 0)
+}
+
+sector
+{
+	// Customizable sampling distance for floors and ceilings.
+	lm_sampledist_floor = &lt;int&gt; (default: 0)
+	lm_sampledist_ceiling = &lt;int&gt; (default: 0)
 }
 </pre>
