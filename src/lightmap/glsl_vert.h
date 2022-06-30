@@ -20,10 +20,17 @@ layout(push_constant) uniform PushConstants
 
 layout(location = 0) out vec3 worldpos;
 
+vec2 positions[4] = vec2[](
+	vec2(0.0, 0.0),
+	vec2(0.0, 1.0),
+	vec2(1.0, 1.0),
+	vec2(1.0, 0.0)
+);
+
 void main()
 {
 	worldpos = vec3(0.0);
-	gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+	gl_Position = vec4(positions[gl_VertexIndex] * 2.0 - 1.0, 0.0, 1.0);
 }
 
 )glsl";
