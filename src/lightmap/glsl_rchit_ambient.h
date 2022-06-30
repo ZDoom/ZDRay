@@ -28,7 +28,16 @@ layout(set = 0, binding = 6) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
 
 void main()
 {
-	payload.hitAttenuation = gl_HitTEXT;
+	SurfaceInfo surface = surfaces[surfaceIndices[gl_PrimitiveID]];
+
+	if(surface.Sky > 0.0)
+	{
+		payload.hitAttenuation = 100000.0;
+	}
+	else
+	{
+		payload.hitAttenuation = gl_HitTEXT;
+	}
 }
 
 )glsl";
