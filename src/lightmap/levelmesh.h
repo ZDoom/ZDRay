@@ -67,7 +67,6 @@ struct Surface
 	std::vector<vec2> lightmapCoords;
 	//std::vector<bool> coveragemask;
 	std::vector<vec3> samples;
-	std::vector<vec3> indirect;
 	SurfaceType type;
 	int typeIndex;
 	IntSector *controlSector;

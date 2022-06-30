@@ -238,7 +238,6 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	surface->lightmapSteps[1] = tCoords[1] * (float)surface->sampleDimension;
 
 	surface->samples.resize(width * height);
-	surface->indirect.resize(width * height);
 }
 
 BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
@@ -289,18 +288,6 @@ void LevelMesh::FinishSurface(Surface* surface)
 	int sampleWidth = surface->lightmapDims[0];
 	int sampleHeight = surface->lightmapDims[1];
 	vec3* colorSamples = surface->samples.data();
-
-	if (!surface->indirect.empty())
-	{
-		vec3* indirect = surface->indirect.data();
-		for (int i = 0; i < sampleHeight; i++)
-		{
-			for (int j = 0; j < sampleWidth; j++)
-			{
-				colorSamples[i * sampleWidth + j] += indirect[i * sampleWidth + j] * 0.5f;
-			}
-		}
-	}
 
 	// SVE redraws the scene for lightmaps, so for optimizations,
 	// tell the engine to ignore this surface if completely black
