@@ -21,6 +21,7 @@ VulkanDevice::VulkanDevice(int vk_device, bool vk_debug) : vk_device(vk_device),
 
 	try
 	{
+		ShInitialize();
 		initVolk();
 		createInstance();
 		selectPhysicalDevice();
@@ -537,6 +538,8 @@ void VulkanDevice::releaseResources()
 	if (instance)
 		vkDestroyInstance(instance, nullptr);
 	instance = VK_NULL_HANDLE;
+
+	ShFinalize();
 }
 
 uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
