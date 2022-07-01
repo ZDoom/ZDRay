@@ -42,8 +42,7 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 
 	printf("Ray tracing in progress...\n");
 
-	RunAsync([&]() {
-	});
+
 
 	if (device->renderdoc)
 		device->renderdoc->EndFrameCapture(0, 0);
@@ -53,25 +52,35 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 
 void GPURaytracer2::CreateVulkanObjects()
 {
+	submitFence = std::make_unique<VulkanFence>(device.get());
 	cmdpool = std::make_unique<VulkanCommandPool>(device.get(), device->graphicsFamily);
-	cmdbuffer = cmdpool->createBuffer();
-	cmdbuffer->begin();
+
+	BeginCommands();
 
 	CreateVertexAndIndexBuffers();
 	CreateBottomLevelAccelerationStructure();
 	CreateTopLevelAccelerationStructure();
 	CreateShaders();
 	CreatePipeline();
+	CreateFrameBuffer();
 	CreateDescriptorSet();
 
 	PipelineBarrier()
 		.AddMemory(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR)
 		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+	FinishCommands();
 }
 
-void GPURaytracer2::SubmitCommands()
+void GPURaytracer2::BeginCommands()
 {
-	auto submitFence = std::make_unique<VulkanFence>(device.get());
+	cmdbuffer = cmdpool->createBuffer();
+	cmdbuffer->begin();
+}
+
+void GPURaytracer2::FinishCommands()
+{
+	cmdbuffer->end();
 
 	QueueSubmit()
 		.AddCommandBuffer(cmdbuffer.get())
@@ -88,73 +97,13 @@ void GPURaytracer2::SubmitCommands()
 
 void GPURaytracer2::CreateVertexAndIndexBuffers()
 {
-	std::vector<SurfaceInfo2> surfaces;
-	surfaces.reserve(mesh->surfaces.size());
-	for (const auto& surface : mesh->surfaces)
-	{
-		SurfaceLightDef* def = nullptr;
-		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
-		{
-			int lightdefidx = mesh->map->Sides[surface->typeIndex].lightdef;
-			if (lightdefidx != -1)
-			{
-				def = &mesh->map->SurfaceLights[lightdefidx];
-			}
-		}
-		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
-		{
-			MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
-			IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
-
-			if (sector && surface->numVerts > 0)
-			{
-				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
-				{
-					def = &mesh->map->SurfaceLights[sector->floorlightdef];
-				}
-				else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
-				{
-					def = &mesh->map->SurfaceLights[sector->ceilinglightdef];
-				}
-			}
-		}
-
-		SurfaceInfo2 info;
-		info.Sky = surface->bSky ? 1.0f : 0.0f;
-		info.Normal = surface->plane.Normal();
-		if (def)
-		{
-			info.EmissiveDistance = def->distance + def->distance;
-			info.EmissiveIntensity = def->intensity;
-			info.EmissiveColor = def->rgb;
-		}
-		else
-		{
-			info.EmissiveDistance = 0.0f;
-			info.EmissiveIntensity = 0.0f;
-			info.EmissiveColor = vec3(0.0f, 0.0f, 0.0f);
-		}
-
-		info.SamplingDistance = float(surface->sampleDimension);
-		surfaces.push_back(info);
-	}
-
-	std::vector<LightInfo2> lights;
-	for (ThingLight& light : mesh->map->ThingLights)
-	{
-		LightInfo2 info;
-		info.Origin = light.LightOrigin();
-		info.Radius = light.LightRadius();
-		info.Intensity = light.intensity;
-		info.InnerAngleCos = light.innerAngleCos;
-		info.OuterAngleCos = light.outerAngleCos;
-		info.SpotDir = light.SpotDir();
-		info.Color = light.rgb;
-		lights.push_back(info);
-	}
+	std::vector<SurfaceInfo2> surfaces = CreateSurfaceInfo();
+	std::vector<LightInfo2> lights = CreateLightInfo();
 
 	if (lights.empty()) // vulkan doesn't support zero byte buffers
 		lights.push_back(LightInfo2());
+	if (surfaces.empty())
+		surfaces.push_back(SurfaceInfo2());
 
 	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(vec3);
 	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
@@ -169,13 +118,23 @@ void GPURaytracer2::CreateVertexAndIndexBuffers()
 	size_t lightoffset = surfaceoffset + surfacebuffersize;
 
 	vertexBuffer = BufferBuilder()
-		.Usage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+		.Usage(
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		.Size(vertexbuffersize)
 		.DebugName("vertexBuffer")
 		.Create(device.get());
 
 	indexBuffer = BufferBuilder()
-		.Usage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+		.Usage(
+			VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		.Size(indexbuffersize)
 		.DebugName("indexBuffer")
 		.Create(device.get());
@@ -218,10 +177,9 @@ void GPURaytracer2::CreateVertexAndIndexBuffers()
 	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceBuffer.get(), surfaceoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), lightBuffer.get(), lightoffset);
 
-	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-	cmdbuffer->pipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+	PipelineBarrier()
+		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
+		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 }
 
 void GPURaytracer2::CreateBottomLevelAccelerationStructure()
@@ -328,10 +286,9 @@ void GPURaytracer2::CreateTopLevelAccelerationStructure()
 
 	cmdbuffer->copyBuffer(tlTransferBuffer.get(), tlInstanceBuffer.get());
 
-	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-	cmdbuffer->pipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+	PipelineBarrier()
+		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
+		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 
 	VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
 	info.buffer = tlInstanceBuffer->buffer;
@@ -423,6 +380,20 @@ void GPURaytracer2::CreatePipeline()
 		.Create(device.get());
 
 	renderPass = RenderPassBuilder()
+		.AddAttachment(
+			VK_FORMAT_R8G8B8A8_UNORM,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_LOAD,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		.AddSubpass()
+		.AddSubpassColorAttachmentRef(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		.AddExternalSubpassDependency(
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT)
 		.DebugName("renderpass")
 		.Create(device.get());
 
@@ -431,8 +402,36 @@ void GPURaytracer2::CreatePipeline()
 		.RenderPass(renderPass.get())
 		.AddVertexShader(vertShader.get())
 		.AddFragmentShader(fragShader.get())
+		.Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
+		.Viewport(0.0f, 0.0f, 320.0f, 200.0f)
+		.Scissor(0, 0, 320, 200)
 		.DebugName("pipeline")
 		.Create(device.get());
+}
+
+void GPURaytracer2::CreateFrameBuffer()
+{
+	framebufferImage = ImageBuilder()
+		.Usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+		.Format(VK_FORMAT_R8G8B8A8_UNORM)
+		.Size(320, 200)
+		.Create(device.get());
+
+	framebufferImageView = ImageViewBuilder()
+		.Image(framebufferImage.get(), VK_FORMAT_R8G8B8A8_UNORM)
+		.DebugName("framebufferImageView")
+		.Create(device.get());
+
+	framebuffer = FramebufferBuilder()
+		.RenderPass(renderPass.get())
+		.Size(320, 200)
+		.AddAttachment(framebufferImageView.get())
+		.DebugName("framebuffer")
+		.Create(device.get());
+
+	PipelineBarrier()
+		.AddImage(framebufferImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+		.Execute(cmdbuffer.get(), 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
 void GPURaytracer2::CreateDescriptorSet()
@@ -472,6 +471,79 @@ void GPURaytracer2::CreateDescriptorSet()
 		.Execute(device.get());
 }
 
+std::vector<SurfaceInfo2> GPURaytracer2::CreateSurfaceInfo()
+{
+	std::vector<SurfaceInfo2> surfaces;
+	surfaces.reserve(mesh->surfaces.size());
+	for (const auto& surface : mesh->surfaces)
+	{
+		SurfaceLightDef* def = nullptr;
+		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
+		{
+			int lightdefidx = mesh->map->Sides[surface->typeIndex].lightdef;
+			if (lightdefidx != -1)
+			{
+				def = &mesh->map->SurfaceLights[lightdefidx];
+			}
+		}
+		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+		{
+			MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
+			IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
+
+			if (sector && surface->numVerts > 0)
+			{
+				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
+				{
+					def = &mesh->map->SurfaceLights[sector->floorlightdef];
+				}
+				else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
+				{
+					def = &mesh->map->SurfaceLights[sector->ceilinglightdef];
+				}
+			}
+		}
+
+		SurfaceInfo2 info;
+		info.Sky = surface->bSky ? 1.0f : 0.0f;
+		info.Normal = surface->plane.Normal();
+		if (def)
+		{
+			info.EmissiveDistance = def->distance + def->distance;
+			info.EmissiveIntensity = def->intensity;
+			info.EmissiveColor = def->rgb;
+		}
+		else
+		{
+			info.EmissiveDistance = 0.0f;
+			info.EmissiveIntensity = 0.0f;
+			info.EmissiveColor = vec3(0.0f, 0.0f, 0.0f);
+		}
+
+		info.SamplingDistance = float(surface->sampleDimension);
+		surfaces.push_back(info);
+	}
+	return surfaces;
+}
+
+std::vector<LightInfo2> GPURaytracer2::CreateLightInfo()
+{
+	std::vector<LightInfo2> lights;
+	for (ThingLight& light : mesh->map->ThingLights)
+	{
+		LightInfo2 info;
+		info.Origin = light.LightOrigin();
+		info.Radius = light.LightRadius();
+		info.Intensity = light.intensity;
+		info.InnerAngleCos = light.innerAngleCos;
+		info.OuterAngleCos = light.outerAngleCos;
+		info.SpotDir = light.SpotDir();
+		info.Color = light.rgb;
+		lights.push_back(info);
+	}
+	return lights;
+}
+
 void GPURaytracer2::PrintVulkanInfo()
 {
 	const auto& props = device->physicalDevice.properties;
@@ -493,45 +565,4 @@ void GPURaytracer2::PrintVulkanInfo()
 	printf("Vulkan device: %s\n", props.deviceName);
 	printf("Vulkan device type: %s\n", deviceType.c_str());
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
-}
-
-void GPURaytracer2::RunAsync(std::function<void()> callback)
-{
-	std::exception_ptr e;
-	std::condition_variable condvar;
-	std::mutex m;
-	bool stop;
-
-	{
-		std::unique_lock<std::mutex> lock(m);
-		stop = false;
-	}
-
-	std::thread t([&]() {
-		try
-		{
-			callback();
-		}
-		catch (...)
-		{
-			e = std::current_exception();
-		}
-		std::unique_lock<std::mutex> lock(m);
-		stop = true;
-		lock.unlock();
-		condvar.notify_all();
-	});
-
-	{
-		std::unique_lock<std::mutex> lock(m);
-		while (!stop)
-		{
-			condvar.wait_for(lock, std::chrono::milliseconds(500), [&]() { return stop; });
-		}
-	}
-
-	t.join();
-
-	if (e)
-		std::rethrow_exception(e);
 }

@@ -62,13 +62,16 @@ private:
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
 	void CreatePipeline();
+	void CreateFrameBuffer();
 	void CreateDescriptorSet();
 
-	void SubmitCommands();
+	void BeginCommands();
+	void FinishCommands();
 
 	void PrintVulkanInfo();
 
-	static void RunAsync(std::function<void()> callback);
+	std::vector<SurfaceInfo2> CreateSurfaceInfo();
+	std::vector<LightInfo2> CreateLightInfo();
 
 	LevelMesh* mesh = nullptr;
 
@@ -103,8 +106,11 @@ private:
 
 	std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
 	std::unique_ptr<VulkanPipeline> pipeline;
-
 	std::unique_ptr<VulkanRenderPass> renderPass;
+
+	std::unique_ptr<VulkanImage> framebufferImage;
+	std::unique_ptr<VulkanImageView> framebufferImageView;
+	std::unique_ptr<VulkanFramebuffer> framebuffer;
 
 	std::unique_ptr<VulkanBuffer> uniformBuffer;
 	std::unique_ptr<VulkanBuffer> uniformTransferBuffer;
@@ -112,6 +118,7 @@ private:
 	std::unique_ptr<VulkanDescriptorPool> descriptorPool;
 	std::unique_ptr<VulkanDescriptorSet> descriptorSet;
 
+	std::unique_ptr<VulkanFence> submitFence;
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
 };
