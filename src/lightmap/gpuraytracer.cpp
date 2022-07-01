@@ -93,60 +93,58 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	//printf("Ray tracing with %d bounce(s)\n", mesh->map->LightBounce);
 	printf("Ray tracing in progress...\n");
 
-	RunAsync([&]() {
-		size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
-		for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
+	size_t maxTasks = (size_t)rayTraceImageSize * rayTraceImageSize;
+	for (size_t startTask = 0; startTask < tasks.size(); startTask += maxTasks)
+	{
+		printf("\r%.1f%%\t%llu/%llu", double(startTask) / double(tasks.size()) * 100, startTask, tasks.size());
+		size_t numTasks = std::min(tasks.size() - startTask, maxTasks);
+		UploadTasks(tasks.data() + startTask, numTasks);
+
+		BeginTracing();
+
+		Uniforms uniforms = {};
+		uniforms.SunDir = mesh->map->GetSunDirection();
+		uniforms.SunColor = mesh->map->GetSunColor();
+		uniforms.SunIntensity = 1.0f;
+
+		uniforms.PassType = 0;
+		uniforms.SampleIndex = 0;
+		uniforms.SampleCount = bounceSampleCount;
+		RunTrace(uniforms, rgenBounceRegion);
+
+		uniforms.SampleCount = coverageSampleCount;
+		RunTrace(uniforms, rgenLightRegion, 0, mesh->map->ThingLights.Size());
+
+		for (uint32_t i = 0; i < (uint32_t)bounceSampleCount; i++)
 		{
-			printf("\r%.1f%%\t%llu/%llu", double(startTask) / double(tasks.size()) * 100, startTask, tasks.size());
-			size_t numTasks = std::min(tasks.size() - startTask, maxTasks);
-			UploadTasks(tasks.data() + startTask, numTasks);
-
-			BeginTracing();
-
-			Uniforms uniforms = {};
-			uniforms.SunDir = mesh->map->GetSunDirection();
-			uniforms.SunColor = mesh->map->GetSunColor();
-			uniforms.SunIntensity = 1.0f;
-
-			uniforms.PassType = 0;
-			uniforms.SampleIndex = 0;
+			uniforms.PassType = 1;
+			uniforms.SampleIndex = i;
 			uniforms.SampleCount = bounceSampleCount;
+			uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
 			RunTrace(uniforms, rgenBounceRegion);
 
-			uniforms.SampleCount = coverageSampleCount;
-			RunTrace(uniforms, rgenLightRegion, 0, mesh->map->ThingLights.Size());
-
-			for (uint32_t i = 0; i < (uint32_t)bounceSampleCount; i++)
+			for (int bounce = 0; bounce < mesh->map->LightBounce; bounce++)
 			{
-				uniforms.PassType = 1;
-				uniforms.SampleIndex = i;
+				uniforms.SampleCount = coverageSampleCount;
+				RunTrace(uniforms, rgenLightRegion, 0, mesh->map->ThingLights.Size());
+
+				uniforms.PassType = 2;
+				uniforms.SampleIndex = (i + bounce) % uniforms.SampleCount;
 				uniforms.SampleCount = bounceSampleCount;
 				uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
 				RunTrace(uniforms, rgenBounceRegion);
-
-				for (int bounce = 0; bounce < mesh->map->LightBounce; bounce++)
-				{
-					uniforms.SampleCount = coverageSampleCount;
-					RunTrace(uniforms, rgenLightRegion, 0, mesh->map->ThingLights.Size());
-
-					uniforms.PassType = 2;
-					uniforms.SampleIndex = (i + bounce) % uniforms.SampleCount;
-					uniforms.SampleCount = bounceSampleCount;
-					uniforms.HemisphereVec = HemisphereVectors[uniforms.SampleIndex];
-					RunTrace(uniforms, rgenBounceRegion);
-				}
 			}
-
-			uniforms.PassType = 0;
-			uniforms.SampleIndex = 0;
-			uniforms.SampleCount = ambientSampleCount;
-			RunTrace(uniforms, rgenAmbientRegion);
-
-			EndTracing();
-			DownloadTasks(tasks.data() + startTask, numTasks);
 		}
-		printf("\r%.1f%%\t%llu/%llu\n", 100.0, tasks.size(), tasks.size());
-	});
+
+		uniforms.PassType = 0;
+		uniforms.SampleIndex = 0;
+		uniforms.SampleCount = ambientSampleCount;
+		RunTrace(uniforms, rgenAmbientRegion);
+
+		EndTracing();
+		DownloadTasks(tasks.data() + startTask, numTasks);
+	}
+	printf("\r%.1f%%\t%llu/%llu\n", 100.0, tasks.size(), tasks.size());
 
 	if (device->renderdoc)
 		device->renderdoc->EndFrameCapture(0, 0);
@@ -971,45 +969,4 @@ float GPURaytracer::RadicalInverse_VdC(uint32_t bits)
 	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
 	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
 	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
-}
-
-void GPURaytracer::RunAsync(std::function<void()> callback)
-{
-	std::exception_ptr e;
-	std::condition_variable condvar;
-	std::mutex m;
-	bool stop;
-
-	{
-		std::unique_lock<std::mutex> lock(m);
-		stop = false;
-	}
-
-	std::thread t([&]() {
-		try
-		{
-			callback();
-		}
-		catch (...)
-		{
-			e = std::current_exception();
-		}
-		std::unique_lock<std::mutex> lock(m);
-		stop = true;
-		lock.unlock();
-		condvar.notify_all();
-	});
-
-	{
-		std::unique_lock<std::mutex> lock(m);
-		while (!stop)
-		{
-			condvar.wait_for(lock, std::chrono::milliseconds(500), [&]() { return stop; });
-		}
-	}
-
-	t.join();
-
-	if (e)
-		std::rethrow_exception(e);
 }
