@@ -76,11 +76,8 @@ void FLevel::SetupLights()
 
 				if (!stricmp(key.key, "lm_suncolor"))
 				{
-					FString hex = FString("0x") + FString(key.value);
-					hex.StripChars("\"");
-					printf("Sun color: %s\n", hex.GetChars());
-					int rgb = hex.ToULong();
-					lightcolor = (uint32_t)rgb;
+					lightcolor = atoi(key.value);
+					printf("Sun color: %d\n", lightcolor);
 				}
 				else if (!stricmp(key.key, "lm_sampledistance"))
 				{
