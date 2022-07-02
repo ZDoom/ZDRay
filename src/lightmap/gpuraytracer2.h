@@ -18,8 +18,16 @@ struct PushConstants2
 {
 	uint32_t LightStart;
 	uint32_t LightEnd;
-	int32_t surfaceIndex;
-	int32_t pushPadding;
+	int32_t SurfaceIndex;
+	int32_t PushPadding1;
+	vec2 TileTL;
+	vec2 TileBR;
+	vec3 LightmapOrigin;
+	float PushPadding2;
+	vec3 LightmapStepX;
+	float PushPadding3;
+	vec3 LightmapStepY;
+	float PushPadding4;
 };
 
 struct SurfaceInfo2
@@ -47,6 +55,14 @@ struct LightInfo2
 	float Padding2;
 };
 
+struct LightmapImage
+{
+	std::unique_ptr<VulkanImage> Image;
+	std::unique_ptr<VulkanImageView> View;
+	std::unique_ptr<VulkanFramebuffer> Framebuffer;
+	std::unique_ptr<VulkanBuffer> Transfer;
+};
+
 class GPURaytracer2
 {
 public:
@@ -62,8 +78,9 @@ private:
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
 	void CreatePipeline();
-	void CreateFrameBuffer();
 	void CreateDescriptorSet();
+
+	LightmapImage CreateImage(int width, int height);
 
 	void BeginCommands();
 	void FinishCommands();
@@ -107,10 +124,6 @@ private:
 	std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
 	std::unique_ptr<VulkanPipeline> pipeline;
 	std::unique_ptr<VulkanRenderPass> renderPass;
-
-	std::unique_ptr<VulkanImage> framebufferImage;
-	std::unique_ptr<VulkanImageView> framebufferImageView;
-	std::unique_ptr<VulkanFramebuffer> framebuffer;
 
 	std::unique_ptr<VulkanBuffer> uniformBuffer;
 	std::unique_ptr<VulkanBuffer> uniformTransferBuffer;

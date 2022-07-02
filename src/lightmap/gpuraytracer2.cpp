@@ -42,7 +42,77 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 
 	printf("Ray tracing in progress...\n");
 
+	BeginCommands();
 
+	std::vector<LightmapImage> surfaceImages;
+
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		Surface* surface = mesh->surfaces[i].get();
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+
+		LightmapImage img = CreateImage(sampleWidth, sampleHeight);
+
+		RenderPassBegin()
+			.RenderPass(renderPass.get())
+			.RenderArea(0, 0, sampleWidth, sampleHeight)
+			.Framebuffer(img.Framebuffer.get())
+			.Execute(cmdbuffer.get());
+
+		PushConstants2 pc;
+		pc.LightStart = 0;
+		pc.LightEnd = mesh->map->ThingLights.Size();
+		pc.SurfaceIndex = (int32_t)i;
+		pc.TileTL = vec2(0.0f);
+		pc.TileBR = vec2(1.0f);
+		pc.LightmapOrigin = surface->lightmapOrigin;
+		pc.LightmapStepX = surface->lightmapSteps[0] * (float)sampleWidth;
+		pc.LightmapStepY = surface->lightmapSteps[1] * (float)sampleHeight;
+
+		VkViewport viewport = {};
+		viewport.maxDepth = 1;
+		viewport.width = (float)sampleWidth;
+		viewport.height = (float)sampleHeight;
+		cmdbuffer->setViewport(0, 1, &viewport);
+
+		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.get());
+		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, descriptorSet.get());
+		cmdbuffer->pushConstants(pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
+		cmdbuffer->draw(4, 1, 0, 0);
+
+		cmdbuffer->endRenderPass();
+
+		PipelineBarrier()
+			.AddImage(img.Image.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT)
+			.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+		VkBufferImageCopy region = {};
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.layerCount = 1;
+		region.imageExtent.width = sampleWidth;
+		region.imageExtent.height = sampleHeight;
+		region.imageExtent.depth = 1;
+		cmdbuffer->copyImageToBuffer(img.Image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img.Transfer->buffer, 1, &region);
+
+		surfaceImages.push_back(std::move(img));
+	}
+
+	FinishCommands();
+
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		Surface* surface = mesh->surfaces[i].get();
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+
+		vec4* pixels = (vec4*)surfaceImages[i].Transfer->Map(0, sampleWidth * sampleHeight * sizeof(vec4));
+		for (int i = 0; i < sampleWidth * sampleHeight; i++)
+		{
+			surface->samples[i] = pixels[i].xyz();
+		}
+		surfaceImages[i].Transfer->Unmap();
+	}
 
 	if (device->renderdoc)
 		device->renderdoc->EndFrameCapture(0, 0);
@@ -62,7 +132,6 @@ void GPURaytracer2::CreateVulkanObjects()
 	CreateTopLevelAccelerationStructure();
 	CreateShaders();
 	CreatePipeline();
-	CreateFrameBuffer();
 	CreateDescriptorSet();
 
 	PipelineBarrier()
@@ -334,9 +403,10 @@ void GPURaytracer2::CreatePipeline()
 {
 	descriptorSetLayout = DescriptorSetLayoutBuilder()
 		.AddBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.AddBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+		.AddBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.DebugName("descriptorSetLayout")
 		.Create(device.get());
 
@@ -348,19 +418,19 @@ void GPURaytracer2::CreatePipeline()
 
 	renderPass = RenderPassBuilder()
 		.AddAttachment(
-			VK_FORMAT_R8G8B8A8_UNORM,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
 			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_LOAD,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		.AddSubpass()
 		.AddSubpassColorAttachmentRef(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		.AddExternalSubpassDependency(
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT)
+			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
 		.DebugName("renderpass")
 		.Create(device.get());
 
@@ -370,35 +440,43 @@ void GPURaytracer2::CreatePipeline()
 		.AddVertexShader(vertShader.get())
 		.AddFragmentShader(fragShader.get())
 		.Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
-		.Viewport(0.0f, 0.0f, 320.0f, 200.0f)
-		.Scissor(0, 0, 320, 200)
+		.AddDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
+		.Viewport(0.0f, 0.0f, 0.0f, 0.0f)
+		.Scissor(0, 0, 4096, 4096)
 		.DebugName("pipeline")
 		.Create(device.get());
 }
 
-void GPURaytracer2::CreateFrameBuffer()
+LightmapImage GPURaytracer2::CreateImage(int width, int height)
 {
-	framebufferImage = ImageBuilder()
+	LightmapImage img;
+
+	img.Image = ImageBuilder()
 		.Usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-		.Format(VK_FORMAT_R8G8B8A8_UNORM)
-		.Size(320, 200)
+		.Format(VK_FORMAT_R32G32B32A32_SFLOAT)
+		.Size(width, height)
+		.DebugName("LightmapImage.Image")
 		.Create(device.get());
 
-	framebufferImageView = ImageViewBuilder()
-		.Image(framebufferImage.get(), VK_FORMAT_R8G8B8A8_UNORM)
-		.DebugName("framebufferImageView")
+	img.View = ImageViewBuilder()
+		.Image(img.Image.get(), VK_FORMAT_R32G32B32A32_SFLOAT)
+		.DebugName("LightmapImage.View")
 		.Create(device.get());
 
-	framebuffer = FramebufferBuilder()
+	img.Framebuffer = FramebufferBuilder()
 		.RenderPass(renderPass.get())
-		.Size(320, 200)
-		.AddAttachment(framebufferImageView.get())
-		.DebugName("framebuffer")
+		.Size(width, height)
+		.AddAttachment(img.View.get())
+		.DebugName("LightmapImage.Framebuffer")
 		.Create(device.get());
 
-	PipelineBarrier()
-		.AddImage(framebufferImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-		.Execute(cmdbuffer.get(), 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	img.Transfer = BufferBuilder()
+		.Size(width * height * sizeof(vec4))
+		.Usage(VK_IMAGE_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
+		.DebugName("LightmapImage.Transfer")
+		.Create(device.get());
+
+	return img;
 }
 
 void GPURaytracer2::CreateDescriptorSet()
@@ -420,7 +498,7 @@ void GPURaytracer2::CreateDescriptorSet()
 
 	descriptorPool = DescriptorPoolBuilder()
 		.AddPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1)
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1)
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
 		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
 		.MaxSets(1)
 		.DebugName("descriptorPool")
@@ -431,7 +509,7 @@ void GPURaytracer2::CreateDescriptorSet()
 
 	WriteDescriptors()
 		.AddAccelerationStructure(descriptorSet.get(), 0, tlAccelStruct.get())
-		.AddBuffer(descriptorSet.get(), 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, uniformBuffer.get(), 0, sizeof(Uniforms2))
+		.AddBuffer(descriptorSet.get(), 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get(), 0, sizeof(Uniforms2))
 		.AddBuffer(descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
 		.AddBuffer(descriptorSet.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
 		.AddBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, lightBuffer.get())

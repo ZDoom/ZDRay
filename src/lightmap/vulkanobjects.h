@@ -7,6 +7,7 @@
 
 class VulkanCommandPool;
 class VulkanDescriptorPool;
+class VulkanCommandBuffer;
 
 class VulkanSemaphore
 {
@@ -307,13 +308,15 @@ class RenderPassBegin
 public:
 	RenderPassBegin();
 
-	void setRenderPass(VulkanRenderPass *renderpass);
-	void setRenderArea(int x, int y, int width, int height);
-	void setFramebuffer(VulkanFramebuffer *framebuffer);
-	void addClearColor(float r, float g, float b, float a);
-	void addClearDepth(float value);
-	void addClearStencil(int value);
-	void addClearDepthStencil(float depthValue, int stencilValue);
+	RenderPassBegin& RenderPass(VulkanRenderPass *renderpass);
+	RenderPassBegin& RenderArea(int x, int y, int width, int height);
+	RenderPassBegin& Framebuffer(VulkanFramebuffer *framebuffer);
+	RenderPassBegin& AddClearColor(float r, float g, float b, float a);
+	RenderPassBegin& AddClearDepth(float value);
+	RenderPassBegin& AddClearStencil(int value);
+	RenderPassBegin& AddClearDepthStencil(float depthValue, int stencilValue);
+
+	void Execute(VulkanCommandBuffer* cmdbuffer, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 
@@ -381,7 +384,6 @@ public:
 	void copyQueryPoolResults(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkQueryResultFlags flags);
 	void pushConstants(VulkanPipelineLayout *layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues);
 	void pushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues);
-	void beginRenderPass(const RenderPassBegin &renderPassBegin, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
 	void beginRenderPass(const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents);
 	void nextSubpass(VkSubpassContents contents);
 	void endRenderPass();
@@ -509,25 +511,28 @@ inline RenderPassBegin::RenderPassBegin()
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 }
 
-inline void RenderPassBegin::setRenderPass(VulkanRenderPass *renderPass)
+inline RenderPassBegin& RenderPassBegin::RenderPass(VulkanRenderPass *renderPass)
 {
 	renderPassInfo.renderPass = renderPass->renderPass;
+	return *this;
 }
 
-inline void RenderPassBegin::setRenderArea(int x, int y, int width, int height)
+inline RenderPassBegin& RenderPassBegin::RenderArea(int x, int y, int width, int height)
 {
 	renderPassInfo.renderArea.offset.x = x;
 	renderPassInfo.renderArea.offset.y = y;
 	renderPassInfo.renderArea.extent.width = width;
 	renderPassInfo.renderArea.extent.height = height;
+	return *this;
 }
 
-inline void RenderPassBegin::setFramebuffer(VulkanFramebuffer *framebuffer)
+inline RenderPassBegin& RenderPassBegin::Framebuffer(VulkanFramebuffer *framebuffer)
 {
 	renderPassInfo.framebuffer = framebuffer->framebuffer;
+	return *this;
 }
 
-inline void RenderPassBegin::addClearColor(float r, float g, float b, float a)
+inline RenderPassBegin& RenderPassBegin::AddClearColor(float r, float g, float b, float a)
 {
 	VkClearValue clearValue = { };
 	clearValue.color = { r, g, b, a };
@@ -535,9 +540,10 @@ inline void RenderPassBegin::addClearColor(float r, float g, float b, float a)
 
 	renderPassInfo.clearValueCount = (uint32_t)clearValues.size();
 	renderPassInfo.pClearValues = clearValues.data();
+	return *this;
 }
 
-inline void RenderPassBegin::addClearDepth(float value)
+inline RenderPassBegin& RenderPassBegin::AddClearDepth(float value)
 {
 	VkClearValue clearValue = { };
 	clearValue.depthStencil.depth = value;
@@ -545,9 +551,10 @@ inline void RenderPassBegin::addClearDepth(float value)
 
 	renderPassInfo.clearValueCount = (uint32_t)clearValues.size();
 	renderPassInfo.pClearValues = clearValues.data();
+	return *this;
 }
 
-inline void RenderPassBegin::addClearStencil(int value)
+inline RenderPassBegin& RenderPassBegin::AddClearStencil(int value)
 {
 	VkClearValue clearValue = { };
 	clearValue.depthStencil.stencil = value;
@@ -555,9 +562,10 @@ inline void RenderPassBegin::addClearStencil(int value)
 
 	renderPassInfo.clearValueCount = (uint32_t)clearValues.size();
 	renderPassInfo.pClearValues = clearValues.data();
+	return *this;
 }
 
-inline void RenderPassBegin::addClearDepthStencil(float depthValue, int stencilValue)
+inline RenderPassBegin& RenderPassBegin::AddClearDepthStencil(float depthValue, int stencilValue)
 {
 	VkClearValue clearValue = { };
 	clearValue.depthStencil.depth = depthValue;
@@ -566,6 +574,12 @@ inline void RenderPassBegin::addClearDepthStencil(float depthValue, int stencilV
 
 	renderPassInfo.clearValueCount = (uint32_t)clearValues.size();
 	renderPassInfo.pClearValues = clearValues.data();
+	return *this;
+}
+
+inline void RenderPassBegin::Execute(VulkanCommandBuffer* cmdbuffer, VkSubpassContents contents)
+{
+	cmdbuffer->beginRenderPass(&renderPassInfo, contents);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -894,11 +908,6 @@ inline void VulkanCommandBuffer::pushConstants(VulkanPipelineLayout *layout, VkS
 inline void VulkanCommandBuffer::pushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues)
 {
 	vkCmdPushConstants(buffer, layout, stageFlags, offset, size, pValues);
-}
-
-inline void VulkanCommandBuffer::beginRenderPass(const RenderPassBegin &renderPassBegin, VkSubpassContents contents)
-{
-	beginRenderPass(&renderPassBegin.renderPassInfo, contents);
 }
 
 inline void VulkanCommandBuffer::beginRenderPass(const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents)

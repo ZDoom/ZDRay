@@ -192,7 +192,7 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
 	bool compileSuccess = shader.parse(&resources, 110, false, EShMsgVulkanRules);
 	if (!compileSuccess)
 	{
-		throw std::runtime_error(std::string("Shader compile failed: ") + shader.getInfoLog());
+		throw std::runtime_error(std::string("Could not compile shader ") + shadername + ": " + shader.getInfoLog());
 	}
 
 	glslang::TProgram program;
@@ -200,7 +200,7 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
 	bool linkSuccess = program.link(EShMsgDefault);
 	if (!linkSuccess)
 	{
-		throw std::runtime_error(std::string("Shader link failed: ") + program.getInfoLog());
+		throw std::runtime_error(std::string("Could not link shader ") + shadername + ": " + program.getInfoLog());
 	}
 
 	glslang::TIntermediate *intermediate = program.getIntermediate(stage);

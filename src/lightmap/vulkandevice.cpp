@@ -200,9 +200,13 @@ void VulkanDevice::createDevice()
 		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
+	VkPhysicalDeviceRayQueryFeaturesKHR rayqueryFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+	rayqueryFeatures.rayQuery = true;
+
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
 	raytracingFeatures.rayTracingPipeline = true;
 	raytracingFeatures.rayTraversalPrimitiveCulling = true;
+	raytracingFeatures.pNext = &rayqueryFeatures;
 
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR deviceAccelFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
 	deviceAccelFeatures.accelerationStructure = true;

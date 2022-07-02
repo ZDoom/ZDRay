@@ -46,8 +46,16 @@ layout(push_constant) uniform PushConstants
 {
 	uint LightStart;
 	uint LightEnd;
-	int surfaceIndex;
-	int pushPadding;
+	int SurfaceIndex;
+	int PushPadding1;
+	vec2 TileTL;
+	vec2 TileBR;
+	vec3 LightmapOrigin;
+	float PushPadding2;
+	vec3 LightmapStepX;
+	float PushPadding3;
+	vec3 LightmapStepY;
+	float PushPadding4;
 };
 
 layout(location = 0) in vec3 worldpos;
@@ -59,12 +67,13 @@ void main()
 
 	vec3 origin = worldpos;
 	vec3 normal;
-	if (surfaceIndex >= 0)
+	if (SurfaceIndex >= 0)
 	{
-		normal = surfaces[surfaceIndex].Normal;
+		normal = surfaces[SurfaceIndex].Normal;
 		origin += normal * 0.1;
 	}
 
+	vec3 incoming = vec3(0.0);
 	for (uint j = LightStart; j < LightEnd; j++)
 	{
 		LightInfo light = lights[j];
@@ -76,7 +85,7 @@ void main()
 
 			float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
 			float angleAttenuation = 1.0f;
-			if (surfaceIndex >= 0)
+			if (SurfaceIndex >= 0)
 			{
 				angleAttenuation = max(dot(normal, dir), 0.0);
 			}
@@ -98,13 +107,13 @@ void main()
 
 				if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionNoneEXT)
 				{
-					incoming.rgb += light.Color * (attenuation * light.Intensity) * incoming.w;
+					incoming.rgb += light.Color * (attenuation * light.Intensity);
 				}
 			}
 		}
 	}
 
-	fragcolor = vec4(0.0);
+	fragcolor = vec4(incoming, 1.0);
 }
 
 )glsl";
