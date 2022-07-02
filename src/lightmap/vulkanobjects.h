@@ -46,6 +46,13 @@ public:
 	VulkanBuffer(VulkanDevice *device, VkBuffer buffer, VmaAllocation allocation, size_t size);
 	~VulkanBuffer();
 
+	VkDeviceAddress GetDeviceAddress()
+	{
+		VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+		info.buffer = buffer;
+		return vkGetBufferDeviceAddress(device->device, &info);
+	}
+
 	void SetDebugName(const char *name) { device->setDebugObjectName(name, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER); }
 
 	VulkanDevice *device = nullptr;
@@ -228,6 +235,13 @@ class VulkanAccelerationStructure
 public:
 	VulkanAccelerationStructure(VulkanDevice* device, VkAccelerationStructureKHR accelstruct);
 	~VulkanAccelerationStructure();
+
+	VkDeviceAddress GetDeviceAddress()
+	{
+		VkAccelerationStructureDeviceAddressInfoKHR addressInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+		addressInfo.accelerationStructure = accelstruct;
+		return vkGetAccelerationStructureDeviceAddressKHR(device->device, &addressInfo);
+	}
 
 	void SetDebugName(const char* name) { device->setDebugObjectName(name, (uint64_t)accelstruct, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR); }
 

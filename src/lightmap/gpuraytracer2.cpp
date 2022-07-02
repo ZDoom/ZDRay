@@ -178,44 +178,35 @@ void GPURaytracer2::CreateVertexAndIndexBuffers()
 	cmdbuffer->copyBuffer(transferBuffer.get(), lightBuffer.get(), lightoffset);
 
 	PipelineBarrier()
-		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
+		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
 		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 }
 
 void GPURaytracer2::CreateBottomLevelAccelerationStructure()
 {
-	VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-	info.buffer = vertexBuffer->buffer;
-	VkDeviceAddress vertexAddress = vkGetBufferDeviceAddress(device->device, &info);
-
-	info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-	info.buffer = indexBuffer->buffer;
-	VkDeviceAddress indexAddress = vkGetBufferDeviceAddress(device->device, &info);
-
-	VkAccelerationStructureGeometryTrianglesDataKHR triangles = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR };
-	triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-	triangles.vertexData.deviceAddress = vertexAddress;
-	triangles.vertexStride = sizeof(vec3);
-	triangles.indexType = VK_INDEX_TYPE_UINT32;
-	triangles.indexData.deviceAddress = indexAddress;
-	triangles.maxVertex = mesh->MeshVertices.Size();
-
+	VkAccelerationStructureBuildGeometryInfoKHR buildInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
 	VkAccelerationStructureGeometryKHR accelStructBLDesc = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR };
+	VkAccelerationStructureGeometryKHR* geometries[] = { &accelStructBLDesc };
+	VkAccelerationStructureBuildRangeInfoKHR rangeInfo = {};
+	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
+
 	accelStructBLDesc.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 	accelStructBLDesc.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-	accelStructBLDesc.geometry.triangles = triangles;
+	accelStructBLDesc.geometry.triangles = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR };
+	accelStructBLDesc.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+	accelStructBLDesc.geometry.triangles.vertexData.deviceAddress = vertexBuffer->GetDeviceAddress();
+	accelStructBLDesc.geometry.triangles.vertexStride = sizeof(vec3);
+	accelStructBLDesc.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+	accelStructBLDesc.geometry.triangles.indexData.deviceAddress = indexBuffer->GetDeviceAddress();
+	accelStructBLDesc.geometry.triangles.maxVertex = mesh->MeshVertices.Size() - 1;
 
-	VkAccelerationStructureBuildRangeInfoKHR rangeInfo = {};
-	rangeInfo.primitiveCount = mesh->MeshElements.Size() / 3;
-
-	VkAccelerationStructureBuildGeometryInfoKHR buildInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
 	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	buildInfo.flags = accelStructBLDesc.flags | VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
 	buildInfo.geometryCount = 1;
 	buildInfo.pGeometries = &accelStructBLDesc;
 
-	uint32_t maxPrimitiveCount = rangeInfo.primitiveCount;
+	uint32_t maxPrimitiveCount = mesh->MeshElements.Size() / 3;
 
 	VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 	vkGetAccelerationStructureBuildSizesKHR(device->device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &maxPrimitiveCount, &sizeInfo);
@@ -226,15 +217,10 @@ void GPURaytracer2::CreateBottomLevelAccelerationStructure()
 		.DebugName("blAccelStructBuffer")
 		.Create(device.get());
 
-	VkAccelerationStructureKHR blAccelStructHandle = {};
-	VkAccelerationStructureCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
-	createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-	createInfo.buffer = blAccelStructBuffer->buffer;
-	createInfo.size = sizeInfo.accelerationStructureSize;
-	VkResult result = vkCreateAccelerationStructureKHR(device->device, &createInfo, nullptr, &blAccelStructHandle);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("vkCreateAccelerationStructureKHR failed");
-	blAccelStruct = std::make_unique<VulkanAccelerationStructure>(device.get(), blAccelStructHandle);
+	blAccelStruct = AccelerationStructureBuilder()
+		.Type(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
+		.Buffer(blAccelStructBuffer.get(), sizeInfo.accelerationStructureSize)
+		.Create(device.get());
 
 	blScratchBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
@@ -242,31 +228,27 @@ void GPURaytracer2::CreateBottomLevelAccelerationStructure()
 		.DebugName("blScratchBuffer")
 		.Create(device.get());
 
-	info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-	info.buffer = blScratchBuffer->buffer;
-	VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(device->device, &info);
-
 	buildInfo.dstAccelerationStructure = blAccelStruct->accelstruct;
-	buildInfo.scratchData.deviceAddress = scratchAddress;
-	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
+	buildInfo.scratchData.deviceAddress = blScratchBuffer->GetDeviceAddress();
+	rangeInfo.primitiveCount = maxPrimitiveCount;
+
 	cmdbuffer->buildAccelerationStructures(1, &buildInfo, rangeInfos);
+
+	// Finish building before using it as input to a toplevel accel structure
+	PipelineBarrier()
+		.AddMemory(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR)
+		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 }
 
 void GPURaytracer2::CreateTopLevelAccelerationStructure()
 {
-	VkAccelerationStructureDeviceAddressInfoKHR addressInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
-	addressInfo.accelerationStructure = blAccelStruct->accelstruct;
-	VkDeviceAddress blAccelStructAddress = vkGetAccelerationStructureDeviceAddressKHR(device->device, &addressInfo);
-
 	VkAccelerationStructureInstanceKHR instance = {};
 	instance.transform.matrix[0][0] = 1.0f;
 	instance.transform.matrix[1][1] = 1.0f;
 	instance.transform.matrix[2][2] = 1.0f;
-	instance.instanceCustomIndex = 0;
-	instance.accelerationStructureReference = blAccelStructAddress;
-	instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 	instance.mask = 0xff;
-	instance.instanceShaderBindingTableRecordOffset = 0;
+	instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+	instance.accelerationStructureReference = blAccelStruct->GetDeviceAddress();
 
 	tlTransferBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
@@ -287,30 +269,23 @@ void GPURaytracer2::CreateTopLevelAccelerationStructure()
 	cmdbuffer->copyBuffer(tlTransferBuffer.get(), tlInstanceBuffer.get());
 
 	PipelineBarrier()
-		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
+		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
 		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 
-	VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-	info.buffer = tlInstanceBuffer->buffer;
-	VkDeviceAddress instanceBufferAddress = vkGetBufferDeviceAddress(device->device, &info);
-
-	VkAccelerationStructureGeometryInstancesDataKHR instances = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR };
-	instances.data.deviceAddress = instanceBufferAddress;
-
 	VkAccelerationStructureGeometryKHR accelStructTLDesc = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR };
-	accelStructTLDesc.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-	accelStructTLDesc.geometry.instances = instances;
-
-	VkAccelerationStructureBuildRangeInfoKHR rangeInfo = {};
-	rangeInfo.primitiveCount = 1;
-
 	VkAccelerationStructureBuildGeometryInfoKHR buildInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
+	VkAccelerationStructureBuildRangeInfoKHR rangeInfo = {};
+	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
+
+	accelStructTLDesc.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	accelStructTLDesc.geometry.instances = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR };
+	accelStructTLDesc.geometry.instances.data.deviceAddress = tlInstanceBuffer->GetDeviceAddress();
+
+	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
 	buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
 	buildInfo.geometryCount = 1;
 	buildInfo.pGeometries = &accelStructTLDesc;
-	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-	buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
 
 	uint32_t maxInstanceCount = 1;
 
@@ -323,15 +298,11 @@ void GPURaytracer2::CreateTopLevelAccelerationStructure()
 		.DebugName("tlAccelStructBuffer")
 		.Create(device.get());
 
-	VkAccelerationStructureKHR tlAccelStructHandle = {};
-	VkAccelerationStructureCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
-	createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-	createInfo.buffer = tlAccelStructBuffer->buffer;
-	createInfo.size = sizeInfo.accelerationStructureSize;
-	VkResult result = vkCreateAccelerationStructureKHR(device->device, &createInfo, nullptr, &tlAccelStructHandle);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("vkCreateAccelerationStructureKHR failed");
-	tlAccelStruct = std::make_unique<VulkanAccelerationStructure>(device.get(), tlAccelStructHandle);
+	tlAccelStruct = AccelerationStructureBuilder()
+		.Type(VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
+		.Buffer(tlAccelStructBuffer.get(), sizeInfo.accelerationStructureSize)
+		.DebugName("tlAccelStruct")
+		.Create(device.get());
 
 	tlScratchBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
@@ -339,14 +310,10 @@ void GPURaytracer2::CreateTopLevelAccelerationStructure()
 		.DebugName("tlScratchBuffer")
 		.Create(device.get());
 
-	info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-	info.buffer = tlScratchBuffer->buffer;
-	VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(device->device, &info);
-
 	buildInfo.dstAccelerationStructure = tlAccelStruct->accelstruct;
-	buildInfo.scratchData.deviceAddress = scratchAddress;
+	buildInfo.scratchData.deviceAddress = tlScratchBuffer->GetDeviceAddress();
+	rangeInfo.primitiveCount = maxInstanceCount;
 
-	VkAccelerationStructureBuildRangeInfoKHR* rangeInfos[] = { &rangeInfo };
 	cmdbuffer->buildAccelerationStructures(1, &buildInfo, rangeInfos);
 }
 
