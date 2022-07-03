@@ -65,8 +65,15 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		Surface* surface = mesh->surfaces[i].get();
 		int sampleWidth = surface->lightmapDims[0];
 		int sampleHeight = surface->lightmapDims[1];
+		surfaceImages.push_back(CreateImage(sampleWidth, sampleHeight));
+	}
 
-		LightmapImage img = CreateImage(sampleWidth, sampleHeight);
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		Surface* surface = mesh->surfaces[i].get();
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+		LightmapImage& img = surfaceImages[i];
 
 		RenderPassBegin()
 			.RenderPass(renderPass.get())
@@ -96,6 +103,14 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		cmdbuffer->draw(4, 1, 0, 0);
 
 		cmdbuffer->endRenderPass();
+	}
+
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		Surface* surface = mesh->surfaces[i].get();
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+		LightmapImage& img = surfaceImages[i];
 
 		PipelineBarrier()
 			.AddImage(img.Image.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT)
@@ -108,8 +123,6 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		region.imageExtent.height = sampleHeight;
 		region.imageExtent.depth = 1;
 		cmdbuffer->copyImageToBuffer(img.Image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img.Transfer->buffer, 1, &region);
-
-		surfaceImages.push_back(std::move(img));
 	}
 
 	FinishCommands();
