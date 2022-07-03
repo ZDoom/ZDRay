@@ -230,22 +230,26 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 		float attenuation = 0.0f;
 		if (state.PassType == 0 && surface)
 		{
-			vec3 e0 = normalize(cross(normal, std::abs(normal.x) < std::abs(normal.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f)));
-			vec3 e1 = cross(normal, e0);
-			e0 = cross(normal, e1);
-
-			for (uint32_t i = 0; i < state.SampleCount; i++)
+			if (dot(normal, state.SunDir) > 0.0f)
 			{
-				vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * float(surface->sampleDimension);
-				vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
+				vec3 e0 = normalize(cross(normal, std::abs(normal.x) < std::abs(normal.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f)));
+				vec3 e1 = cross(normal, e0);
+				e0 = cross(normal, e1);
 
-				vec3 start = origin2;
-				vec3 end = start + state.SunDir * dist;
-				LevelTraceHit hit = Trace(start, end);
-				if (hit.fraction < 1.0f && hit.hitSurface->bSky)
-					attenuation += 1.0f;
+				for (uint32_t i = 0; i < state.SampleCount; i++)
+				{
+					vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * float(surface->sampleDimension);
+					vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
+
+					vec3 start = origin2;
+					vec3 end = start + state.SunDir * dist;
+					LevelTraceHit hit = Trace(start, end);
+					if (hit.fraction < 1.0f && hit.hitSurface->bSky)
+						attenuation += 1.0f;
+				}
+				attenuation *= 1.0f / float(state.SampleCount);
+				incoming += state.SunColor * (attenuation * state.SunIntensity * incomingAttenuation);
 			}
-			attenuation *= 1.0f / float(state.SampleCount);
 		}
 		else
 		{
@@ -253,8 +257,8 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 			vec3 end = start + state.SunDir * dist;
 			LevelTraceHit hit = Trace(start, end);
 			attenuation = (hit.fraction < 1.0f && hit.hitSurface->bSky) ? 1.0f : 0.0f;
+			incoming += state.SunColor * (attenuation * state.SunIntensity * incomingAttenuation);
 		}
-		incoming += state.SunColor * (attenuation * state.SunIntensity * incomingAttenuation);
 	}
 
 	for (uint32_t j = 0; j < state.LightCount; j++)
