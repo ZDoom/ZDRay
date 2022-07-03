@@ -6,6 +6,7 @@
 #include "framework/binfile.h"
 #include "framework/templates.h"
 #include "framework/halffloat.h"
+#include "delauneytriangulator.h"
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -29,32 +30,8 @@ void CPURaytracer::Raytrace(LevelMesh* level)
 	mesh = level;
 
 	std::vector<CPUTraceTask> tasks;
-	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
-	{
-		CPUTraceTask task;
-		task.id = -(int)(i + 2);
-		task.x = 0;
-		task.y = 0;
-		tasks.push_back(task);
-	}
 
-	for (size_t i = 0; i < mesh->surfaces.size(); i++)
-	{
-		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
-		for (int y = 0; y < sampleHeight; y++)
-		{
-			for (int x = 0; x < sampleWidth; x++)
-			{
-				CPUTraceTask task;
-				task.id = (int)i;
-				task.x = x;
-				task.y = y;
-				tasks.push_back(task);
-			}
-		}
-	}
+	CreateTasks(tasks);
 
 	CollisionMesh = std::make_unique<TriangleMeshShape>(mesh->MeshVertices.Data(), mesh->MeshVertices.Size(), mesh->MeshElements.Data(), mesh->MeshElements.Size());
 	CreateHemisphereVectors();
@@ -76,7 +53,7 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 	if (task.id >= 0)
 	{
 		Surface* surface = mesh->surfaces[task.id].get();
-		vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (float)task.x + surface->lightmapSteps[1] * (float)task.y;
+		vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * ((float)task.x + 0.5f) + surface->lightmapSteps[1] * ((float)task.y + 0.5f);
 		state.StartPosition = pos;
 		state.StartSurface = surface;
 	}
@@ -364,6 +341,121 @@ float CPURaytracer::RadicalInverse_VdC(uint32_t bits)
 	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
 	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
 	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
+}
+
+typedef DelauneyTriangulator::Vertex DTVertex;
+
+inline bool PointOnSide(const vec2& p, const DTVertex& v1, const DTVertex& v2, float tolerance)
+{
+	vec2 p2 = p - normalize(vec2(-(v2.y - v1.y), v2.x - v1.x)) * tolerance;
+	return (p2.y - v1.y) * (v2.x - v1.x) + (v1.x - p2.x) * (v2.y - v1.y) <= 0;
+}
+
+void CPURaytracer::CreateTasks(std::vector<CPUTraceTask>& tasks)
+{
+	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
+	{
+		CPUTraceTask task;
+		task.id = -(int)(i + 2);
+		task.x = 0;
+		task.y = 0;
+		tasks.push_back(task);
+	}
+
+	size_t fullTaskCount = mesh->lightProbes.size();
+
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		if (i % 4096 == 0)
+			printf("\rGathering surface trace tasks: %d / %d", i, mesh->surfaces.size());
+
+		Surface* surface = mesh->surfaces[i].get();
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+
+		if (!surface->bSky)
+		{
+			// Transformation matrix
+			mat3 base;
+			base[0] = surface->lightmapSteps[0].x;
+			base[1] = surface->lightmapSteps[0].y;
+			base[2] = surface->lightmapSteps[0].z;
+			base[3] = surface->lightmapSteps[1].x;
+			base[4] = surface->lightmapSteps[1].y;
+			base[5] = surface->lightmapSteps[1].z;
+			base[6] = surface->plane.a;
+			base[7] = surface->plane.b;
+			base[8] = surface->plane.c;
+
+			mat3 inverseProjection = mat3::inverse(base);
+
+			// Transform vertices to XY and triangulate
+			DelauneyTriangulator triangulator;
+
+			BBox bounds;
+
+			for (const auto& vertex : surface->verts)
+			{
+				auto flattenedVertex = inverseProjection * vertex;
+
+				triangulator.vertices.emplace_back(flattenedVertex.x, flattenedVertex.y, nullptr);
+
+				if (triangulator.vertices.empty())
+				{
+					bounds = BBox(flattenedVertex, flattenedVertex);
+				}
+				else
+				{
+					bounds.AddPoint(flattenedVertex);
+				}
+			}
+
+			triangulator.triangulate();
+
+			const float boundsWidth = bounds.max.x - bounds.min.x;
+			const float boundsHeight = bounds.max.y - bounds.min.y;
+
+			const float offsetW = boundsWidth / sampleWidth;
+			const float offsetH = boundsHeight / sampleHeight;
+
+			const float offset = (offsetH > offsetW ? offsetH : offsetW);
+
+			auto isInBounds = [&](int x, int y) {
+				const float fx = (float(x) / float(sampleWidth)) * boundsWidth + bounds.min.x + offsetW;
+				const float fy = (float(y) / float(sampleHeight)) * boundsHeight + bounds.min.y + offsetH;
+
+				for (const auto& triangle : triangulator.triangles)
+				{
+					if (PointOnSide(vec2(fx, fy), *triangle.A, *triangle.B, offset)
+						&& PointOnSide(vec2(fx, fy), *triangle.B, *triangle.C, offset)
+						&& PointOnSide(vec2(fx, fy), *triangle.C, *triangle.A, offset))
+					{
+						return true;
+					}
+				}
+				return false;
+			};
+
+			fullTaskCount += size_t(sampleHeight) * size_t(sampleWidth);
+
+			for (int y = 0; y < sampleHeight; y++)
+			{
+				for (int x = 0; x < sampleWidth; x++)
+				{
+					if (isInBounds(x, y))
+					{
+						CPUTraceTask task;
+						task.id = (int)i;
+						task.x = x;
+						task.y = y;
+						tasks.push_back(task);
+					}
+				}
+			}
+		}
+	}
+	printf("\rGathering surface trace tasks: %d / %d\n", mesh->surfaces.size(), mesh->surfaces.size());
+	printf("\tDiscarded %.3f%% of all tasks\n", (1.0 - double(tasks.size()) / fullTaskCount) * 100.0);
 }
 
 void CPURaytracer::CreateHemisphereVectors()
