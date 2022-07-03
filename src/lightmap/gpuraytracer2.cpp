@@ -148,10 +148,6 @@ void GPURaytracer2::CreateVulkanObjects()
 	CreatePipeline();
 	CreateDescriptorSet();
 
-	PipelineBarrier()
-		.AddMemory(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR)
-		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
 	FinishCommands();
 }
 
@@ -398,6 +394,10 @@ void GPURaytracer2::CreateTopLevelAccelerationStructure()
 	rangeInfo.primitiveCount = maxInstanceCount;
 
 	cmdbuffer->buildAccelerationStructures(1, &buildInfo, rangeInfos);
+
+	PipelineBarrier()
+		.AddMemory(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR)
+		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
 void GPURaytracer2::CreateShaders()
