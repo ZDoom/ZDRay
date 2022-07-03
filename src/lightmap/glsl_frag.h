@@ -74,6 +74,30 @@ void main()
 	}
 
 	vec3 incoming = vec3(0.0);
+
+	// Sun light
+	{
+		const float dist = 32768.0;
+
+		rayQueryEXT rayQuery;
+		rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, SunDir, dist);
+
+		while(rayQueryProceedEXT(rayQuery))
+		{
+			if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
+			{
+				rayQueryConfirmIntersectionEXT(rayQuery);
+			}
+		}
+
+		if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+		{
+			int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
+			SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
+			incoming.rgb += SunColor * SunIntensity * surface.Sky;
+		}
+	}
+
 	for (uint j = LightStart; j < LightEnd; j++)
 	{
 		LightInfo light = lights[j];

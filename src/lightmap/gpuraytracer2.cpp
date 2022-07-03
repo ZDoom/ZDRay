@@ -44,6 +44,20 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 
 	BeginCommands();
 
+	Uniforms2 uniforms = {};
+	uniforms.SunDir = mesh->map->GetSunDirection();
+	uniforms.SunColor = mesh->map->GetSunColor();
+	uniforms.SunIntensity = 1.0f;
+
+	mappedUniforms = (uint8_t*)uniformTransferBuffer->Map(0, uniformStructs * uniformStructStride);
+	*reinterpret_cast<Uniforms2*>(mappedUniforms + uniformStructStride * uniformsIndex) = uniforms;
+	uniformTransferBuffer->Unmap();
+
+	cmdbuffer->copyBuffer(uniformTransferBuffer.get(), uniformBuffer.get());
+	PipelineBarrier()
+		.AddBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
+		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
 	std::vector<LightmapImage> surfaceImages;
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
