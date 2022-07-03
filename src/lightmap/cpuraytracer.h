@@ -78,6 +78,7 @@ private:
 
 	CPUEmissiveSurface GetEmissive(Surface* surface);
 
+	void CreateTasks(std::vector<CPUTraceTask>& tasks);
 	void CreateHemisphereVectors();
 	void CreateLights();
 
