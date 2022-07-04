@@ -6,7 +6,7 @@
 
 class SurfaceClip
 {
-	DelauneyTriangulator triangulator;
+	std::vector<vec2> vertices;
 
 	float sampleWidth;
 	float sampleHeight;
@@ -18,9 +18,11 @@ class SurfaceClip
 	float offsetH;
 	float tolerance;
 
+	// Local space
+	bool PointInBounds(const vec2& p, float tolerance) const;
 public:
 	SurfaceClip(Surface* surface);
 
-	// Tolerates points close enough to the surface to avoid missing used samples
+	// Task XY space. Tolerates points close enough to the surface to avoid missing used samples
 	bool SampleIsInBounds(float x, float y) const;
 };

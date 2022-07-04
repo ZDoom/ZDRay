@@ -1,11 +1,16 @@
 #include "surfaceclip.h"
 
-typedef DelauneyTriangulator::Vertex DTVertex;
-
-inline bool PointOnSide(const vec2& p, const DTVertex& v1, const DTVertex& v2, float tolerance)
+inline bool PointOnSide(const vec2& p, const vec2& v1, const vec2& v2, float tolerance)
 {
-	vec2 p2 = p - normalize(vec2(-(v2.y - v1.y), v2.x - v1.x)) * tolerance;
-	return (p2.y - v1.y) * (v2.x - v1.x) + (v1.x - p2.x) * (v2.y - v1.y) <= 0;
+	vec2 p2 = p + normalize(vec2(-(v2.y - v1.y), v2.x - v1.x)) * tolerance;
+	return (p2.y - v1.y) * (v2.x - v1.x) + (v1.x - p2.x) * (v2.y - v1.y) >= 0;
+}
+
+
+inline bool PointBeyondSide(const vec2& p, const vec2& v1, const vec2& v2)
+{
+	vec2 p2 = p - normalize(vec2(-(v2.y - v1.y), v2.x - v1.x)); // What a hack!
+	return (p2.y - v1.y) * (v2.x - v1.x) + (v1.x - p2.x) * (v2.y - v1.y) < 0;
 }
 
 SurfaceClip::SurfaceClip(Surface* surface)
@@ -28,15 +33,15 @@ SurfaceClip::SurfaceClip(Surface* surface)
 	mat3 inverseProjection = mat3::inverse(base);
 
 	// Transform vertices to XY and triangulate
-	triangulator.vertices.reserve(surface->verts.size());
+	vertices.reserve(surface->verts.size());
 
 	for (const auto& vertex : surface->verts)
 	{
 		auto flattenedVertex = inverseProjection * vertex;
 
-		triangulator.vertices.emplace_back(flattenedVertex.x, flattenedVertex.y, nullptr);
+		vertices.emplace_back(flattenedVertex.x, flattenedVertex.y);
 
-		if (triangulator.vertices.empty())
+		if (vertices.empty())
 		{
 			bounds = BBox(flattenedVertex, flattenedVertex);
 		}
@@ -46,7 +51,34 @@ SurfaceClip::SurfaceClip(Surface* surface)
 		}
 	}
 
-	triangulator.triangulate();
+	// Walls have "Z" like pattern for vertices
+	if (surface->type != ST_CEILING && surface->type != ST_FLOOR)
+	{
+		if (vertices.size() == 4)
+		{
+			std::swap(vertices[vertices.size() - 2], vertices[vertices.size() - 1]);
+		}
+	}
+
+	auto isConvex = [&]() {
+		for (size_t i = 2; i < vertices.size(); ++i)
+		{
+			if (!PointBeyondSide(vertices[i - 1], vertices[i - 2], vertices[i]))
+			{
+				return false;
+			}
+		}
+		return PointBeyondSide(vertices[vertices.size() - 1], vertices[vertices.size() - 2], vertices[0]) && PointBeyondSide(vertices[0], vertices[vertices.size() - 1], vertices[1]);
+	};
+
+	// Fix vertex order
+	if (!isConvex())
+	{
+		for (size_t i = 0; i < vertices.size() / 2; ++i)
+		{
+			std::swap(vertices[i], vertices[vertices.size() - 1 - i]);
+		}
+	}
 
 	// Init misc. variables
 	boundsWidth = bounds.max.x - bounds.min.x;
@@ -58,18 +90,19 @@ SurfaceClip::SurfaceClip(Surface* surface)
 	tolerance = (offsetH > offsetW ? offsetH : offsetW) * 2.0f;
 }
 
-bool SurfaceClip::SampleIsInBounds(float x, float y) const
+bool SurfaceClip::PointInBounds(const vec2& p, float tolerance) const
 {
-	const vec2 p = vec2((x / float(sampleWidth)) * boundsWidth + bounds.min.x + offsetW, (y / float(sampleHeight)) * boundsHeight + bounds.min.y + offsetH);
-
-	for (const auto& triangle : triangulator.triangles)
+	for (size_t i = 1; i < vertices.size(); ++i)
 	{
-		if (PointOnSide(p, *triangle.A, *triangle.B, tolerance)
-			&& PointOnSide(p, *triangle.B, *triangle.C, tolerance)
-			&& PointOnSide(p, *triangle.C, *triangle.A, tolerance))
+		if (!PointOnSide(p, vertices[i - 1], vertices[i], tolerance))
 		{
-			return true;
+			return false;
 		}
 	}
-	return false;
+	return PointOnSide(p, vertices[vertices.size() - 1], vertices[0], tolerance);
+}
+
+bool SurfaceClip::SampleIsInBounds(float x, float y) const
+{
+	return PointInBounds(vec2((x / float(sampleWidth)) * boundsWidth + bounds.min.x + offsetW, (y / float(sampleHeight)) * boundsHeight + bounds.min.y + offsetH), tolerance);
 }
