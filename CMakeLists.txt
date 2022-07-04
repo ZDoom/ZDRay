@@ -174,6 +174,8 @@ set( SOURCES
 	src/lightmap/vulkanbuilders.h
 	src/lightmap/stacktrace.cpp
 	src/lightmap/stacktrace.h
+	src/lightmap/surfaceclip.cpp
+	src/lightmap/surfaceclip.h
 	src/lightmap/gpuraytracer.cpp
 	src/lightmap/gpuraytracer.h
 	src/lightmap/gpuraytracer2.cpp

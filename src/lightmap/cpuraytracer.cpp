@@ -6,7 +6,7 @@
 #include "framework/binfile.h"
 #include "framework/templates.h"
 #include "framework/halffloat.h"
-#include "delauneytriangulator.h"
+#include "surfaceclip.h"
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -347,14 +347,6 @@ float CPURaytracer::RadicalInverse_VdC(uint32_t bits)
 	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
 }
 
-typedef DelauneyTriangulator::Vertex DTVertex;
-
-inline bool PointOnSide(const vec2& p, const DTVertex& v1, const DTVertex& v2, float tolerance)
-{
-	vec2 p2 = p - normalize(vec2(-(v2.y - v1.y), v2.x - v1.x)) * tolerance;
-	return (p2.y - v1.y) * (v2.x - v1.x) + (v1.x - p2.x) * (v2.y - v1.y) <= 0;
-}
-
 void CPURaytracer::CreateTasks(std::vector<CPUTraceTask>& tasks)
 {
 	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
@@ -371,82 +363,24 @@ void CPURaytracer::CreateTasks(std::vector<CPUTraceTask>& tasks)
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		if (i % 4096 == 0)
-			printf("\rGathering surface trace tasks: %d / %d", i, mesh->surfaces.size());
+			printf("\rGathering surface trace tasks: %llu / %llu", i, mesh->surfaces.size());
 
 		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
 
 		if (!surface->bSky)
 		{
-			// Transformation matrix
-			mat3 base;
-			base[0] = surface->lightmapSteps[0].x;
-			base[1] = surface->lightmapSteps[0].y;
-			base[2] = surface->lightmapSteps[0].z;
-			base[3] = surface->lightmapSteps[1].x;
-			base[4] = surface->lightmapSteps[1].y;
-			base[5] = surface->lightmapSteps[1].z;
-			base[6] = surface->plane.a;
-			base[7] = surface->plane.b;
-			base[8] = surface->plane.c;
-
-			mat3 inverseProjection = mat3::inverse(base);
-
-			// Transform vertices to XY and triangulate
-			DelauneyTriangulator triangulator;
-
-			BBox bounds;
-
-			for (const auto& vertex : surface->verts)
-			{
-				auto flattenedVertex = inverseProjection * vertex;
-
-				triangulator.vertices.emplace_back(flattenedVertex.x, flattenedVertex.y, nullptr);
-
-				if (triangulator.vertices.empty())
-				{
-					bounds = BBox(flattenedVertex, flattenedVertex);
-				}
-				else
-				{
-					bounds.AddPoint(flattenedVertex);
-				}
-			}
-
-			triangulator.triangulate();
-
-			const float boundsWidth = bounds.max.x - bounds.min.x;
-			const float boundsHeight = bounds.max.y - bounds.min.y;
-
-			const float offsetW = boundsWidth / sampleWidth;
-			const float offsetH = boundsHeight / sampleHeight;
-
-			const float offset = (offsetH > offsetW ? offsetH : offsetW);
-
-			auto isInBounds = [&](int x, int y) {
-				const float fx = (float(x) / float(sampleWidth)) * boundsWidth + bounds.min.x + offsetW;
-				const float fy = (float(y) / float(sampleHeight)) * boundsHeight + bounds.min.y + offsetH;
-
-				for (const auto& triangle : triangulator.triangles)
-				{
-					if (PointOnSide(vec2(fx, fy), *triangle.A, *triangle.B, offset)
-						&& PointOnSide(vec2(fx, fy), *triangle.B, *triangle.C, offset)
-						&& PointOnSide(vec2(fx, fy), *triangle.C, *triangle.A, offset))
-					{
-						return true;
-					}
-				}
-				return false;
-			};
+			int sampleWidth = surface->lightmapDims[0];
+			int sampleHeight = surface->lightmapDims[1];
 
 			fullTaskCount += size_t(sampleHeight) * size_t(sampleWidth);
+
+			SurfaceClip surfaceClip(surface);
 
 			for (int y = 0; y < sampleHeight; y++)
 			{
 				for (int x = 0; x < sampleWidth; x++)
 				{
-					if (isInBounds(x, y))
+					if (surfaceClip.SampleIsInBounds(float(x), float(y)))
 					{
 						CPUTraceTask task;
 						task.id = (int)i;
@@ -458,7 +392,7 @@ void CPURaytracer::CreateTasks(std::vector<CPUTraceTask>& tasks)
 			}
 		}
 	}
-	printf("\rGathering surface trace tasks: %d / %d\n", mesh->surfaces.size(), mesh->surfaces.size());
+	printf("\rGathering surface trace tasks: %llu / %llu\n", mesh->surfaces.size(), mesh->surfaces.size());
 	printf("\tDiscarded %.3f%% of all tasks\n", (1.0 - double(tasks.size()) / fullTaskCount) * 100.0);
 }
 
