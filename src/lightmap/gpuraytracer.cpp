@@ -7,6 +7,7 @@
 #include "framework/templates.h"
 #include "framework/halffloat.h"
 #include "vulkanbuilders.h"
+#include "surfaceclip.h"
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -50,32 +51,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	CreateVulkanObjects();
 
 	std::vector<TraceTask> tasks;
-	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
-	{
-		TraceTask task;
-		task.id = -(int)(i + 2);
-		task.x = 0;
-		task.y = 0;
-		tasks.push_back(task);
-	}
-
-	for (size_t i = 0; i < mesh->surfaces.size(); i++)
-	{
-		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
-		for (int y = 0; y < sampleHeight; y++)
-		{
-			for (int x = 0; x < sampleWidth; x++)
-			{
-				TraceTask task;
-				task.id = (int)i;
-				task.x = x;
-				task.y = y;
-				tasks.push_back(task);
-			}
-		}
-	}
+	CreateTasks(tasks);
 
 	std::vector<vec3> HemisphereVectors;
 	HemisphereVectors.reserve(bounceSampleCount);
@@ -150,6 +126,57 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 		device->renderdoc->EndFrameCapture(0, 0);
 
 	printf("Ray trace complete\n");
+}
+
+void GPURaytracer::CreateTasks(std::vector<TraceTask>& tasks)
+{
+	tasks.resize(mesh->lightProbes.size());
+
+	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
+	{
+		TraceTask task;
+		task.id = -(int)(i + 2);
+		task.x = 0;
+		task.y = 0;
+		tasks.push_back(task);
+	}
+
+	size_t fullTaskCount = mesh->lightProbes.size();
+
+	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	{
+		if (i % 4096 == 0)
+			printf("\rGathering surface trace tasks: %llu / %llu", i, mesh->surfaces.size());
+
+		Surface* surface = mesh->surfaces[i].get();
+
+		if (!surface->bSky)
+		{
+			int sampleWidth = surface->lightmapDims[0];
+			int sampleHeight = surface->lightmapDims[1];
+
+			fullTaskCount += size_t(sampleHeight) * size_t(sampleWidth);
+
+			SurfaceClip surfaceClip(surface);
+
+			for (int y = 0; y < sampleHeight; y++)
+			{
+				for (int x = 0; x < sampleWidth; x++)
+				{
+					if (surfaceClip.SampleIsInBounds(float(x), float(y)))
+					{
+						TraceTask task;
+						task.id = (int)i;
+						task.x = x;
+						task.y = y;
+						tasks.push_back(task);
+					}
+				}
+			}
+		}
+	}
+	printf("\rGathering surface trace tasks: %llu / %llu\n", mesh->surfaces.size(), mesh->surfaces.size());
+	printf("\tDiscarded %.3f%% of all tasks\n", (1.0 - double(tasks.size()) / fullTaskCount) * 100.0);
 }
 
 void GPURaytracer::CreateVulkanObjects()
