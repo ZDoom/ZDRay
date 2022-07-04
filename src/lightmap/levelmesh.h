@@ -35,6 +35,7 @@
 #include "framework/tarray.h"
 #include "framework/halffloat.h"
 #include "lightmaptexture.h"
+#include "math/mathlib.h"
 
 struct MapSubsectorEx;
 struct IntSector;

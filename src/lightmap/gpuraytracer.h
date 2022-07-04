@@ -66,6 +66,7 @@ public:
 	void Raytrace(LevelMesh* level);
 
 private:
+	void CreateTasks(std::vector<TraceTask>& tasks);
 	void CreateVulkanObjects();
 	void CreateVertexAndIndexBuffers();
 	void CreateBottomLevelAccelerationStructure();
