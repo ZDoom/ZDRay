@@ -352,6 +352,8 @@ float CPURaytracer::RadicalInverse_VdC(uint32_t bits)
 
 void CPURaytracer::CreateTasks(std::vector<CPUTraceTask>& tasks)
 {
+	tasks.reserve(mesh->lightProbes.size());
+
 	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
 	{
 		CPUTraceTask task;

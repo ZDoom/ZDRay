@@ -130,7 +130,7 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 void GPURaytracer::CreateTasks(std::vector<TraceTask>& tasks)
 {
-	tasks.resize(mesh->lightProbes.size());
+	tasks.reserve(mesh->lightProbes.size());
 
 	for (size_t i = 0; i < mesh->lightProbes.size(); i++)
 	{
