@@ -93,7 +93,7 @@ void main()
 		const float dist = 32768.0;
 
 		float attenuation = 0.0;
-		if (PassType == 0 && surfaceIndex >= 0)
+		if (PassType == 0 && surfaceIndex >= 0 && dot(normal, SunDir) > 0.0)
 		{
 			vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
 			vec3 e1 = cross(normal, e0);
@@ -125,53 +125,55 @@ void main()
 		if (dist > minDistance && dist < light.Radius)
 		{
 			vec3 dir = normalize(light.Origin - origin);
-
-			float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
-			float angleAttenuation = 1.0f;
-			if (surfaceIndex >= 0)
+			if(surfaceIndex < 0 || dot(normal, dir) > 0.0)
 			{
-				angleAttenuation = max(dot(normal, dir), 0.0);
-			}
-			float spotAttenuation = 1.0;
-			if (light.OuterAngleCos > -1.0)
-			{
-				float cosDir = dot(dir, light.SpotDir);
-				spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
-				spotAttenuation = max(spotAttenuation, 0.0);
-			}
-
-			float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
-			if (attenuation > 0.0)
-			{
-				float shadowAttenuation = 0.0;
-
-				if (PassType == 0 && surfaceIndex >= 0)
+				float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
+				float angleAttenuation = 1.0f;
+				if (surfaceIndex >= 0)
 				{
-					vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
-					vec3 e1 = cross(normal, e0);
-					e0 = cross(normal, e1);
-					for (uint i = 0; i < SampleCount; i++)
+					angleAttenuation = max(dot(normal, dir), 0.0);
+				}
+				float spotAttenuation = 1.0;
+				if (light.OuterAngleCos > -1.0)
+				{
+					float cosDir = dot(dir, light.SpotDir);
+					spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
+					spotAttenuation = max(spotAttenuation, 0.0);
+				}
+
+				float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
+				if (attenuation > 0.0)
+				{
+					float shadowAttenuation = 0.0;
+
+					if (PassType == 0 && surfaceIndex >= 0)
 					{
-						vec2 offset = (Hammersley(i, SampleCount) - 0.5) * surfaces[surfaceIndex].SamplingDistance;
-						vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+						vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
+						vec3 e1 = cross(normal, e0);
+						e0 = cross(normal, e1);
+						for (uint i = 0; i < SampleCount; i++)
+						{
+							vec2 offset = (Hammersley(i, SampleCount) - 0.5) * surfaces[surfaceIndex].SamplingDistance;
+							vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
 
-						float dist2 = distance(light.Origin, origin2);
-						vec3 dir2 = normalize(light.Origin - origin2);
+							float dist2 = distance(light.Origin, origin2);
+							vec3 dir2 = normalize(light.Origin - origin2);
 
-						traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin2, minDistance, dir2, dist2, 0);
-						shadowAttenuation += payload.hitAttenuation;
+							traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin2, minDistance, dir2, dist2, 0);
+							shadowAttenuation += payload.hitAttenuation;
+						}
+						shadowAttenuation *= 1.0 / float(SampleCount);
 					}
-					shadowAttenuation *= 1.0 / float(SampleCount);
-				}
-				else
-				{
-					traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin, minDistance, dir, dist, 0);
-					shadowAttenuation = payload.hitAttenuation;
-				}
+					else
+					{
+						traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 1, origin, minDistance, dir, dist, 0);
+						shadowAttenuation = payload.hitAttenuation;
+					}
 
-				attenuation *= shadowAttenuation;
+					attenuation *= shadowAttenuation;
 
-				incoming.rgb += light.Color * (attenuation * light.Intensity) * incoming.w;
+					incoming.rgb += light.Color * (attenuation * light.Intensity) * incoming.w;
+				}
 			}
 		}
 	}

@@ -270,50 +270,53 @@ void CPURaytracer::RunLightTrace(CPUTraceState& state)
 		{
 			vec3 dir = normalize(light.Origin - origin);
 
-			float distAttenuation = std::max(1.0f - (dist / light.Radius), 0.0f);
-			float angleAttenuation = 1.0f;
-			if (surface)
+			if (!surface || dot(normal, dir) > 0.0)
 			{
-				angleAttenuation = std::max(dot(normal, dir), 0.0f);
-			}
-			float spotAttenuation = 1.0f;
-			if (light.OuterAngleCos > -1.0f)
-			{
-				float cosDir = dot(dir, light.SpotDir);
-				spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
-				spotAttenuation = std::max(spotAttenuation, 0.0f);
-			}
-
-			float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
-			if (attenuation > 0.0f)
-			{
-				float shadowAttenuation = 0.0f;
-
-				if (state.PassType == 0 && surface)
+				float distAttenuation = std::max(1.0f - (dist / light.Radius), 0.0f);
+				float angleAttenuation = 1.0f;
+				if (surface)
 				{
-					vec3 e0 = normalize(cross(normal, std::abs(normal.x) < std::abs(normal.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f)));
-					vec3 e1 = cross(normal, e0);
-					e0 = cross(normal, e1);
-					for (uint32_t i = 0; i < state.SampleCount; i++)
+					angleAttenuation = std::max(dot(normal, dir), 0.0f);
+				}
+				float spotAttenuation = 1.0f;
+				if (light.OuterAngleCos > -1.0f)
+				{
+					float cosDir = dot(dir, light.SpotDir);
+					spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
+					spotAttenuation = std::max(spotAttenuation, 0.0f);
+				}
+
+				float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
+				if (attenuation > 0.0f)
+				{
+					float shadowAttenuation = 0.0f;
+
+					if (state.PassType == 0 && surface)
 					{
-						vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * float(surface->sampleDimension);
-						vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
+						vec3 e0 = normalize(cross(normal, std::abs(normal.x) < std::abs(normal.y) ? vec3(1.0f, 0.0f, 0.0f) : vec3(0.0f, 1.0f, 0.0f)));
+						vec3 e1 = cross(normal, e0);
+						e0 = cross(normal, e1);
+						for (uint32_t i = 0; i < state.SampleCount; i++)
+						{
+							vec2 offset = (Hammersley(i, state.SampleCount) - 0.5f) * float(surface->sampleDimension);
+							vec3 origin2 = origin + e0 * offset.x + e1 * offset.y;
 
-						LevelTraceHit hit = Trace(origin2, light.Origin);
-						if (hit.fraction == 1.0f)
-							shadowAttenuation += 1.0f;
+							LevelTraceHit hit = Trace(origin2, light.Origin);
+							if (hit.fraction == 1.0f)
+								shadowAttenuation += 1.0f;
+						}
+						shadowAttenuation *= 1.0f / float(state.SampleCount);
 					}
-					shadowAttenuation *= 1.0f / float(state.SampleCount);
-				}
-				else
-				{
-					LevelTraceHit hit = Trace(origin, light.Origin);
-					shadowAttenuation = (hit.fraction == 1.0f) ? 1.0f : 0.0f;
-				}
+					else
+					{
+						LevelTraceHit hit = Trace(origin, light.Origin);
+						shadowAttenuation = (hit.fraction == 1.0f) ? 1.0f : 0.0f;
+					}
 
-				attenuation *= shadowAttenuation;
+					attenuation *= shadowAttenuation;
 
-				incoming += light.Color * (attenuation * light.Intensity * incomingAttenuation);
+					incoming += light.Color * (attenuation * light.Intensity * incomingAttenuation);
+				}
 			}
 		}
 	}
