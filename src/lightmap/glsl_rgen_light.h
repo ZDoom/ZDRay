@@ -93,28 +93,32 @@ void main()
 		const float dist = 32768.0;
 
 		float attenuation = 0.0;
-		if (PassType == 0 && surfaceIndex >= 0 && dot(normal, SunDir) > 0.0)
+		if (PassType == 0 && surfaceIndex >= 0)
 		{
-			vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
-			vec3 e1 = cross(normal, e0);
-			e0 = cross(normal, e1);
-
-			for (uint i = 0; i < SampleCount; i++)
+			if(dot(normal, SunDir) > 0.0)
 			{
-				vec2 offset = (Hammersley(i, SampleCount) - 0.5) * surfaces[surfaceIndex].SamplingDistance;
-				vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+				vec3 e0 = normalize(cross(normal, abs(normal.x) < abs(normal.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
+				vec3 e1 = cross(normal, e0);
+				e0 = cross(normal, e1);
 
-				traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, SunDir, dist, 0);
-				attenuation += payload.hitAttenuation;
+				for (uint i = 0; i < SampleCount; i++)
+				{
+					vec2 offset = (Hammersley(i, SampleCount) - 0.5) * surfaces[surfaceIndex].SamplingDistance;
+					vec3 origin2 = origin + offset.x * e0 + offset.y * e1;
+
+					traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin2, minDistance, SunDir, dist, 0);
+					attenuation += payload.hitAttenuation;
+				}
+				attenuation *= 1.0 / float(SampleCount);
+				incoming.rgb += SunColor * (attenuation * SunIntensity * incoming.w);
 			}
-			attenuation *= 1.0 / float(SampleCount);
 		}
 		else
 		{
 			traceRayEXT(acc, gl_RayFlagsOpaqueEXT, 0xff, 2, 0, 2, origin, minDistance, SunDir, dist, 0);
 			attenuation = payload.hitAttenuation;
+			incoming.rgb += SunColor * (attenuation * SunIntensity * incoming.w);
 		}
-		incoming.rgb += SunColor * (attenuation * SunIntensity * incoming.w);
 	}
 
 	for (uint j = LightStart; j < LightEnd; j++)
