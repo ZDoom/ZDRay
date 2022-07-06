@@ -90,9 +90,6 @@ private:
 	static float RadicalInverse_VdC(uint32_t bits);
 	static vec2 Hammersley(uint32_t i, uint32_t N);
 
-	const int coverageSampleCount = 256;
-	const int bounceSampleCount = 2048;
-	const int ambientSampleCount = 2048;
 	int rayTraceImageSize = 1024;
 
 	LevelMesh* mesh = nullptr;

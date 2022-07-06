@@ -29,6 +29,10 @@
 
 extern bool VKDebug;
 
+extern int coverageSampleCount;
+extern int bounceSampleCount;
+extern int ambientSampleCount;
+
 GPURaytracer::GPURaytracer()
 {
 	device = std::make_unique<VulkanDevice>(0, VKDebug);

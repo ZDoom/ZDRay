@@ -119,6 +119,10 @@ bool			 CPURaytrace = false;
 bool			 VKDebug = false;
 bool			 DumpMesh = false;
 
+int coverageSampleCount = 256;
+int bounceSampleCount = 2048;
+int ambientSampleCount = 2048;
+
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
 static option long_opts[] =
@@ -157,10 +161,11 @@ static option long_opts[] =
 	{"cpu-raytrace",	no_argument,		0,	'C'},
 	{"vkdebug",			no_argument,		0,	'D'},
 	{"dump-mesh",		no_argument,		0,	1004},
+	{"preview",			no_argument,		0,	1005},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:CD:";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:CD::";
 
 // CODE --------------------------------------------------------------------
 
@@ -456,6 +461,11 @@ static void ParseArgs(int argc, char **argv)
 			break;
 		case 1004:
 			DumpMesh = true;
+			break;
+		case 1005:
+			coverageSampleCount = 4;
+			bounceSampleCount = 16;
+			ambientSampleCount = 16;
 			break;
 		case 1000:
 			ShowUsage();
