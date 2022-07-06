@@ -17,6 +17,9 @@
 extern bool VKDebug;
 extern int NumThreads;
 
+extern int coverageSampleCount;
+extern int bounceSampleCount;
+
 CPURaytracer::CPURaytracer()
 {
 }
