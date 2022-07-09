@@ -273,135 +273,124 @@ void LevelMesh::CreateTextures()
 {
 	std::vector<Surface*> sortedSurfaces;
 	sortedSurfaces.reserve(surfaces.size());
-	for (auto& surf : surfaces)
-		sortedSurfaces.push_back(surf.get());
-	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->lightmapDims[1] < b->lightmapDims[1]; });
+
+	for (auto& surface : surfaces)
+	{
+		int sampleWidth = surface->lightmapDims[0];
+		int sampleHeight = surface->lightmapDims[1];
+		vec3* colorSamples = surface->samples.data();
+
+		// SVE redraws the scene for lightmaps, so for optimizations,
+		// tell the engine to ignore this surface if completely black
+		bool bShouldLookupTexture = false;
+		for (int i = 0; i < sampleHeight; i++)
+		{
+			for (int j = 0; j < sampleWidth; j++)
+			{
+				const auto& c = colorSamples[i * sampleWidth + j];
+				if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
+				{
+					bShouldLookupTexture = true;
+					break;
+				}
+			}
+		}
+
+		if (bShouldLookupTexture)
+		{
+			sortedSurfaces.push_back(surface.get());
+		}
+		else
+		{
+			surface->lightmapNum = -1;
+		}
+	}
+
+	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->lightmapDims[1] != b->lightmapDims[1] ? a->lightmapDims[1] > b->lightmapDims[1] : a->lightmapDims[0] > b->lightmapDims[0]; });
+
+	RectPacker packer(textureWidth, textureHeight, RectPacker::Spacing(0));
 
 	for (Surface* surf : sortedSurfaces)
 	{
-		FinishSurface(surf);
+		FinishSurface(packer, surf);
 	}
 }
 
-void LevelMesh::FinishSurface(Surface* surface)
+void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 {
 	int sampleWidth = surface->lightmapDims[0];
 	int sampleHeight = surface->lightmapDims[1];
 	vec3* colorSamples = surface->samples.data();
 
-	// SVE redraws the scene for lightmaps, so for optimizations,
-	// tell the engine to ignore this surface if completely black
-	bool bShouldLookupTexture = false;
+	auto result = packer.insert(sampleWidth, sampleHeight);
+	int x = result.pos.x, y = result.pos.y;
+	surface->lightmapNum = result.pageIndex;
+
+	while (result.pageIndex >= textures.size())
+	{
+		textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
+	}
+
+	uint16_t* currentTexture = textures[surface->lightmapNum]->Pixels();
+
+	// calculate final texture coordinates
+	for (int i = 0; i < surface->numVerts; i++)
+	{
+		auto& u = surface->lightmapCoords[i].x;
+		auto& v = surface->lightmapCoords[i].y;
+		u = (u + x) / (float)textureWidth;
+		v = (v + y) / (float)textureHeight;
+	}
+
+	surface->lightmapOffs[0] = x;
+	surface->lightmapOffs[1] = y;
+
+#if 1
+	// store results to lightmap texture
+	float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
+	for (int y = 0; y < sampleHeight; y++)
+	{
+		vec3* src = &colorSamples[y * sampleWidth];
+		for (int x = 0; x < sampleWidth; x++)
+		{
+			// gaussian blur with a 3x3 kernel
+			vec3 color = { 0.0f };
+			for (int yy = -1; yy <= 1; yy++)
+			{
+				int yyy = clamp(y + yy, 0, sampleHeight - 1) - y;
+				for (int xx = -1; xx <= 1; xx++)
+				{
+					int xxx = clamp(x + xx, 0, sampleWidth - 1);
+					color += src[yyy * sampleWidth + xxx] * weights[4 + xx + yy * 3];
+				}
+			}
+			color *= 0.5f;
+
+			// get texture offset
+			int offs = ((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
+
+			// convert RGB to bytes
+			currentTexture[offs + x * 3 + 0] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].x, -65000.0f, 65000.0f));
+			currentTexture[offs + x * 3 + 1] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].y, -65000.0f, 65000.0f));
+			currentTexture[offs + x * 3 + 2] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].z, -65000.0f, 65000.0f));
+		}
+	}
+#else
+	// store results to lightmap texture
 	for (int i = 0; i < sampleHeight; i++)
 	{
 		for (int j = 0; j < sampleWidth; j++)
 		{
-			const auto& c = colorSamples[i * sampleWidth + j];
-			if (c.x > 0.0f || c.y > 0.0f || c.z > 0.0f)
-			{
-				bShouldLookupTexture = true;
-				break;
-			}
+			// get texture offset
+			int offs = ((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
+
+			// convert RGB to bytes
+			currentTexture[offs + j * 3 + 0] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].x, -65000.0f, 65000.0f));
+			currentTexture[offs + j * 3 + 1] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].y, -65000.0f, 65000.0f));
+			currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, -65000.0f, 65000.0f));
 		}
 	}
-
-	if (bShouldLookupTexture == false)
-	{
-		surface->lightmapNum = -1;
-	}
-	else
-	{
-		int x = 0, y = 0;
-		surface->lightmapNum = AllocTextureRoom(sampleWidth + 2, sampleHeight + 2, &x, &y);
-		x++;
-		y++;
-
-		uint16_t* currentTexture = textures[surface->lightmapNum]->Pixels();
-
-		// calculate final texture coordinates
-		for (int i = 0; i < surface->numVerts; i++)
-		{
-			auto& u = surface->lightmapCoords[i].x;
-			auto& v = surface->lightmapCoords[i].y;
-			u = (u + x) / (float)textureWidth;
-			v = (v + y) / (float)textureHeight;
-		}
-
-		surface->lightmapOffs[0] = x;
-		surface->lightmapOffs[1] = y;
-
-#if 1
-		// store results to lightmap texture
-		float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
-		for (int y = 0; y < sampleHeight; y++)
-		{
-			vec3* src = &colorSamples[y * sampleWidth];
-			for (int x = 0; x < sampleWidth; x++)
-			{
-				// gaussian blur with a 3x3 kernel
-				vec3 color = { 0.0f };
-				for (int yy = -1; yy <= 1; yy++)
-				{
-					int yyy = clamp(y + yy, 0, sampleHeight - 1) - y;
-					for (int xx = -1; xx <= 1; xx++)
-					{
-						int xxx = clamp(x + xx, 0, sampleWidth - 1);
-						color += src[yyy * sampleWidth + xxx] * weights[4 + xx + yy * 3];
-					}
-				}
-				color *= 0.5f;
-
-				// get texture offset
-				int offs = ((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
-
-				// convert RGB to bytes
-				currentTexture[offs + x * 3 + 0] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].x, -65000.0f, 65000.0f));
-				currentTexture[offs + x * 3 + 1] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].y, -65000.0f, 65000.0f));
-				currentTexture[offs + x * 3 + 2] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].z, -65000.0f, 65000.0f));
-			}
-		}
-#else
-		// store results to lightmap texture
-		for (int i = 0; i < sampleHeight; i++)
-		{
-			for (int j = 0; j < sampleWidth; j++)
-			{
-				// get texture offset
-				int offs = ((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
-
-				// convert RGB to bytes
-				currentTexture[offs + j * 3 + 0] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].x, -65000.0f, 65000.0f));
-				currentTexture[offs + j * 3 + 1] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].y, -65000.0f, 65000.0f));
-				currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, -65000.0f, 65000.0f));
-			}
-		}
 #endif
-	}
-}
-
-int LevelMesh::AllocTextureRoom(int width, int height, int* x, int* y)
-{
-	int numTextures = textures.size();
-
-	int k;
-	for (k = 0; k < numTextures; ++k)
-	{
-		if (textures[k]->MakeRoomForBlock(width, height, x, y))
-		{
-			break;
-		}
-	}
-
-	if (k == numTextures)
-	{
-		textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
-		if (!textures[k]->MakeRoomForBlock(width, height, x, y))
-		{
-			throw std::runtime_error("Lightmap allocation failed");
-		}
-	}
-
-	return k;
 }
 
 void LevelMesh::CreateLightProbes(FLevel& map)

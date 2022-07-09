@@ -220,6 +220,7 @@ set( SOURCES
 )
 
 set(THIRDPARTY_SOURCES
+	${CMAKE_SOURCE_DIR}/thirdparty/dp_rect_pack/dp_rect_pack.h
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.h
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.c
 	${CMAKE_SOURCE_DIR}/thirdparty/vk_mem_alloc/vk_mem_alloc.h
@@ -440,6 +441,7 @@ source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR
 source_group("Sources\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/models/.+")
 
 source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")
+source_group("thirdparty\\dp_rect_pack" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dp_rect_pack/.+")
 source_group("thirdparty\\ShaderCompiler" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ShaderCompiler/.+")
 source_group("thirdparty\\vk_mem_alloc" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vk_mem_alloc/.+")
 source_group("thirdparty\\volk" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/volk/.+")

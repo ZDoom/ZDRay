@@ -37,6 +37,10 @@
 #include "lightmaptexture.h"
 #include "math/mathlib.h"
 
+#include "dp_rect_pack/dp_rect_pack.h"
+
+typedef dp::rect_pack::RectPacker<int> RectPacker;
+
 struct MapSubsectorEx;
 struct IntSector;
 struct IntSideDef;
@@ -118,8 +122,7 @@ private:
 
 	void BuildSurfaceParams(Surface* surface);
 	BBox GetBoundsFromSurface(const Surface* surface);
-	void FinishSurface(Surface* surface);
-	int AllocTextureRoom(int width, int height, int* x, int* y);
+	void FinishSurface(RectPacker& packer, Surface* surface);
 
 	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);
 };
