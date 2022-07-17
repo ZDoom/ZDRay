@@ -345,7 +345,7 @@ void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 	surface->lightmapOffs[0] = x;
 	surface->lightmapOffs[1] = y;
 
-#if 1
+#if 0
 	// store results to lightmap texture
 	float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
 	for (int y = 0; y < sampleHeight; y++)
@@ -370,9 +370,9 @@ void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 			int offs = ((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
 
 			// convert RGB to bytes
-			currentTexture[offs + x * 3 + 0] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].x, -65000.0f, 65000.0f));
-			currentTexture[offs + x * 3 + 1] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].y, -65000.0f, 65000.0f));
-			currentTexture[offs + x * 3 + 2] = floatToHalf(clamp(colorSamples[y * sampleWidth + x].z, -65000.0f, 65000.0f));
+			currentTexture[offs + x * 3 + 0] = floatToHalf(clamp(color.x, -65000.0f, 65000.0f));
+			currentTexture[offs + x * 3 + 1] = floatToHalf(clamp(color.y, -65000.0f, 65000.0f));
+			currentTexture[offs + x * 3 + 2] = floatToHalf(clamp(color.z, -65000.0f, 65000.0f));
 		}
 	}
 #else
