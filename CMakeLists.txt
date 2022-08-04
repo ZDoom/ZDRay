@@ -16,6 +16,14 @@ IF( NOT CMAKE_BUILD_TYPE )
 		FORCE )
 ENDIF( NOT CMAKE_BUILD_TYPE )
 
+list( APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}" )
+include( TargetArch )
+
+target_architecture(TARGET_ARCHITECTURE)
+if( NOT ${TARGET_ARCHITECTURE} MATCHES "x86_64" )
+	add_definitions( -DNO_SSE )
+endif()
+
 set( SSE_MATTERS NO )
 
 # SSE only matters on 32-bit targets. We check compiler flags to know if we can do it.
