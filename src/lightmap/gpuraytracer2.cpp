@@ -63,16 +63,16 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
+		int sampleWidth = surface->texWidth;
+		int sampleHeight = surface->texHeight;
 		surfaceImages.push_back(CreateImage(sampleWidth, sampleHeight));
 	}
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
+		int sampleWidth = surface->texWidth;
+		int sampleHeight = surface->texHeight;
 		LightmapImage& img = surfaceImages[i];
 
 		RenderPassBegin()
@@ -87,9 +87,9 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		pc.SurfaceIndex = (int32_t)i;
 		pc.TileTL = vec2(0.0f);
 		pc.TileBR = vec2(1.0f);
-		pc.LightmapOrigin = surface->lightmapOrigin;
-		pc.LightmapStepX = surface->lightmapSteps[0] * (float)sampleWidth;
-		pc.LightmapStepY = surface->lightmapSteps[1] * (float)sampleHeight;
+		pc.LightmapOrigin = surface->worldOrigin;
+		pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
+		pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
 
 		VkViewport viewport = {};
 		viewport.maxDepth = 1;
@@ -108,8 +108,8 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
+		int sampleWidth = surface->texWidth;
+		int sampleHeight = surface->texHeight;
 		LightmapImage& img = surfaceImages[i];
 
 		PipelineBarrier()
@@ -130,13 +130,13 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
+		int sampleWidth = surface->texWidth;
+		int sampleHeight = surface->texHeight;
 
 		vec4* pixels = (vec4*)surfaceImages[i].Transfer->Map(0, sampleWidth * sampleHeight * sizeof(vec4));
 		for (int i = 0; i < sampleWidth * sampleHeight; i++)
 		{
-			surface->samples[i] = pixels[i].xyz();
+			surface->texPixels[i] = pixels[i].xyz();
 		}
 		surfaceImages[i].Transfer->Unmap();
 	}
@@ -563,7 +563,7 @@ std::vector<SurfaceInfo2> GPURaytracer2::CreateSurfaceInfo()
 			MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
 			IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
 
-			if (sector && surface->numVerts > 0)
+			if (sector && surface->verts.size() > 0)
 			{
 				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
 				{

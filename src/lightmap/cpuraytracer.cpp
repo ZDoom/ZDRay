@@ -56,7 +56,7 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 	if (task.id >= 0)
 	{
 		Surface* surface = mesh->surfaces[task.id].get();
-		vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * ((float)task.x + 0.5f) + surface->lightmapSteps[1] * ((float)task.y + 0.5f);
+		vec3 pos = surface->worldOrigin + surface->worldStepX * ((float)task.x + 0.5f) + surface->worldStepY * ((float)task.y + 0.5f);
 		state.StartPosition = pos;
 		state.StartSurface = surface;
 	}
@@ -104,8 +104,8 @@ void CPURaytracer::RaytraceTask(const CPUTraceTask& task)
 	if (task.id >= 0)
 	{
 		Surface* surface = mesh->surfaces[task.id].get();
-		size_t sampleWidth = surface->lightmapDims[0];
-		surface->samples[task.x + task.y * sampleWidth] = state.Output;
+		size_t sampleWidth = surface->texWidth;
+		surface->texPixels[task.x + task.y * sampleWidth] = state.Output;
 	}
 	else
 	{
@@ -377,8 +377,8 @@ void CPURaytracer::CreateTasks(std::vector<CPUTraceTask>& tasks)
 
 		if (!surface->bSky)
 		{
-			int sampleWidth = surface->lightmapDims[0];
-			int sampleHeight = surface->lightmapDims[1];
+			int sampleWidth = surface->texWidth;
+			int sampleHeight = surface->texHeight;
 
 			fullTaskCount += size_t(sampleHeight) * size_t(sampleWidth);
 
@@ -457,7 +457,7 @@ CPUEmissiveSurface CPURaytracer::GetEmissive(Surface* surface)
 		MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
 		IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
 
-		if (sector && surface->numVerts > 0)
+		if (sector && surface->verts.size() > 0)
 		{
 			if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
 			{

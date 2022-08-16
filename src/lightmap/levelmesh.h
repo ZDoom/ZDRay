@@ -59,26 +59,38 @@ enum SurfaceType
 
 struct Surface
 {
-	Plane plane;
-	int lightmapNum;
-	int lightmapOffs[2];
-	int lightmapDims[2];
-	vec3 lightmapOrigin;
-	vec3 lightmapSteps[2];
-	vec3 textureCoords[2];
-	BBox bounds;
-	int numVerts;
+	// Surface geometry
+	SurfaceType type = ST_UNKNOWN;
 	std::vector<vec3> verts;
-	std::vector<vec2> lightmapCoords;
-	//std::vector<bool> coveragemask;
-	std::vector<vec3> samples;
-	SurfaceType type;
-	int typeIndex;
-	IntSector *controlSector;
-	bool bSky;
-	std::vector<vec2> uvs;
+	Plane plane;
+
+	// Surface material
 	std::string material;
-	int sampleDimension;
+	std::vector<vec2> texUV;
+
+	// Surface properties
+	int typeIndex = 0;
+	IntSector* controlSector = nullptr;
+	int sampleDimension = 0;
+	bool bSky = false;
+
+	// Lightmap world coordinates for the texture
+	vec3 worldOrigin = { 0.0f };
+	vec3 worldStepX = { 0.0f };
+	vec3 worldStepY = { 0.0f };
+
+	// Output lightmap for the surface
+	int texWidth = 0;
+	int texHeight = 0;
+	std::vector<vec3> texPixels;
+
+	// UV coordinates for the vertices
+	std::vector<vec2> lightUV;
+
+	// Placement in final texture atlas
+	int atlasPageIndex = -1;
+	int atlasX = 0;
+	int atlasY = 0;
 };
 
 class LightProbeSample
@@ -122,6 +134,7 @@ private:
 
 	void BuildSurfaceParams(Surface* surface);
 	BBox GetBoundsFromSurface(const Surface* surface);
+	void BlurSurfaces();
 	void FinishSurface(RectPacker& packer, Surface* surface);
 
 	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);

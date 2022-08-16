@@ -65,7 +65,7 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		const auto &s = surfaces[i];
-		int numVerts = s->numVerts;
+		int numVerts = s->verts.size();
 		unsigned int pos = MeshVertices.Size();
 
 		for (int j = 0; j < numVerts; j++)
@@ -135,7 +135,7 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 	if (surface->sampleDimension < 0) surface->sampleDimension = 1;
 	surface->sampleDimension = Math::RoundPowerOfTwo(surface->sampleDimension);
 
-	// round off dimentions
+	// round off dimensions
 	for (i = 0; i < 3; i++)
 	{
 		bounds.min[i] = surface->sampleDimension * (Math::Floor(bounds.min[i] / surface->sampleDimension) - 1);
@@ -187,35 +187,13 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 		height = (textureHeight - 2);
 	}
 
-	surface->lightmapCoords.resize(surface->numVerts);
-	for (i = 0; i < surface->numVerts; i++)
+	surface->lightUV.resize(surface->verts.size());
+	for (i = 0; i < (int)surface->verts.size(); i++)
 	{
 		vec3 tDelta = surface->verts[i] - bounds.min;
-		surface->lightmapCoords[i].x = dot(tDelta, tCoords[0]);
-		surface->lightmapCoords[i].y = dot(tDelta, tCoords[1]);
+		surface->lightUV[i].x = dot(tDelta, tCoords[0]);
+		surface->lightUV[i].y = dot(tDelta, tCoords[1]);
 	}
-
-	/*
-	surface->coveragemask.resize(width * height);
-	if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
-	{
-		int count = surfaces[i]->numVerts;
-		for (i = 0; i < count; i++)
-		{
-			MarkEdge(surface, i, i + 1 % count);
-		}
-	}
-	else // triangle strip
-	{
-		MarkEdge(surface, 0, 2);
-		MarkEdge(surface, 2, 3);
-		MarkEdge(surface, 3, 1);
-		MarkEdge(surface, 1, 0);
-	}
-	*/
-
-	surface->textureCoords[0] = tCoords[0];
-	surface->textureCoords[1] = tCoords[1];
 
 	tOrigin = bounds.min;
 
@@ -230,14 +208,12 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 		tCoords[i][axis] -= d;
 	}
 
-	surface->bounds = bounds;
-	surface->lightmapDims[0] = width;
-	surface->lightmapDims[1] = height;
-	surface->lightmapOrigin = tOrigin;
-	surface->lightmapSteps[0] = tCoords[0] * (float)surface->sampleDimension;
-	surface->lightmapSteps[1] = tCoords[1] * (float)surface->sampleDimension;
-
-	surface->samples.resize(width * height);
+	surface->texWidth = width;
+	surface->texHeight = height;
+	surface->texPixels.resize(width * height);
+	surface->worldOrigin = tOrigin;
+	surface->worldStepX = tCoords[0] * (float)surface->sampleDimension;
+	surface->worldStepY = tCoords[1] * (float)surface->sampleDimension;
 }
 
 BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
@@ -248,7 +224,7 @@ BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
 	BBox bounds;
 	bounds.Clear();
 
-	for (int i = 0; i < surface->numVerts; i++)
+	for (int i = 0; i < (int)surface->verts.size(); i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
@@ -271,14 +247,16 @@ BBox LevelMesh::GetBoundsFromSurface(const Surface* surface)
 
 void LevelMesh::CreateTextures()
 {
+	BlurSurfaces();
+
 	std::vector<Surface*> sortedSurfaces;
 	sortedSurfaces.reserve(surfaces.size());
 
 	for (auto& surface : surfaces)
 	{
-		int sampleWidth = surface->lightmapDims[0];
-		int sampleHeight = surface->lightmapDims[1];
-		vec3* colorSamples = surface->samples.data();
+		int sampleWidth = surface->texWidth;
+		int sampleHeight = surface->texHeight;
+		vec3* colorSamples = surface->texPixels.data();
 
 		// SVE redraws the scene for lightmaps, so for optimizations,
 		// tell the engine to ignore this surface if completely black
@@ -302,11 +280,11 @@ void LevelMesh::CreateTextures()
 		}
 		else
 		{
-			surface->lightmapNum = -1;
+			surface->atlasPageIndex = -1;
 		}
 	}
 
-	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->lightmapDims[1] != b->lightmapDims[1] ? a->lightmapDims[1] > b->lightmapDims[1] : a->lightmapDims[0] > b->lightmapDims[0]; });
+	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->texHeight != b->texHeight ? a->texHeight > b->texHeight : a->texWidth > b->texWidth; });
 
 	RectPacker packer(textureWidth, textureHeight, RectPacker::Spacing(0));
 
@@ -316,73 +294,81 @@ void LevelMesh::CreateTextures()
 	}
 }
 
+void LevelMesh::BlurSurfaces()
+{
+	static const float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
+	std::vector<vec3> tempBuffer;
+
+	for (auto& surface : surfaces)
+	{
+		int texWidth = surface->texWidth;
+		int texHeight = surface->texHeight;
+		vec3* texPixels = surface->texPixels.data();
+
+		tempBuffer.resize(std::max(tempBuffer.size(), (size_t)texWidth * texHeight));
+		vec3* tempPixels = tempBuffer.data();
+
+		// gaussian blur with a 3x3 kernel
+		for (int y = 0; y < texHeight; y++)
+		{
+			vec3* src = &texPixels[y * texWidth];
+			vec3* dst = &tempPixels[y * texWidth];
+			for (int x = 0; x < texWidth; x++)
+			{
+				vec3 color = { 0.0f };
+				for (int yy = -1; yy <= 1; yy++)
+				{
+					int yyy = clamp(y + yy, 0, texHeight - 1) - y;
+					for (int xx = -1; xx <= 1; xx++)
+					{
+						int xxx = clamp(x + xx, 0, texWidth - 1);
+						color += src[yyy * texWidth + xxx] * weights[4 + xx + yy * 3];
+					}
+				}
+				dst[x] = color * 0.5f;
+			}
+		}
+
+		memcpy(texPixels, tempPixels, texWidth * texHeight * sizeof(vec3));
+	}
+}
+
 void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 {
-	int sampleWidth = surface->lightmapDims[0];
-	int sampleHeight = surface->lightmapDims[1];
-	vec3* colorSamples = surface->samples.data();
+	int sampleWidth = surface->texWidth;
+	int sampleHeight = surface->texHeight;
+	vec3* colorSamples = surface->texPixels.data();
 
 	auto result = packer.insert(sampleWidth, sampleHeight);
 	int x = result.pos.x, y = result.pos.y;
-	surface->lightmapNum = result.pageIndex;
+	surface->atlasPageIndex = result.pageIndex;
 
 	while (result.pageIndex >= textures.size())
 	{
 		textures.push_back(std::make_unique<LightmapTexture>(textureWidth, textureHeight));
 	}
 
-	uint16_t* currentTexture = textures[surface->lightmapNum]->Pixels();
+	uint16_t* currentTexture = textures[surface->atlasPageIndex]->Pixels();
 
 	// calculate final texture coordinates
-	for (int i = 0; i < surface->numVerts; i++)
+	for (int i = 0; i < (int)surface->verts.size(); i++)
 	{
-		auto& u = surface->lightmapCoords[i].x;
-		auto& v = surface->lightmapCoords[i].y;
+		auto& u = surface->lightUV[i].x;
+		auto& v = surface->lightUV[i].y;
 		u = (u + x) / (float)textureWidth;
 		v = (v + y) / (float)textureHeight;
 	}
 
-	surface->lightmapOffs[0] = x;
-	surface->lightmapOffs[1] = y;
+	surface->atlasX = x;
+	surface->atlasY = y;
 
-#if 0
-	// store results to lightmap texture
-	float weights[9] = { 0.125f, 0.25f, 0.125f, 0.25f, 0.50f, 0.25f, 0.125f, 0.25f, 0.125f };
-	for (int y = 0; y < sampleHeight; y++)
-	{
-		vec3* src = &colorSamples[y * sampleWidth];
-		for (int x = 0; x < sampleWidth; x++)
-		{
-			// gaussian blur with a 3x3 kernel
-			vec3 color = { 0.0f };
-			for (int yy = -1; yy <= 1; yy++)
-			{
-				int yyy = clamp(y + yy, 0, sampleHeight - 1) - y;
-				for (int xx = -1; xx <= 1; xx++)
-				{
-					int xxx = clamp(x + xx, 0, sampleWidth - 1);
-					color += src[yyy * sampleWidth + xxx] * weights[4 + xx + yy * 3];
-				}
-			}
-			color *= 0.5f;
-
-			// get texture offset
-			int offs = ((textureWidth * (y + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
-
-			// convert RGB to bytes
-			currentTexture[offs + x * 3 + 0] = floatToHalf(clamp(color.x, -65000.0f, 65000.0f));
-			currentTexture[offs + x * 3 + 1] = floatToHalf(clamp(color.y, -65000.0f, 65000.0f));
-			currentTexture[offs + x * 3 + 2] = floatToHalf(clamp(color.z, -65000.0f, 65000.0f));
-		}
-	}
-#else
 	// store results to lightmap texture
 	for (int i = 0; i < sampleHeight; i++)
 	{
 		for (int j = 0; j < sampleWidth; j++)
 		{
 			// get texture offset
-			int offs = ((textureWidth * (i + surface->lightmapOffs[1])) + surface->lightmapOffs[0]) * 3;
+			int offs = ((textureWidth * (i + surface->atlasY)) + surface->atlasX) * 3;
 
 			// convert RGB to bytes
 			currentTexture[offs + j * 3 + 0] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].x, -65000.0f, 65000.0f));
@@ -390,7 +376,6 @@ void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 			currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, -65000.0f, 65000.0f));
 		}
 	}
-#endif
 }
 
 void LevelMesh::CreateLightProbes(FLevel& map)
@@ -483,7 +468,6 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 		auto surf = std::make_unique<Surface>();
 		surf->material = side->midtexture;
-		surf->numVerts = 4;
 		surf->verts.resize(4);
 		surf->bSky = front->skyFloor || front->skyCeiling;
 
@@ -505,15 +489,15 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 		float texZ = surf->verts[0].z;
 
-		surf->uvs.resize(4);
-		surf->uvs[0].x = 0.0f;
-		surf->uvs[1].x = distance / texWidth;
-		surf->uvs[2].x = 0.0f;
-		surf->uvs[3].x = distance / texWidth;
-		surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
-		surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
-		surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
-		surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+		surf->texUV.resize(4);
+		surf->texUV[0].x = 0.0f;
+		surf->texUV[1].x = distance / texWidth;
+		surf->texUV[2].x = 0.0f;
+		surf->texUV[3].x = distance / texWidth;
+		surf->texUV[0].y = (surf->verts[0].z - texZ) / texHeight;
+		surf->texUV[1].y = (surf->verts[1].z - texZ) / texHeight;
+		surf->texUV[2].y = (surf->verts[2].z - texZ) / texHeight;
+		surf->texUV[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 		surfaces.push_back(std::move(surf));
 		return;
@@ -549,7 +533,6 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			surf->typeIndex = typeIndex;
 			surf->controlSector = xfloor;
 			surf->sampleDimension = (surf->sampleDimension = otherSide->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
-			surf->numVerts = 4;
 			surf->verts.resize(4);
 			surf->verts[0].x = surf->verts[2].x = v2.x;
 			surf->verts[0].y = surf->verts[2].y = v2.y;
@@ -564,15 +547,15 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			float texZ = surf->verts[0].z;
 
-			surf->uvs.resize(4);
-			surf->uvs[0].x = 0.0f;
-			surf->uvs[1].x = distance / texWidth;
-			surf->uvs[2].x = 0.0f;
-			surf->uvs[3].x = distance / texWidth;
-			surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
-			surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
-			surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
-			surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+			surf->texUV.resize(4);
+			surf->texUV[0].x = 0.0f;
+			surf->texUV[1].x = distance / texWidth;
+			surf->texUV[2].x = 0.0f;
+			surf->texUV[3].x = distance / texWidth;
+			surf->texUV[0].y = (surf->verts[0].z - texZ) / texHeight;
+			surf->texUV[1].y = (surf->verts[1].z - texZ) / texHeight;
+			surf->texUV[2].y = (surf->verts[2].z - texZ) / texHeight;
+			surf->texUV[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 			surfaces.push_back(std::move(surf));
 		}
@@ -607,7 +590,6 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 				auto surf = std::make_unique<Surface>();
 				surf->material = side->bottomtexture;
-				surf->numVerts = 4;
 				surf->verts.resize(4);
 
 				surf->verts[0].x = surf->verts[2].x = v1.x;
@@ -629,15 +611,15 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 				float texZ = surf->verts[0].z;
 
-				surf->uvs.resize(4);
-				surf->uvs[0].x = 0.0f;
-				surf->uvs[1].x = distance / texWidth;
-				surf->uvs[2].x = 0.0f;
-				surf->uvs[3].x = distance / texWidth;
-				surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
-				surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
-				surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
-				surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+				surf->texUV.resize(4);
+				surf->texUV[0].x = 0.0f;
+				surf->texUV[1].x = distance / texWidth;
+				surf->texUV[2].x = 0.0f;
+				surf->texUV[3].x = distance / texWidth;
+				surf->texUV[0].y = (surf->verts[0].z - texZ) / texHeight;
+				surf->texUV[1].y = (surf->verts[1].z - texZ) / texHeight;
+				surf->texUV[2].y = (surf->verts[2].z - texZ) / texHeight;
+				surf->texUV[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 				surfaces.push_back(std::move(surf));
 			}
@@ -666,7 +648,6 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 				auto surf = std::make_unique<Surface>();
 				surf->material = side->toptexture;
-				surf->numVerts = 4;
 				surf->verts.resize(4);
 
 				surf->verts[0].x = surf->verts[2].x = v1.x;
@@ -688,15 +669,15 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 				float texZ = surf->verts[0].z;
 
-				surf->uvs.resize(4);
-				surf->uvs[0].x = 0.0f;
-				surf->uvs[1].x = distance / texWidth;
-				surf->uvs[2].x = 0.0f;
-				surf->uvs[3].x = distance / texWidth;
-				surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
-				surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
-				surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
-				surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+				surf->texUV.resize(4);
+				surf->texUV[0].x = 0.0f;
+				surf->texUV[1].x = distance / texWidth;
+				surf->texUV[2].x = 0.0f;
+				surf->texUV[3].x = distance / texWidth;
+				surf->texUV[0].y = (surf->verts[0].z - texZ) / texHeight;
+				surf->texUV[1].y = (surf->verts[1].z - texZ) / texHeight;
+				surf->texUV[2].y = (surf->verts[2].z - texZ) / texHeight;
+				surf->texUV[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 				surfaces.push_back(std::move(surf));
 			}
@@ -714,7 +695,6 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 		auto surf = std::make_unique<Surface>();
 		surf->material = side->midtexture;
-		surf->numVerts = 4;
 		surf->verts.resize(4);
 
 		surf->verts[0].x = surf->verts[2].x = v1.x;
@@ -735,15 +715,15 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 		float texZ = surf->verts[0].z;
 
-		surf->uvs.resize(4);
-		surf->uvs[0].x = 0.0f;
-		surf->uvs[1].x = distance / texWidth;
-		surf->uvs[2].x = 0.0f;
-		surf->uvs[3].x = distance / texWidth;
-		surf->uvs[0].y = (surf->verts[0].z - texZ) / texHeight;
-		surf->uvs[1].y = (surf->verts[1].z - texZ) / texHeight;
-		surf->uvs[2].y = (surf->verts[2].z - texZ) / texHeight;
-		surf->uvs[3].y = (surf->verts[3].z - texZ) / texHeight;
+		surf->texUV.resize(4);
+		surf->texUV[0].x = 0.0f;
+		surf->texUV[1].x = distance / texWidth;
+		surf->texUV[2].x = 0.0f;
+		surf->texUV[3].x = distance / texWidth;
+		surf->texUV[0].y = (surf->verts[0].z - texZ) / texHeight;
+		surf->texUV[1].y = (surf->verts[1].z - texZ) / texHeight;
+		surf->texUV[2].y = (surf->verts[2].z - texZ) / texHeight;
+		surf->texUV[3].y = (surf->verts[3].z - texZ) / texHeight;
 
 		surfaces.push_back(std::move(surf));
 	}
@@ -754,9 +734,8 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 	auto surf = std::make_unique<Surface>();
 	surf->sampleDimension = sector->sampleDistanceFloor ? sector->sampleDistanceFloor : defaultSamples;
 	surf->material = sector->data.floorpic;
-	surf->numVerts = sub->numlines;
-	surf->verts.resize(surf->numVerts);
-	surf->uvs.resize(surf->numVerts);
+	surf->verts.resize(sub->numlines);
+	surf->texUV.resize(sub->numlines);
 	surf->bSky = sector->skyFloor;
 
 	if (!is3DFloor)
@@ -768,17 +747,17 @@ void LevelMesh::CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSect
 		surf->plane = Plane::Inverse(sector->ceilingplane);
 	}
 
-	for (int j = 0; j < surf->numVerts; j++)
+	for (int j = 0; j < (int)sub->numlines; j++)
 	{
-		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (surf->numVerts - 1) - j];
+		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + (sub->numlines - 1) - j];
 		FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
 
 		surf->verts[j].x = v1.x;
 		surf->verts[j].y = v1.y;
 		surf->verts[j].z = surf->plane.zAt(surf->verts[j].x, surf->verts[j].y);
 
-		surf->uvs[j].x = v1.x / 64.0f;
-		surf->uvs[j].y = v1.y / 64.0f;
+		surf->texUV[j].x = v1.x / 64.0f;
+		surf->texUV[j].y = v1.y / 64.0f;
 	}
 
 	surf->type = ST_FLOOR;
@@ -793,9 +772,8 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 	auto surf = std::make_unique<Surface>();
 	surf->material = sector->data.ceilingpic;
 	surf->sampleDimension = sector->sampleDistanceCeiling ? sector->sampleDistanceCeiling : defaultSamples;
-	surf->numVerts = sub->numlines;
-	surf->verts.resize(surf->numVerts);
-	surf->uvs.resize(surf->numVerts);
+	surf->verts.resize(sub->numlines);
+	surf->texUV.resize(sub->numlines);
 	surf->bSky = sector->skyCeiling;
 
 	if (!is3DFloor)
@@ -807,7 +785,7 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 		surf->plane = Plane::Inverse(sector->floorplane);
 	}
 
-	for (int j = 0; j < surf->numVerts; j++)
+	for (int j = 0; j < (int)sub->numlines; j++)
 	{
 		MapSegGLEx *seg = &doomMap.GLSegs[sub->firstline + j];
 		FloatVertex v1 = doomMap.GetSegVertex(seg->v1);
@@ -816,8 +794,8 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 		surf->verts[j].y = v1.y;
 		surf->verts[j].z = surf->plane.zAt(surf->verts[j].x, surf->verts[j].y);
 
-		surf->uvs[j].x = v1.x / 64.0f;
-		surf->uvs[j].y = v1.y / 64.0f;
+		surf->texUV[j].x = v1.x / 64.0f;
+		surf->texUV[j].y = v1.y / 64.0f;
 	}
 
 	surf->type = ST_CEILING;
@@ -882,9 +860,9 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	int numSurfaces = 0;
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
-		if (surfaces[i]->lightmapNum != -1)
+		if (surfaces[i]->atlasPageIndex != -1)
 		{
-			numTexCoords += surfaces[i]->numVerts;
+			numTexCoords += surfaces[i]->verts.size();
 			numSurfaces++;
 		}
 	}
@@ -926,55 +904,55 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	int coordOffsets = 0;
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
-		if (surfaces[i]->lightmapNum == -1)
+		if (surfaces[i]->atlasPageIndex == -1)
 			continue;
 
 		lumpFile.Write32(surfaces[i]->type);
 		lumpFile.Write32(surfaces[i]->typeIndex);
 		lumpFile.Write32(surfaces[i]->controlSector ? (uint32_t)(surfaces[i]->controlSector - &map->Sectors[0]) : 0xffffffff);
-		lumpFile.Write32(surfaces[i]->lightmapNum);
+		lumpFile.Write32(surfaces[i]->atlasPageIndex);
 		lumpFile.Write32(coordOffsets);
-		coordOffsets += surfaces[i]->numVerts;
+		coordOffsets += surfaces[i]->verts.size();
 	}
 
 	// Write texture coordinates
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
-		if (surfaces[i]->lightmapNum == -1)
+		if (surfaces[i]->atlasPageIndex == -1)
 			continue;
 
-		int count = surfaces[i]->numVerts;
+		int count = surfaces[i]->verts.size();
 		if (surfaces[i]->type == ST_FLOOR)
 		{
 			for (int j = count - 1; j >= 0; j--)
 			{
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].x);
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].y);
+				lumpFile.WriteFloat(surfaces[i]->lightUV[j].x);
+				lumpFile.WriteFloat(surfaces[i]->lightUV[j].y);
 			}
 		}
 		else if (surfaces[i]->type == ST_CEILING)
 		{
 			for (int j = 0; j < count; j++)
 			{
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].x);
-				lumpFile.WriteFloat(surfaces[i]->lightmapCoords[j].y);
+				lumpFile.WriteFloat(surfaces[i]->lightUV[j].x);
+				lumpFile.WriteFloat(surfaces[i]->lightUV[j].y);
 			}
 		}
 		else
 		{
 			// zdray uses triangle strip internally, lump/gzd uses triangle fan
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0].x);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[0].y);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[0].x);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[0].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2].x);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[2].y);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[2].x);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[2].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3].x);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[3].y);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[3].x);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[3].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1].x);
-			lumpFile.WriteFloat(surfaces[i]->lightmapCoords[1].y);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[1].x);
+			lumpFile.WriteFloat(surfaces[i]->lightUV[1].y);
 		}
 	}
 
@@ -1019,7 +997,7 @@ void LevelMesh::Export(std::string filename)
 	{
 		Surface* surface = surfaces[MeshSurfaces[surfidx]].get();
 
-		outLightmapId[surfidx] = surface->lightmapNum;
+		outLightmapId[surfidx] = surface->atlasPageIndex;
 
 		for (int i = 0; i < 3; i++)
 		{
@@ -1028,7 +1006,7 @@ void LevelMesh::Export(std::string filename)
 			int uvindex = MeshUVIndex[vertexidx];
 
 			outvertices[vertexidx] = MeshVertices[vertexidx];
-			outuv[vertexidx] = surface->lightmapCoords[uvindex];
+			outuv[vertexidx] = surface->lightUV[uvindex];
 			outnormal[vertexidx] = surface->plane.Normal();
 			outface.Push(vertexidx);
 		}

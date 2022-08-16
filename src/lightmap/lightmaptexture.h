@@ -9,8 +9,6 @@ class LightmapTexture
 public:
 	LightmapTexture(int width, int height);
 
-	bool MakeRoomForBlock(const int width, const int height, int* x, int* y);
-
 	int Width() const { return textureWidth; }
 	int Height() const { return textureHeight; }
 	uint16_t* Pixels() { return mPixels.data(); }

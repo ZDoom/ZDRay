@@ -15,17 +15,17 @@ inline bool PointBeyondSide(const vec2& p, const vec2& v1, const vec2& v2)
 
 SurfaceClip::SurfaceClip(Surface* surface)
 {
-	sampleWidth = float(surface->lightmapDims[0]);
-	sampleHeight = float(surface->lightmapDims[1]);
+	sampleWidth = float(surface->texWidth);
+	sampleHeight = float(surface->texHeight);
 
 	// Transformation matrix
 	mat3 base;
-	base[0] = surface->lightmapSteps[0].x;
-	base[1] = surface->lightmapSteps[0].y;
-	base[2] = surface->lightmapSteps[0].z;
-	base[3] = surface->lightmapSteps[1].x;
-	base[4] = surface->lightmapSteps[1].y;
-	base[5] = surface->lightmapSteps[1].z;
+	base[0] = surface->worldStepX.x;
+	base[1] = surface->worldStepX.y;
+	base[2] = surface->worldStepX.z;
+	base[3] = surface->worldStepY.x;
+	base[4] = surface->worldStepY.y;
+	base[5] = surface->worldStepY.z;
 	base[6] = surface->plane.a;
 	base[7] = surface->plane.b;
 	base[8] = surface->plane.c;

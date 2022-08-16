@@ -156,8 +156,8 @@ void GPURaytracer::CreateTasks(std::vector<TraceTask>& tasks)
 
 		if (!surface->bSky)
 		{
-			int sampleWidth = surface->lightmapDims[0];
-			int sampleHeight = surface->lightmapDims[1];
+			int sampleWidth = surface->texWidth;
+			int sampleHeight = surface->texHeight;
 
 			fullTaskCount += size_t(sampleHeight) * size_t(sampleWidth);
 
@@ -223,7 +223,7 @@ void GPURaytracer::UploadTasks(const TraceTask* tasks, size_t size)
 		if (task.id >= 0)
 		{
 			Surface* surface = mesh->surfaces[task.id].get();
-			vec3 pos = surface->lightmapOrigin + surface->lightmapSteps[0] * (task.x + 0.5f) + surface->lightmapSteps[1] * (task.y + 0.5f);
+			vec3 pos = surface->worldOrigin + surface->worldStepX * (task.x + 0.5f) + surface->worldStepY * (task.y + 0.5f);
 			startPositions[i] = vec4(pos, (float)task.id);
 		}
 		else
@@ -373,8 +373,8 @@ void GPURaytracer::DownloadTasks(const TraceTask* tasks, size_t size)
 		if (task.id >= 0)
 		{
 			Surface* surface = mesh->surfaces[task.id].get();
-			size_t sampleWidth = surface->lightmapDims[0];
-			surface->samples[task.x + task.y * sampleWidth] = vec3(output[i].x, output[i].y, output[i].z);
+			size_t sampleWidth = surface->texWidth;
+			surface->texPixels[task.x + task.y * sampleWidth] = vec3(output[i].x, output[i].y, output[i].z);
 		}
 		else
 		{
@@ -405,7 +405,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 			MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
 			IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
 
-			if (sector && surface->numVerts > 0)
+			if (sector && surface->verts.size() > 0)
 			{
 				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
 				{
