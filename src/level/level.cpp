@@ -20,7 +20,7 @@
 
 #include "level/level.h"
 #include "lightmap/cpuraytracer.h"
-#include "lightmap/gpuraytracer2.h"
+#include "lightmap/gpuraytracer.h"
 #include "math/vec.h"
 //#include "rejectbuilder.h"
 #include <memory>
@@ -767,12 +767,12 @@ void FProcessor::BuildLightmaps()
 
 	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.DefaultSamples, LMDims);
 
-	std::unique_ptr<GPURaytracer2> gpuraytracer;
+	std::unique_ptr<GPURaytracer> gpuraytracer;
 	if (!CPURaytrace)
 	{
 		try
 		{
-			gpuraytracer = std::make_unique<GPURaytracer2>();
+			gpuraytracer = std::make_unique<GPURaytracer>();
 		}
 		catch (std::exception msg)
 		{

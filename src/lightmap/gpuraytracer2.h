@@ -63,6 +63,11 @@ struct LightmapImage
 	std::unique_ptr<VulkanBuffer> Transfer;
 };
 
+struct SceneVertex
+{
+	vec2 Position;
+};
+
 class GPURaytracer2
 {
 public:
@@ -79,6 +84,7 @@ private:
 	void CreateShaders();
 	void CreatePipeline();
 	void CreateDescriptorSet();
+	void CreateSceneVertexBuffer();
 
 	LightmapImage CreateImage(int width, int height);
 
@@ -98,6 +104,11 @@ private:
 	VkDeviceSize uniformStructStride = sizeof(Uniforms2);
 
 	std::unique_ptr<VulkanDevice> device;
+
+	static const int SceneVertexBufferSize = 1 * 1024 * 1024;
+	std::unique_ptr<VulkanBuffer> sceneVertexBuffer;
+	SceneVertex* sceneVertices = nullptr;
+	int sceneVertexPos = 0;
 
 	std::unique_ptr<VulkanBuffer> vertexBuffer;
 	std::unique_ptr<VulkanBuffer> indexBuffer;

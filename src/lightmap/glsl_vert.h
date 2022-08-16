@@ -18,20 +18,13 @@ layout(push_constant) uniform PushConstants
 	float PushPadding4;
 };
 
+layout(location = 0) in vec2 aPosition;
 layout(location = 0) out vec3 worldpos;
-
-vec2 positions[4] = vec2[](
-	vec2(0.0, 0.0),
-	vec2(1.0, 0.0),
-	vec2(0.0, 1.0),
-	vec2(1.0, 1.0)
-);
 
 void main()
 {
-	vec2 tilepos = positions[gl_VertexIndex];
-	worldpos = LightmapOrigin + LightmapStepX * tilepos.x + LightmapStepY * tilepos.y;
-	gl_Position = vec4(mix(TileTL, TileBR, tilepos) * 2.0 - 1.0, 0.0, 1.0);
+	worldpos = LightmapOrigin + LightmapStepX * aPosition.x + LightmapStepY * aPosition.y;
+	gl_Position = vec4(aPosition * 2.0 - 1.0, 0.0, 1.0);
 }
 
 )glsl";

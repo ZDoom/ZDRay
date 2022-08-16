@@ -58,59 +58,98 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		.AddBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
 		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-	std::vector<LightmapImage> surfaceImages;
+	const int atlasImageSize = 512;
+	RectPacker packer(atlasImageSize, atlasImageSize, RectPacker::Spacing(0));
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->texWidth;
-		int sampleHeight = surface->texHeight;
-		surfaceImages.push_back(CreateImage(sampleWidth, sampleHeight));
+
+		auto result = packer.insert(surface->texWidth, surface->texHeight);
+		surface->atlasX = result.pos.x;
+		surface->atlasY = result.pos.y;
+		surface->atlasPageIndex = (int)result.pageIndex;
 	}
 
-	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	std::vector<LightmapImage> atlasImages;
+	for (size_t pageIndex = 0; pageIndex < packer.getNumPages(); pageIndex++)
 	{
-		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->texWidth;
-		int sampleHeight = surface->texHeight;
-		LightmapImage& img = surfaceImages[i];
+		atlasImages.push_back(CreateImage(atlasImageSize, atlasImageSize));
+	}
+
+	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
+	{
+		LightmapImage& img = atlasImages[pageIndex];
 
 		RenderPassBegin()
 			.RenderPass(renderPass.get())
-			.RenderArea(0, 0, sampleWidth, sampleHeight)
+			.RenderArea(0, 0, atlasImageSize, atlasImageSize)
 			.Framebuffer(img.Framebuffer.get())
 			.Execute(cmdbuffer.get());
 
-		PushConstants2 pc;
-		pc.LightStart = 0;
-		pc.LightEnd = mesh->map->ThingLights.Size();
-		pc.SurfaceIndex = (int32_t)i;
-		pc.TileTL = vec2(0.0f);
-		pc.TileBR = vec2(1.0f);
-		pc.LightmapOrigin = surface->worldOrigin;
-		pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
-		pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
-
-		VkViewport viewport = {};
-		viewport.maxDepth = 1;
-		viewport.width = (float)sampleWidth;
-		viewport.height = (float)sampleHeight;
-		cmdbuffer->setViewport(0, 1, &viewport);
-
+		VkDeviceSize offset = 0;
+		cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
 		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.get());
 		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, descriptorSet.get());
-		cmdbuffer->pushConstants(pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
-		cmdbuffer->draw(4, 1, 0, 0);
 
+		for (size_t i = 0; i < mesh->surfaces.size(); i++)
+		{
+			Surface* surface = mesh->surfaces[i].get();
+			if (surface->atlasPageIndex != pageIndex)
+				continue;
+
+			int sampleWidth = surface->texWidth;
+			int sampleHeight = surface->texHeight;
+
+			PushConstants2 pc;
+			pc.LightStart = 0;
+			pc.LightEnd = mesh->map->ThingLights.Size();
+			pc.SurfaceIndex = (int32_t)i;
+			pc.TileTL = vec2(0.0f);
+			pc.TileBR = vec2(1.0f);
+			pc.LightmapOrigin = surface->worldOrigin;
+			pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
+			pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
+
+#if 1
+			int firstVertex = sceneVertexPos;
+			int vertexCount = 4;
+			sceneVertexPos += vertexCount;
+
+			SceneVertex* vertex = &sceneVertices[firstVertex];
+			vertex[0].Position = vec2(0.0f, 0.0f);
+			vertex[1].Position = vec2(1.0f, 0.0f);
+			vertex[2].Position = vec2(1.0f, 1.0f);
+			vertex[3].Position = vec2(0.0f, 1.0f);
+#else
+			int firstVertex = sceneVertexPos;
+			int vertexCount = (int)surface->lightUV.size();
+			sceneVertexPos += vertexCount;
+
+			SceneVertex* vertex = &sceneVertices[firstVertex];
+			for (const vec2& uv : surface->lightUV)
+			{
+				(vertex++)->Position = vec2(uv.x / sampleWidth, uv.y / sampleHeight);
+			}
+#endif
+
+			VkViewport viewport = {};
+			viewport.maxDepth = 1;
+			viewport.x = (float)surface->atlasX;
+			viewport.y = (float)surface->atlasY;
+			viewport.width = (float)sampleWidth;
+			viewport.height = (float)sampleHeight;
+
+			cmdbuffer->setViewport(0, 1, &viewport);
+			cmdbuffer->pushConstants(pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
+			cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
+		}
 		cmdbuffer->endRenderPass();
 	}
 
-	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	for (size_t i = 0; i < atlasImages.size(); i++)
 	{
-		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->texWidth;
-		int sampleHeight = surface->texHeight;
-		LightmapImage& img = surfaceImages[i];
+		LightmapImage& img = atlasImages[i];
 
 		PipelineBarrier()
 			.AddImage(img.Image.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT)
@@ -119,26 +158,39 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		VkBufferImageCopy region = {};
 		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		region.imageSubresource.layerCount = 1;
-		region.imageExtent.width = sampleWidth;
-		region.imageExtent.height = sampleHeight;
+		region.imageExtent.width = atlasImageSize;
+		region.imageExtent.height = atlasImageSize;
 		region.imageExtent.depth = 1;
 		cmdbuffer->copyImageToBuffer(img.Image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img.Transfer->buffer, 1, &region);
 	}
 
 	FinishCommands();
 
-	for (size_t i = 0; i < mesh->surfaces.size(); i++)
+	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
 	{
-		Surface* surface = mesh->surfaces[i].get();
-		int sampleWidth = surface->texWidth;
-		int sampleHeight = surface->texHeight;
+		vec4* pixels = (vec4*)atlasImages[pageIndex].Transfer->Map(0, atlasImageSize * atlasImageSize * sizeof(vec4));
 
-		vec4* pixels = (vec4*)surfaceImages[i].Transfer->Map(0, sampleWidth * sampleHeight * sizeof(vec4));
-		for (int i = 0; i < sampleWidth * sampleHeight; i++)
+		for (size_t i = 0; i < mesh->surfaces.size(); i++)
 		{
-			surface->texPixels[i] = pixels[i].xyz();
+			Surface* surface = mesh->surfaces[i].get();
+			if (surface->atlasPageIndex != pageIndex)
+				continue;
+
+			int atlasX = surface->atlasX;
+			int atlasY = surface->atlasY;
+			int sampleWidth = surface->texWidth;
+			int sampleHeight = surface->texHeight;
+			for (int y = 0; y < sampleHeight; y++)
+			{
+				vec3* dest = &surface->texPixels[y * sampleWidth];
+				vec4* src = &pixels[atlasX + (atlasY + y) * atlasImageSize];
+				for (int x = 0; x < sampleWidth; x++)
+				{
+					dest[x] = src[x].xyz();
+				}
+			}
 		}
-		surfaceImages[i].Transfer->Unmap();
+		atlasImages[pageIndex].Transfer->Unmap();
 	}
 
 	if (device->renderdoc)
@@ -154,6 +206,7 @@ void GPURaytracer2::CreateVulkanObjects()
 
 	BeginCommands();
 
+	CreateSceneVertexBuffer();
 	CreateVertexAndIndexBuffers();
 	CreateBottomLevelAccelerationStructure();
 	CreateTopLevelAccelerationStructure();
@@ -162,6 +215,25 @@ void GPURaytracer2::CreateVulkanObjects()
 	CreateDescriptorSet();
 
 	FinishCommands();
+}
+
+void GPURaytracer2::CreateSceneVertexBuffer()
+{
+	size_t size = sizeof(SceneVertex) * SceneVertexBufferSize;
+
+	sceneVertexBuffer = BufferBuilder()
+		.Usage(
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VMA_MEMORY_USAGE_UNKNOWN, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT)
+		.MemoryType(
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		.Size(size)
+		.DebugName("SceneVertexBuffer")
+		.Create(device.get());
+
+	sceneVertices = (SceneVertex*)sceneVertexBuffer->Map(0, size);
+	sceneVertexPos = 0;
 }
 
 void GPURaytracer2::BeginCommands()
@@ -466,7 +538,9 @@ void GPURaytracer2::CreatePipeline()
 		.RenderPass(renderPass.get())
 		.AddVertexShader(vertShader.get())
 		.AddFragmentShader(fragShader.get())
-		.Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
+		.AddVertexBufferBinding(0, sizeof(SceneVertex))
+		.AddVertexAttribute(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(SceneVertex, Position))
+		.Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
 		.AddDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
 		.Viewport(0.0f, 0.0f, 0.0f, 0.0f)
 		.Scissor(0, 0, 4096, 4096)
