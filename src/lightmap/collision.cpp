@@ -68,6 +68,13 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, SphereShape *sha
 	return find_any_hit(shape1, shape2, shape1->root);
 }
 
+std::vector<int> TriangleMeshShape::find_all_hits(TriangleMeshShape* shape1, SphereShape* shape2)
+{
+	std::vector<int> hits;
+	find_all_hits(shape1, shape2, shape1->root, hits);
+	return hits;
+}
+
 bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end)
 {
 	return find_any_hit(shape, RayBBox(ray_start, ray_end), shape->root);
@@ -131,6 +138,25 @@ bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, SphereShape *sha
 		}
 	}
 	return false;
+}
+
+void TriangleMeshShape::find_all_hits(TriangleMeshShape* shape1, SphereShape* shape2, int a, std::vector<int>& hits)
+{
+	if (overlap_bv_sphere(shape1, shape2, a))
+	{
+		if (shape1->is_leaf(a))
+		{
+			if (overlap_triangle_sphere(shape1, shape2, a))
+			{
+				hits.push_back(shape1->nodes[a].element_index / 3);
+			}
+		}
+		else
+		{
+			find_all_hits(shape1, shape2, shape1->nodes[a].left, hits);
+			find_all_hits(shape1, shape2, shape1->nodes[a].right, hits);
+		}
+	}
 }
 
 bool TriangleMeshShape::find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b)

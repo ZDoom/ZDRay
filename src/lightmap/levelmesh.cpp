@@ -112,6 +112,35 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	{
 		BuildSurfaceParams(surfaces[i].get());
 	}
+
+	printf("Building collision data...\n\n");
+
+	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
+
+	printf("Building light list...\n\n");
+
+	for (ThingLight& light : map->ThingLights)
+	{
+		SphereShape sphere;
+		sphere.center = light.LightOrigin();
+		sphere.radius = light.LightRadius();
+
+		for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
+		{
+			Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
+			bool found = false;
+			for (ThingLight* light2 : surface->LightList)
+			{
+				if (light2 == &light)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				surface->LightList.push_back(&light);
+		}
+	}
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.

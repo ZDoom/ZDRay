@@ -85,6 +85,7 @@ private:
 	void CreatePipeline();
 	void CreateDescriptorSet();
 	void CreateSceneVertexBuffer();
+	void CreateSceneLightBuffer();
 
 	LightmapImage CreateImage(int width, int height);
 
@@ -94,7 +95,6 @@ private:
 	void PrintVulkanInfo();
 
 	std::vector<SurfaceInfo2> CreateSurfaceInfo();
-	std::vector<LightInfo2> CreateLightInfo();
 
 	LevelMesh* mesh = nullptr;
 
@@ -110,12 +110,16 @@ private:
 	SceneVertex* sceneVertices = nullptr;
 	int sceneVertexPos = 0;
 
+	static const int SceneLightBufferSize = 1 * 1024 * 1024;
+	std::unique_ptr<VulkanBuffer> sceneLightBuffer;
+	LightInfo2* sceneLights = nullptr;
+	int sceneLightPos = 0;
+
 	std::unique_ptr<VulkanBuffer> vertexBuffer;
 	std::unique_ptr<VulkanBuffer> indexBuffer;
 	std::unique_ptr<VulkanBuffer> transferBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceIndexBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceBuffer;
-	std::unique_ptr<VulkanBuffer> lightBuffer;
 
 	std::unique_ptr<VulkanBuffer> blScratchBuffer;
 	std::unique_ptr<VulkanBuffer> blAccelStructBuffer;

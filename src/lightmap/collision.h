@@ -97,6 +97,8 @@ public:
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2);
 	static bool find_any_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end);
 
+	static std::vector<int> find_all_hits(TriangleMeshShape* shape1, SphereShape* shape2);
+
 	static TraceHit find_first_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end);
 
 private:
@@ -125,6 +127,8 @@ private:
 	static bool find_any_hit(TriangleMeshShape *shape1, TriangleMeshShape *shape2, int a, int b);
 	static bool find_any_hit(TriangleMeshShape *shape1, SphereShape *shape2, int a);
 	static bool find_any_hit(TriangleMeshShape *shape1, const RayBBox &ray, int a);
+
+	static void find_all_hits(TriangleMeshShape* shape1, SphereShape* shape2, int a, std::vector<int>& hits);
 
 	static void find_first_hit(TriangleMeshShape *shape1, const RayBBox &ray, int a, TraceHit *hit);
 

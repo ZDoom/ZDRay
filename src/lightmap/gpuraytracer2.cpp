@@ -101,16 +101,6 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 			int sampleWidth = surface->texWidth;
 			int sampleHeight = surface->texHeight;
 
-			PushConstants2 pc;
-			pc.LightStart = 0;
-			pc.LightEnd = mesh->map->ThingLights.Size();
-			pc.SurfaceIndex = (int32_t)i;
-			pc.TileTL = vec2(0.0f);
-			pc.TileBR = vec2(1.0f);
-			pc.LightmapOrigin = surface->worldOrigin;
-			pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
-			pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
-
 #if 1
 			int firstVertex = sceneVertexPos;
 			int vertexCount = 4;
@@ -133,15 +123,42 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 			}
 #endif
 
+			int firstLight = sceneLightPos;
+			int lightCount = (int)surface->LightList.size();
+			sceneLightPos += lightCount;
+
+			LightInfo2* lightinfo = &sceneLights[firstLight];
+			for (ThingLight* light : surface->LightList)
+			{
+				lightinfo->Origin = light->LightOrigin();
+				lightinfo->Radius = light->LightRadius();
+				lightinfo->Intensity = light->intensity;
+				lightinfo->InnerAngleCos = light->innerAngleCos;
+				lightinfo->OuterAngleCos = light->outerAngleCos;
+				lightinfo->SpotDir = light->SpotDir();
+				lightinfo->Color = light->rgb;
+				lightinfo++;
+			}
+
 			VkViewport viewport = {};
 			viewport.maxDepth = 1;
 			viewport.x = (float)surface->atlasX;
 			viewport.y = (float)surface->atlasY;
 			viewport.width = (float)sampleWidth;
 			viewport.height = (float)sampleHeight;
-
 			cmdbuffer->setViewport(0, 1, &viewport);
+
+			PushConstants2 pc;
+			pc.LightStart = firstLight;
+			pc.LightEnd = firstLight + lightCount;
+			pc.SurfaceIndex = (int32_t)i;
+			pc.TileTL = vec2(0.0f);
+			pc.TileBR = vec2(1.0f);
+			pc.LightmapOrigin = surface->worldOrigin;
+			pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
+			pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
 			cmdbuffer->pushConstants(pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
+
 			cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
 		}
 		cmdbuffer->endRenderPass();
@@ -164,7 +181,19 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		cmdbuffer->copyImageToBuffer(img.Image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img.Transfer->buffer, 1, &region);
 	}
 
+#ifdef WIN32
+	LARGE_INTEGER s;
+	QueryPerformanceCounter(&s);
+#endif
+
 	FinishCommands();
+
+#ifdef WIN32
+	LARGE_INTEGER e, f;
+	QueryPerformanceCounter(&e);
+	QueryPerformanceFrequency(&f);
+	printf("GPU ray tracing time was %.3f seconds.\n", double(e.QuadPart - s.QuadPart) / double(f.QuadPart));
+#endif
 
 	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
 	{
@@ -207,6 +236,7 @@ void GPURaytracer2::CreateVulkanObjects()
 	BeginCommands();
 
 	CreateSceneVertexBuffer();
+	CreateSceneLightBuffer();
 	CreateVertexAndIndexBuffers();
 	CreateBottomLevelAccelerationStructure();
 	CreateTopLevelAccelerationStructure();
@@ -236,6 +266,25 @@ void GPURaytracer2::CreateSceneVertexBuffer()
 	sceneVertexPos = 0;
 }
 
+void GPURaytracer2::CreateSceneLightBuffer()
+{
+	size_t size = sizeof(LightInfo2) * SceneLightBufferSize;
+
+	sceneLightBuffer = BufferBuilder()
+		.Usage(
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_UNKNOWN, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT)
+		.MemoryType(
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		.Size(size)
+		.DebugName("SceneLightBuffer")
+		.Create(device.get());
+
+	sceneLights = (LightInfo2*)sceneLightBuffer->Map(0, size);
+	sceneLightPos = 0;
+}
+
 void GPURaytracer2::BeginCommands()
 {
 	cmdbuffer = cmdpool->createBuffer();
@@ -262,19 +311,15 @@ void GPURaytracer2::FinishCommands()
 void GPURaytracer2::CreateVertexAndIndexBuffers()
 {
 	std::vector<SurfaceInfo2> surfaces = CreateSurfaceInfo();
-	std::vector<LightInfo2> lights = CreateLightInfo();
 
-	if (lights.empty()) // vulkan doesn't support zero byte buffers
-		lights.push_back(LightInfo2());
-	if (surfaces.empty())
+	if (surfaces.empty()) // vulkan doesn't support zero byte buffers
 		surfaces.push_back(SurfaceInfo2());
 
 	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(vec3);
 	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
 	size_t surfaceindexbuffersize = (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t);
 	size_t surfacebuffersize = (size_t)surfaces.size() * sizeof(SurfaceInfo2);
-	size_t lightbuffersize = (size_t)lights.size() * sizeof(LightInfo2);
-	size_t transferbuffersize = vertexbuffersize + indexbuffersize + surfaceindexbuffersize + surfacebuffersize + lightbuffersize;
+	size_t transferbuffersize = vertexbuffersize + indexbuffersize + surfaceindexbuffersize + surfacebuffersize;
 	size_t vertexoffset = 0;
 	size_t indexoffset = vertexoffset + vertexbuffersize;
 	size_t surfaceindexoffset = indexoffset + indexbuffersize;
@@ -315,12 +360,6 @@ void GPURaytracer2::CreateVertexAndIndexBuffers()
 		.DebugName("surfaceBuffer")
 		.Create(device.get());
 
-	lightBuffer = BufferBuilder()
-		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-		.Size(lightbuffersize)
-		.DebugName("lightBuffer")
-		.Create(device.get());
-
 	transferBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
 		.Size(transferbuffersize)
@@ -332,14 +371,12 @@ void GPURaytracer2::CreateVertexAndIndexBuffers()
 	memcpy(data + indexoffset, mesh->MeshElements.Data(), indexbuffersize);
 	memcpy(data + surfaceindexoffset, mesh->MeshSurfaces.Data(), surfaceindexbuffersize);
 	memcpy(data + surfaceoffset, surfaces.data(), surfacebuffersize);
-	memcpy(data + lightoffset, lights.data(), lightbuffersize);
 	transferBuffer->Unmap();
 
 	cmdbuffer->copyBuffer(transferBuffer.get(), vertexBuffer.get(), vertexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), indexBuffer.get(), indexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceIndexBuffer.get(), surfaceindexoffset);
 	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceBuffer.get(), surfaceoffset);
-	cmdbuffer->copyBuffer(transferBuffer.get(), lightBuffer.get(), lightoffset);
 
 	PipelineBarrier()
 		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
@@ -613,7 +650,7 @@ void GPURaytracer2::CreateDescriptorSet()
 		.AddBuffer(descriptorSet.get(), 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get(), 0, sizeof(Uniforms2))
 		.AddBuffer(descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
 		.AddBuffer(descriptorSet.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
-		.AddBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, lightBuffer.get())
+		.AddBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneLightBuffer.get())
 		.Execute(device.get());
 }
 
@@ -670,24 +707,6 @@ std::vector<SurfaceInfo2> GPURaytracer2::CreateSurfaceInfo()
 		surfaces.push_back(info);
 	}
 	return surfaces;
-}
-
-std::vector<LightInfo2> GPURaytracer2::CreateLightInfo()
-{
-	std::vector<LightInfo2> lights;
-	for (ThingLight& light : mesh->map->ThingLights)
-	{
-		LightInfo2 info;
-		info.Origin = light.LightOrigin();
-		info.Radius = light.LightRadius();
-		info.Intensity = light.intensity;
-		info.InnerAngleCos = light.innerAngleCos;
-		info.OuterAngleCos = light.outerAngleCos;
-		info.SpotDir = light.SpotDir();
-		info.Color = light.rgb;
-		lights.push_back(info);
-	}
-	return lights;
 }
 
 void GPURaytracer2::PrintVulkanInfo()

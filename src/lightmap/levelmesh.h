@@ -36,6 +36,7 @@
 #include "framework/halffloat.h"
 #include "lightmaptexture.h"
 #include "math/mathlib.h"
+#include "collision.h"
 
 #include "dp_rect_pack/dp_rect_pack.h"
 
@@ -45,6 +46,7 @@ struct MapSubsectorEx;
 struct IntSector;
 struct IntSideDef;
 struct FLevel;
+struct ThingLight;
 class FWadWriter;
 
 enum SurfaceType
@@ -73,6 +75,9 @@ struct Surface
 	IntSector* controlSector = nullptr;
 	int sampleDimension = 0;
 	bool bSky = false;
+
+	// Touching light sources
+	std::vector<ThingLight*> LightList;
 
 	// Lightmap world coordinates for the texture
 	vec3 worldOrigin = { 0.0f };
@@ -124,6 +129,8 @@ public:
 	TArray<int> MeshUVIndex;
 	TArray<unsigned int> MeshElements;
 	TArray<int> MeshSurfaces;
+
+	std::unique_ptr<TriangleMeshShape> Collision;
 
 private:
 	void CreateSubsectorSurfaces(FLevel &doomMap);
