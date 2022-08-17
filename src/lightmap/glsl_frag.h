@@ -61,13 +61,14 @@ layout(push_constant) uniform PushConstants
 layout(location = 0) in vec3 worldpos;
 layout(location = 0) out vec4 fragcolor;
 
+vec3 TraceSunLight(vec3 origin);
+vec3 TraceLight(vec3 origin, vec3 normal, LightInfo light);
+float TraceAmbientOcclusion(vec3 origin, vec3 normal);
 vec2 Hammersley(uint i, uint N);
 float RadicalInverse_VdC(uint bits);
 
 void main()
 {
-	const float minDistance = 0.01;
-
 	vec3 origin = worldpos;
 	vec3 normal;
 	if (SurfaceIndex >= 0)
@@ -76,14 +77,107 @@ void main()
 		origin += normal * 0.1;
 	}
 
-	vec3 incoming = vec3(0.0);
+	vec3 incoming = TraceSunLight(origin);
 
-	// Sun light
+	for (uint j = LightStart; j < LightEnd; j++)
 	{
-		const float dist = 32768.0;
+		incoming += TraceLight(origin, normal, lights[j]);
+	}
+
+	if (SurfaceIndex >= 0)
+	{
+		incoming.rgb *= TraceAmbientOcclusion(origin, normal);
+	}
+
+	fragcolor = vec4(incoming, 1.0);
+}
+
+vec3 TraceLight(vec3 origin, vec3 normal, LightInfo light)
+{
+	const float minDistance = 0.01;
+	vec3 incoming = vec3(0.0);
+	float dist = distance(light.Origin, origin);
+	if (dist > minDistance && dist < light.Radius)
+	{
+		vec3 dir = normalize(light.Origin - origin);
+
+		float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
+		float angleAttenuation = 1.0f;
+		if (SurfaceIndex >= 0)
+		{
+			angleAttenuation = max(dot(normal, dir), 0.0);
+		}
+		float spotAttenuation = 1.0;
+		if (light.OuterAngleCos > -1.0)
+		{
+			float cosDir = dot(dir, light.SpotDir);
+			spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
+			spotAttenuation = max(spotAttenuation, 0.0);
+		}
+
+		float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
+		if (attenuation > 0.0)
+		{
+			rayQueryEXT rayQuery;
+			rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, dir, dist);
+
+			while(rayQueryProceedEXT(rayQuery)) { }
+
+			if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionNoneEXT)
+			{
+				incoming.rgb += light.Color * (attenuation * light.Intensity);
+			}
+		}
+	}
+	return incoming;
+}
+
+vec3 TraceSunLight(vec3 origin)
+{
+	const float minDistance = 0.01;
+	vec3 incoming = vec3(0.0);
+	const float dist = 32768.0;
+
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, SunDir, dist);
+
+	while(rayQueryProceedEXT(rayQuery))
+	{
+		if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
+		{
+			rayQueryConfirmIntersectionEXT(rayQuery);
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+	{
+		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
+		SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
+		incoming.rgb += SunColor * SunIntensity * surface.Sky;
+	}
+	return incoming;
+}
+
+float TraceAmbientOcclusion(vec3 origin, vec3 normal)
+{
+	const float minDistance = 0.05;
+	const float aoDistance = 100;
+	const int SampleCount = 2048;
+
+	vec3 N = normal;
+	vec3 up = abs(N.x) < abs(N.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+	vec3 tangent = normalize(cross(up, N));
+	vec3 bitangent = cross(N, tangent);
+
+	float ambience = 0.0f;
+	for (uint i = 0; i < SampleCount; i++)
+	{
+		vec2 Xi = Hammersley(i, SampleCount);
+		vec3 H = normalize(vec3(Xi.x * 2.0f - 1.0f, Xi.y * 2.0f - 1.0f, 1.5 - length(Xi)));
+		vec3 L = H.x * tangent + H.y * bitangent + H.z * N;
 
 		rayQueryEXT rayQuery;
-		rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, SunDir, dist);
+		rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, L, aoDistance);
 
 		while(rayQueryProceedEXT(rayQuery))
 		{
@@ -97,100 +191,18 @@ void main()
 		{
 			int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
 			SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
-			incoming.rgb += SunColor * SunIntensity * surface.Sky;
+			if (surface.Sky == 0.0)
+			{
+				float hitDistance = rayQueryGetIntersectionTEXT(rayQuery, true);
+				ambience += clamp(hitDistance / aoDistance, 0.0, 1.0);
+			}
 		}
-	}
-
-	for (uint j = LightStart; j < LightEnd; j++)
-	{
-		LightInfo light = lights[j];
-
-		float dist = distance(light.Origin, origin);
-		if (dist > minDistance && dist < light.Radius)
+		else
 		{
-			vec3 dir = normalize(light.Origin - origin);
-
-			float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
-			float angleAttenuation = 1.0f;
-			if (SurfaceIndex >= 0)
-			{
-				angleAttenuation = max(dot(normal, dir), 0.0);
-			}
-			float spotAttenuation = 1.0;
-			if (light.OuterAngleCos > -1.0)
-			{
-				float cosDir = dot(dir, light.SpotDir);
-				spotAttenuation = smoothstep(light.OuterAngleCos, light.InnerAngleCos, cosDir);
-				spotAttenuation = max(spotAttenuation, 0.0);
-			}
-
-			float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
-			if (attenuation > 0.0)
-			{
-				rayQueryEXT rayQuery;
-				rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, dir, dist);
-
-				while(rayQueryProceedEXT(rayQuery)) { }
-
-				if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionNoneEXT)
-				{
-					incoming.rgb += light.Color * (attenuation * light.Intensity);
-				}
-			}
+			ambience += 1.0;
 		}
 	}
-
-	// Ambient occlusion
-	if (SurfaceIndex >= 0)
-	{
-		const float minDistance = 0.05;
-		const float aoDistance = 100;
-		const int SampleCount = 2048;
-
-		vec3 N = normal;
-		vec3 up = abs(N.x) < abs(N.y) ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
-		vec3 tangent = normalize(cross(up, N));
-		vec3 bitangent = cross(N, tangent);
-
-		float ambience = 0.0f;
-		for (uint i = 0; i < SampleCount; i++)
-		{
-			vec2 Xi = Hammersley(i, SampleCount);
-			vec3 H = normalize(vec3(Xi.x * 2.0f - 1.0f, Xi.y * 2.0f - 1.0f, 1.5 - length(Xi)));
-			vec3 L = H.x * tangent + H.y * bitangent + H.z * N;
-
-			rayQueryEXT rayQuery;
-			rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, L, aoDistance);
-
-			while(rayQueryProceedEXT(rayQuery))
-			{
-				if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
-				{
-					rayQueryConfirmIntersectionEXT(rayQuery);
-				}
-			}
-
-			if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
-			{
-				int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
-				SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
-				if (surface.Sky == 0.0)
-				{
-					float hitDistance = rayQueryGetIntersectionTEXT(rayQuery, true);
-					ambience += clamp(hitDistance / aoDistance, 0.0, 1.0);
-				}
-			}
-			else
-			{
-				ambience += 1.0;
-			}
-		}
-		ambience /= float(SampleCount);
-
-		incoming.rgb = incoming.rgb * ambience;
-	}
-
-	fragcolor = vec4(incoming, 1.0);
+	return ambience / float(SampleCount);
 }
 
 vec2 Hammersley(uint i, uint N)
