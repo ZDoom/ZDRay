@@ -15,6 +15,7 @@
 #include <mutex>
 #include <thread>
 #include "glsl_frag.h"
+#include "glsl_frag_resolve.h"
 #include "glsl_vert.h"
 
 extern bool VKDebug;
@@ -82,15 +83,15 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		LightmapImage& img = atlasImages[pageIndex];
 
 		RenderPassBegin()
-			.RenderPass(renderPass.get())
+			.RenderPass(raytrace.renderPass.get())
 			.RenderArea(0, 0, atlasImageSize, atlasImageSize)
-			.Framebuffer(img.Framebuffer.get())
+			.Framebuffer(img.raytrace.Framebuffer.get())
 			.Execute(cmdbuffer.get());
 
 		VkDeviceSize offset = 0;
 		cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
-		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.get());
-		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, descriptorSet.get());
+		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipeline.get());
+		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet.get());
 
 		for (size_t i = 0; i < mesh->surfaces.size(); i++)
 		{
@@ -100,28 +101,6 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 
 			int sampleWidth = surface->texWidth;
 			int sampleHeight = surface->texHeight;
-
-#if 1
-			int firstVertex = sceneVertexPos;
-			int vertexCount = 4;
-			sceneVertexPos += vertexCount;
-
-			SceneVertex* vertex = &sceneVertices[firstVertex];
-			vertex[0].Position = vec2(0.0f, 0.0f);
-			vertex[1].Position = vec2(1.0f, 0.0f);
-			vertex[2].Position = vec2(1.0f, 1.0f);
-			vertex[3].Position = vec2(0.0f, 1.0f);
-#else
-			int firstVertex = sceneVertexPos;
-			int vertexCount = (int)surface->lightUV.size();
-			sceneVertexPos += vertexCount;
-
-			SceneVertex* vertex = &sceneVertices[firstVertex];
-			for (const vec2& uv : surface->lightUV)
-			{
-				(vertex++)->Position = vec2(uv.x / sampleWidth, uv.y / sampleHeight);
-			}
-#endif
 
 			int firstLight = sceneLightPos;
 			int lightCount = (int)surface->LightList.size();
@@ -157,9 +136,73 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 			pc.LightmapOrigin = surface->worldOrigin;
 			pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
 			pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
-			cmdbuffer->pushConstants(pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
+			cmdbuffer->pushConstants(raytrace.pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
+
+			if (vertexList.size() < surface->lightUV.size())
+				vertexList.resize(surface->lightUV.size());
+
+#if 1
+			// Draw tile
+			int firstVertex = sceneVertexPos;
+			int vertexCount = 4;
+			sceneVertexPos += vertexCount;
+
+			SceneVertex* vertex = &sceneVertices[firstVertex];
+			vertex[0].Position = vec2(0.0f, 0.0f);
+			vertex[1].Position = vec2(1.0f, 0.0f);
+			vertex[2].Position = vec2(1.0f, 1.0f);
+			vertex[3].Position = vec2(0.0f, 1.0f);
 
 			cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
+#else
+			// Convert to triangle fan and correct orientation
+			int vertexCount = (int)surface->lightUV.size();
+			if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+			{
+				if (IsNegativelyOriented(surface->lightUV[0], surface->lightUV[1], surface->lightUV[2]))
+				{
+					for (int idx = 0; idx < vertexCount; idx++)
+					{
+						vertexList[idx] = surface->lightUV[idx];
+					}
+				}
+				else
+				{
+					for (int idx = 0; idx < vertexCount; idx++)
+					{
+						vertexList[idx] = surface->lightUV[vertexCount - 1 - idx];
+					}
+				}
+			}
+			else
+			{
+				if (IsNegativelyOriented(surface->lightUV[0], surface->lightUV[2], surface->lightUV[3]))
+				{
+					vertexList[0] = surface->lightUV[0];
+					vertexList[1] = surface->lightUV[2];
+					vertexList[2] = surface->lightUV[3];
+					vertexList[3] = surface->lightUV[1];
+				}
+				else
+				{
+					vertexList[0] = surface->lightUV[1];
+					vertexList[1] = surface->lightUV[3];
+					vertexList[2] = surface->lightUV[2];
+					vertexList[3] = surface->lightUV[0];
+				}
+			}
+
+			// Draw polygon
+			int firstVertex = sceneVertexPos;
+			sceneVertexPos += vertexCount;
+			SceneVertex* vertex = &sceneVertices[firstVertex];
+			for (int idx = 0; idx < vertexCount; idx++)
+			{
+				auto& uv = vertexList[idx];
+				(vertex++)->Position = vec2(uv.x / sampleWidth, uv.y / sampleHeight);
+			}
+			cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
+#endif
 		}
 		cmdbuffer->endRenderPass();
 	}
@@ -169,7 +212,58 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		LightmapImage& img = atlasImages[i];
 
 		PipelineBarrier()
-			.AddImage(img.Image.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT)
+			.AddImage(img.raytrace.Image.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
+			.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+		RenderPassBegin()
+			.RenderPass(resolve.renderPass.get())
+			.RenderArea(0, 0, atlasImageSize, atlasImageSize)
+			.Framebuffer(img.resolve.Framebuffer.get())
+			.Execute(cmdbuffer.get());
+
+		VkDeviceSize offset = 0;
+		cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
+		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, resolve.pipeline.get());
+
+		auto descriptorSet = resolve.descriptorPool->allocate(resolve.descriptorSetLayout.get());
+		descriptorSet->SetDebugName("resolve.descriptorSet");
+		WriteDescriptors()
+			.AddCombinedImageSampler(descriptorSet.get(), 0, img.raytrace.View.get(), resolve.sampler.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			.Execute(device.get());
+		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, resolve.pipelineLayout.get(), 0, descriptorSet.get());
+		resolve.descriptorSets.push_back(std::move(descriptorSet));
+
+		VkViewport viewport = {};
+		viewport.maxDepth = 1;
+		viewport.width = (float)atlasImageSize;
+		viewport.height = (float)atlasImageSize;
+		cmdbuffer->setViewport(0, 1, &viewport);
+
+		PushConstants2 pc;
+		pc.LightStart = 0;
+		pc.LightEnd = 0;
+		pc.SurfaceIndex = 0;
+		pc.TileTL = vec2(0.0f);
+		pc.TileBR = vec2(1.0f);
+		pc.LightmapOrigin = vec3(0.0f);
+		pc.LightmapStepX = vec3(0.0f);
+		pc.LightmapStepY = vec3(0.0f);
+		cmdbuffer->pushConstants(resolve.pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants2), &pc);
+
+		int firstVertex = sceneVertexPos;
+		int vertexCount = 4;
+		sceneVertexPos += vertexCount;
+		SceneVertex* vertex = &sceneVertices[firstVertex];
+		vertex[0].Position = vec2(0.0f, 0.0f);
+		vertex[1].Position = vec2(1.0f, 0.0f);
+		vertex[2].Position = vec2(1.0f, 1.0f);
+		vertex[3].Position = vec2(0.0f, 1.0f);
+		cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
+
+		cmdbuffer->endRenderPass();
+
+		PipelineBarrier()
+			.AddImage(img.resolve.Image.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT)
 			.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 		VkBufferImageCopy region = {};
@@ -178,7 +272,7 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		region.imageExtent.width = atlasImageSize;
 		region.imageExtent.height = atlasImageSize;
 		region.imageExtent.depth = 1;
-		cmdbuffer->copyImageToBuffer(img.Image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img.Transfer->buffer, 1, &region);
+		cmdbuffer->copyImageToBuffer(img.resolve.Image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img.Transfer->buffer, 1, &region);
 	}
 
 #ifdef WIN32
@@ -195,9 +289,15 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 	printf("GPU ray tracing time was %.3f seconds.\n", double(e.QuadPart - s.QuadPart) / double(f.QuadPart));
 #endif
 
+	struct hvec4
+	{
+		unsigned short x,y,z,w;
+		vec3 xyz() { return vec3(halfToFloat(x), halfToFloat(y), halfToFloat(z)); }
+	};
+
 	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
 	{
-		vec4* pixels = (vec4*)atlasImages[pageIndex].Transfer->Map(0, atlasImageSize * atlasImageSize * sizeof(vec4));
+		hvec4* pixels = (hvec4*)atlasImages[pageIndex].Transfer->Map(0, atlasImageSize * atlasImageSize * sizeof(hvec4));
 
 		for (size_t i = 0; i < mesh->surfaces.size(); i++)
 		{
@@ -209,10 +309,12 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 			int atlasY = surface->atlasY;
 			int sampleWidth = surface->texWidth;
 			int sampleHeight = surface->texHeight;
+
+			// Download
 			for (int y = 0; y < sampleHeight; y++)
 			{
 				vec3* dest = &surface->texPixels[y * sampleWidth];
-				vec4* src = &pixels[atlasX + (atlasY + y) * atlasImageSize];
+				hvec4* src = &pixels[atlasX + (atlasY + y) * atlasImageSize];
 				for (int x = 0; x < sampleWidth; x++)
 				{
 					dest[x] = src[x].xyz();
@@ -238,11 +340,12 @@ void GPURaytracer2::CreateVulkanObjects()
 	CreateSceneVertexBuffer();
 	CreateSceneLightBuffer();
 	CreateVertexAndIndexBuffers();
+	CreateUniformBuffer();
 	CreateBottomLevelAccelerationStructure();
 	CreateTopLevelAccelerationStructure();
 	CreateShaders();
-	CreatePipeline();
-	CreateDescriptorSet();
+	CreateRaytracePipeline();
+	CreateResolvePipeline();
 
 	FinishCommands();
 }
@@ -533,28 +636,99 @@ void GPURaytracer2::CreateShaders()
 		.FragmentShader(glsl_frag)
 		.DebugName("fragShader")
 		.Create("fragShader", device.get());
+
+	fragResolveShader = ShaderBuilder()
+		.FragmentShader(glsl_frag_resolve)
+		.DebugName("fragResolveShader")
+		.Create("fragResolveShader", device.get());
 }
 
-void GPURaytracer2::CreatePipeline()
+void GPURaytracer2::CreateRaytracePipeline()
 {
-	descriptorSetLayout = DescriptorSetLayoutBuilder()
+	raytrace.descriptorSetLayout = DescriptorSetLayoutBuilder()
 		.AddBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.DebugName("descriptorSetLayout")
+		.DebugName("raytrace.descriptorSetLayout")
 		.Create(device.get());
 
-	pipelineLayout = PipelineLayoutBuilder()
-		.AddSetLayout(descriptorSetLayout.get())
+	raytrace.pipelineLayout = PipelineLayoutBuilder()
+		.AddSetLayout(raytrace.descriptorSetLayout.get())
 		.AddPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2))
-		.DebugName("pipelineLayout")
+		.DebugName("raytrace.pipelineLayout")
 		.Create(device.get());
 
-	renderPass = RenderPassBuilder()
+	raytrace.renderPass = RenderPassBuilder()
 		.AddAttachment(
-			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			VK_SAMPLE_COUNT_4_BIT,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		.AddSubpass()
+		.AddSubpassColorAttachmentRef(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		.AddExternalSubpassDependency(
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
+		.DebugName("raytrace.renderpass")
+		.Create(device.get());
+
+	raytrace.pipeline = GraphicsPipelineBuilder()
+		.Layout(raytrace.pipelineLayout.get())
+		.RenderPass(raytrace.renderPass.get())
+		.AddVertexShader(vertShader.get())
+		.AddFragmentShader(fragShader.get())
+		.AddVertexBufferBinding(0, sizeof(SceneVertex))
+		.AddVertexAttribute(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(SceneVertex, Position))
+		.Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
+		.AddDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
+		.RasterizationSamples(VK_SAMPLE_COUNT_4_BIT)
+		.Viewport(0.0f, 0.0f, 0.0f, 0.0f)
+		.Scissor(0, 0, 4096, 4096)
+		.DebugName("raytrace.pipeline")
+		.Create(device.get());
+
+	raytrace.descriptorPool = DescriptorPoolBuilder()
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1)
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
+		.MaxSets(1)
+		.DebugName("raytrace.descriptorPool")
+		.Create(device.get());
+
+	raytrace.descriptorSet = raytrace.descriptorPool->allocate(raytrace.descriptorSetLayout.get());
+	raytrace.descriptorSet->SetDebugName("raytrace.descriptorSet");
+
+	WriteDescriptors()
+		.AddAccelerationStructure(raytrace.descriptorSet.get(), 0, tlAccelStruct.get())
+		.AddBuffer(raytrace.descriptorSet.get(), 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get(), 0, sizeof(Uniforms2))
+		.AddBuffer(raytrace.descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
+		.AddBuffer(raytrace.descriptorSet.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
+		.AddBuffer(raytrace.descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneLightBuffer.get())
+		.Execute(device.get());
+}
+
+void GPURaytracer2::CreateResolvePipeline()
+{
+	resolve.descriptorSetLayout = DescriptorSetLayoutBuilder()
+		.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.DebugName("resolve.descriptorSetLayout")
+		.Create(device.get());
+
+	resolve.pipelineLayout = PipelineLayoutBuilder()
+		.AddSetLayout(resolve.descriptorSetLayout.get())
+		.AddPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants2))
+		.DebugName("resolve.pipelineLayout")
+		.Create(device.get());
+
+	resolve.renderPass = RenderPassBuilder()
+		.AddAttachment(
+			VK_FORMAT_R16G16B16A16_SFLOAT,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_STORE,
@@ -567,21 +741,31 @@ void GPURaytracer2::CreatePipeline()
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
-		.DebugName("renderpass")
+		.DebugName("resolve.renderpass")
 		.Create(device.get());
 
-	pipeline = GraphicsPipelineBuilder()
-		.Layout(pipelineLayout.get())
-		.RenderPass(renderPass.get())
+	resolve.pipeline = GraphicsPipelineBuilder()
+		.Layout(resolve.pipelineLayout.get())
+		.RenderPass(resolve.renderPass.get())
 		.AddVertexShader(vertShader.get())
-		.AddFragmentShader(fragShader.get())
+		.AddFragmentShader(fragResolveShader.get())
 		.AddVertexBufferBinding(0, sizeof(SceneVertex))
 		.AddVertexAttribute(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(SceneVertex, Position))
 		.Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
 		.AddDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
 		.Viewport(0.0f, 0.0f, 0.0f, 0.0f)
 		.Scissor(0, 0, 4096, 4096)
-		.DebugName("pipeline")
+		.DebugName("resolve.pipeline")
+		.Create(device.get());
+
+	resolve.descriptorPool = DescriptorPoolBuilder()
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256)
+		.MaxSets(256)
+		.DebugName("resolve.descriptorPool")
+		.Create(device.get());
+
+	resolve.sampler = SamplerBuilder()
+		.DebugName("resolve.Sampler")
 		.Create(device.get());
 }
 
@@ -589,23 +773,43 @@ LightmapImage GPURaytracer2::CreateImage(int width, int height)
 {
 	LightmapImage img;
 
-	img.Image = ImageBuilder()
+	img.raytrace.Image = ImageBuilder()
+		.Usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+		.Format(VK_FORMAT_R16G16B16A16_SFLOAT)
+		.Size(width, height)
+		.Samples(VK_SAMPLE_COUNT_4_BIT)
+		.DebugName("LightmapImage.raytrace.Image")
+		.Create(device.get());
+
+	img.raytrace.View = ImageViewBuilder()
+		.Image(img.raytrace.Image.get(), VK_FORMAT_R16G16B16A16_SFLOAT)
+		.DebugName("LightmapImage.raytrace.View")
+		.Create(device.get());
+
+	img.raytrace.Framebuffer = FramebufferBuilder()
+		.RenderPass(raytrace.renderPass.get())
+		.Size(width, height)
+		.AddAttachment(img.raytrace.View.get())
+		.DebugName("LightmapImage.raytrace.Framebuffer")
+		.Create(device.get());
+
+	img.resolve.Image = ImageBuilder()
 		.Usage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-		.Format(VK_FORMAT_R32G32B32A32_SFLOAT)
+		.Format(VK_FORMAT_R16G16B16A16_SFLOAT)
 		.Size(width, height)
-		.DebugName("LightmapImage.Image")
+		.DebugName("LightmapImage.resolve.Image")
 		.Create(device.get());
 
-	img.View = ImageViewBuilder()
-		.Image(img.Image.get(), VK_FORMAT_R32G32B32A32_SFLOAT)
-		.DebugName("LightmapImage.View")
+	img.resolve.View = ImageViewBuilder()
+		.Image(img.resolve.Image.get(), VK_FORMAT_R16G16B16A16_SFLOAT)
+		.DebugName("LightmapImage.resolve.View")
 		.Create(device.get());
 
-	img.Framebuffer = FramebufferBuilder()
-		.RenderPass(renderPass.get())
+	img.resolve.Framebuffer = FramebufferBuilder()
+		.RenderPass(resolve.renderPass.get())
 		.Size(width, height)
-		.AddAttachment(img.View.get())
-		.DebugName("LightmapImage.Framebuffer")
+		.AddAttachment(img.resolve.View.get())
+		.DebugName("LightmapImage.resolve.Framebuffer")
 		.Create(device.get());
 
 	img.Transfer = BufferBuilder()
@@ -617,7 +821,7 @@ LightmapImage GPURaytracer2::CreateImage(int width, int height)
 	return img;
 }
 
-void GPURaytracer2::CreateDescriptorSet()
+void GPURaytracer2::CreateUniformBuffer()
 {
 	VkDeviceSize align = device->physicalDevice.properties.limits.minUniformBufferOffsetAlignment;
 	uniformStructStride = (sizeof(Uniforms2) + align - 1) / align * align;
@@ -633,25 +837,6 @@ void GPURaytracer2::CreateDescriptorSet()
 		.Size(uniformStructs * uniformStructStride)
 		.DebugName("uniformTransferBuffer")
 		.Create(device.get());
-
-	descriptorPool = DescriptorPoolBuilder()
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1)
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
-		.MaxSets(1)
-		.DebugName("descriptorPool")
-		.Create(device.get());
-
-	descriptorSet = descriptorPool->allocate(descriptorSetLayout.get());
-	descriptorSet->SetDebugName("descriptorSet");
-
-	WriteDescriptors()
-		.AddAccelerationStructure(descriptorSet.get(), 0, tlAccelStruct.get())
-		.AddBuffer(descriptorSet.get(), 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get(), 0, sizeof(Uniforms2))
-		.AddBuffer(descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
-		.AddBuffer(descriptorSet.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
-		.AddBuffer(descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneLightBuffer.get())
-		.Execute(device.get());
 }
 
 std::vector<SurfaceInfo2> GPURaytracer2::CreateSurfaceInfo()
@@ -730,4 +915,13 @@ void GPURaytracer2::PrintVulkanInfo()
 	printf("Vulkan device: %s\n", props.deviceName);
 	printf("Vulkan device type: %s\n", deviceType.c_str());
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
+}
+
+bool GPURaytracer2::IsNegativelyOriented(const vec2& v1, const vec2& v2, const vec2& v3)
+{
+	float A =
+		v1.x * v2.y - v2.x * v1.y +
+		v2.x * v3.y - v3.x * v2.y +
+		v3.x * v1.y - v1.x * v3.y;
+	return A < 0.0f;
 }

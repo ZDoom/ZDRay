@@ -57,9 +57,20 @@ struct LightInfo2
 
 struct LightmapImage
 {
-	std::unique_ptr<VulkanImage> Image;
-	std::unique_ptr<VulkanImageView> View;
-	std::unique_ptr<VulkanFramebuffer> Framebuffer;
+	struct
+	{
+		std::unique_ptr<VulkanImage> Image;
+		std::unique_ptr<VulkanImageView> View;
+		std::unique_ptr<VulkanFramebuffer> Framebuffer;
+	} raytrace;
+
+	struct
+	{
+		std::unique_ptr<VulkanImage> Image;
+		std::unique_ptr<VulkanImageView> View;
+		std::unique_ptr<VulkanFramebuffer> Framebuffer;
+	} resolve;
+
 	std::unique_ptr<VulkanBuffer> Transfer;
 };
 
@@ -82,8 +93,9 @@ private:
 	void CreateBottomLevelAccelerationStructure();
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
-	void CreatePipeline();
-	void CreateDescriptorSet();
+	void CreateRaytracePipeline();
+	void CreateResolvePipeline();
+	void CreateUniformBuffer();
 	void CreateSceneVertexBuffer();
 	void CreateSceneLightBuffer();
 
@@ -95,6 +107,8 @@ private:
 	void PrintVulkanInfo();
 
 	std::vector<SurfaceInfo2> CreateSurfaceInfo();
+
+	static bool IsNegativelyOriented(const vec2& v1, const vec2& v2, const vec2& v3);
 
 	LevelMesh* mesh = nullptr;
 
@@ -133,20 +147,35 @@ private:
 
 	std::unique_ptr<VulkanShader> vertShader;
 	std::unique_ptr<VulkanShader> fragShader;
+	std::unique_ptr<VulkanShader> fragResolveShader;
 
-	std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+	struct
+	{
+		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+		std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
+		std::unique_ptr<VulkanPipeline> pipeline;
+		std::unique_ptr<VulkanRenderPass> renderPass;
+		std::unique_ptr<VulkanDescriptorPool> descriptorPool;
+		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
+	} raytrace;
 
-	std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
-	std::unique_ptr<VulkanPipeline> pipeline;
-	std::unique_ptr<VulkanRenderPass> renderPass;
+	struct
+	{
+		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+		std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
+		std::unique_ptr<VulkanPipeline> pipeline;
+		std::unique_ptr<VulkanRenderPass> renderPass;
+		std::unique_ptr<VulkanDescriptorPool> descriptorPool;
+		std::vector<std::unique_ptr<VulkanDescriptorSet>> descriptorSets;
+		std::unique_ptr<VulkanSampler> sampler;
+	} resolve;
 
 	std::unique_ptr<VulkanBuffer> uniformBuffer;
 	std::unique_ptr<VulkanBuffer> uniformTransferBuffer;
 
-	std::unique_ptr<VulkanDescriptorPool> descriptorPool;
-	std::unique_ptr<VulkanDescriptorSet> descriptorSet;
-
 	std::unique_ptr<VulkanFence> submitFence;
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
+
+	std::vector<vec2> vertexList;
 };

@@ -58,7 +58,7 @@ layout(push_constant) uniform PushConstants
 	float PushPadding4;
 };
 
-layout(location = 0) in vec3 worldpos;
+layout(location = 0) centroid in vec3 worldpos;
 layout(location = 0) out vec4 fragcolor;
 
 vec3 TraceSunLight(vec3 origin);
@@ -69,13 +69,8 @@ float RadicalInverse_VdC(uint bits);
 
 void main()
 {
-	vec3 origin = worldpos;
-	vec3 normal;
-	if (SurfaceIndex >= 0)
-	{
-		normal = surfaces[SurfaceIndex].Normal;
-		origin += normal * 0.1;
-	}
+	vec3 normal = surfaces[SurfaceIndex].Normal;
+	vec3 origin = worldpos + normal * 0.1;
 
 	vec3 incoming = TraceSunLight(origin);
 
@@ -84,10 +79,7 @@ void main()
 		incoming += TraceLight(origin, normal, lights[j]);
 	}
 
-	if (SurfaceIndex >= 0)
-	{
-		incoming.rgb *= TraceAmbientOcclusion(origin, normal);
-	}
+	incoming.rgb *= TraceAmbientOcclusion(origin, normal);
 
 	fragcolor = vec4(incoming, 1.0);
 }

@@ -1501,6 +1501,28 @@ WriteDescriptors& WriteDescriptors::AddBuffer(VulkanDescriptorSet* descriptorSet
 	return *this;
 }
 
+WriteDescriptors& WriteDescriptors::AddSampledImage(VulkanDescriptorSet* descriptorSet, int binding, VulkanImageView* view, VkImageLayout imageLayout)
+{
+	VkDescriptorImageInfo imageInfo = {};
+	imageInfo.imageView = view->view;
+	imageInfo.imageLayout = imageLayout;
+
+	auto extra = std::make_unique<WriteExtra>();
+	extra->imageInfo = imageInfo;
+
+	VkWriteDescriptorSet descriptorWrite = {};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = descriptorSet->set;
+	descriptorWrite.dstBinding = binding;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.pImageInfo = &extra->imageInfo;
+	writes.push_back(descriptorWrite);
+	writeExtras.push_back(std::move(extra));
+	return *this;
+}
+
 WriteDescriptors& WriteDescriptors::AddStorageImage(VulkanDescriptorSet* descriptorSet, int binding, VulkanImageView* view, VkImageLayout imageLayout)
 {
 	VkDescriptorImageInfo imageInfo = {};
@@ -1527,7 +1549,7 @@ WriteDescriptors& WriteDescriptors::AddCombinedImageSampler(VulkanDescriptorSet*
 {
 	VkDescriptorImageInfo imageInfo = {};
 	imageInfo.imageView = view->view;
-	imageInfo.sampler = sampler->sampler;
+	imageInfo.sampler = sampler ? sampler->sampler : nullptr;
 	imageInfo.imageLayout = imageLayout;
 
 	auto extra = std::make_unique<WriteExtra>();
