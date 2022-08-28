@@ -173,6 +173,15 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 				surface->LightList.push_back(&light);
 		}
 	}
+
+	/*
+	std::map<int, int> lightStats;
+	for (auto& surface : surfaces)
+		lightStats[surface->LightList.size()]++;
+	for (auto& it : lightStats)
+		printf("%d lights: %d surfaces\n", it.first, it.second);
+	printf("\n");
+	*/
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.
