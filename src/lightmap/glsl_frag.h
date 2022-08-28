@@ -48,8 +48,6 @@ layout(push_constant) uniform PushConstants
 	uint LightEnd;
 	int SurfaceIndex;
 	int PushPadding1;
-	vec2 TileTL;
-	vec2 TileBR;
 	vec3 LightmapOrigin;
 	float PushPadding2;
 	vec3 LightmapStepX;

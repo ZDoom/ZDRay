@@ -129,7 +129,7 @@ vec3 &Plane::Normal()
 
 float Plane::Distance(const vec3 &point)
 {
-	return dot(point, Normal());
+	return dot(point, Normal()) - d;
 }
 
 Plane &Plane::SetDistance(const vec3 &point)

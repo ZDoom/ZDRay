@@ -65,6 +65,7 @@ struct Surface
 	SurfaceType type = ST_UNKNOWN;
 	std::vector<vec3> verts;
 	Plane plane;
+	BBox bounds;
 
 	// Surface material
 	std::string material;
@@ -84,6 +85,11 @@ struct Surface
 	vec3 worldStepX = { 0.0f };
 	vec3 worldStepY = { 0.0f };
 
+	// Calculate world coordinates to UV coordinates
+	vec3 translateWorldToLocal = { 0.0f };
+	vec3 projLocalToU = { 0.0f };
+	vec3 projLocalToV = { 0.0f };
+
 	// Output lightmap for the surface
 	int texWidth = 0;
 	int texHeight = 0;
@@ -96,6 +102,9 @@ struct Surface
 	int atlasPageIndex = -1;
 	int atlasX = 0;
 	int atlasY = 0;
+
+	// Smoothing group surface is to be rendered with
+	int smoothingGroupIndex = -1;
 };
 
 class LightProbeSample
@@ -120,6 +129,8 @@ public:
 	std::vector<LightProbeSample> lightProbes;
 
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
+
+	std::vector<Plane> smoothingGroups;
 
 	int defaultSamples = 16;
 	int textureWidth = 128;

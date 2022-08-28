@@ -20,8 +20,6 @@ struct PushConstants2
 	uint32_t LightEnd;
 	int32_t SurfaceIndex;
 	int32_t PushPadding1;
-	vec2 TileTL;
-	vec2 TileBR;
 	vec3 LightmapOrigin;
 	float PushPadding2;
 	vec3 LightmapStepX;
@@ -108,6 +106,7 @@ private:
 
 	std::vector<SurfaceInfo2> CreateSurfaceInfo();
 
+	static vec2 ToUV(const vec3& vert, const Surface* targetSurface);
 	static bool IsNegativelyOriented(const vec2& v1, const vec2& v2, const vec2& v3);
 
 	LevelMesh* mesh = nullptr;
@@ -124,7 +123,7 @@ private:
 	SceneVertex* sceneVertices = nullptr;
 	int sceneVertexPos = 0;
 
-	static const int SceneLightBufferSize = 1 * 1024 * 1024;
+	static const int SceneLightBufferSize = 2 * 1024 * 1024;
 	std::unique_ptr<VulkanBuffer> sceneLightBuffer;
 	LightInfo2* sceneLights = nullptr;
 	int sceneLightPos = 0;
@@ -176,6 +175,4 @@ private:
 	std::unique_ptr<VulkanFence> submitFence;
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
-
-	std::vector<vec2> vertexList;
 };

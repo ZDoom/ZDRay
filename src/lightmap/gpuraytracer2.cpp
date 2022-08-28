@@ -59,16 +59,17 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		.AddBuffer(uniformBuffer.get(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
 		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-	const int atlasImageSize = 512;
-	RectPacker packer(atlasImageSize, atlasImageSize, RectPacker::Spacing(0));
+	const int atlasImageSize = 2048;
+	const int spacing = 3; // Note: the spacing is here to avoid that the resolve sampler finds data from other surface tiles
+	RectPacker packer(atlasImageSize, atlasImageSize, RectPacker::Spacing(spacing));
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
 		Surface* surface = mesh->surfaces[i].get();
 
-		auto result = packer.insert(surface->texWidth, surface->texHeight);
-		surface->atlasX = result.pos.x;
-		surface->atlasY = result.pos.y;
+		auto result = packer.insert(surface->texWidth + 2, surface->texHeight + 2);
+		surface->atlasX = result.pos.x + 1;
+		surface->atlasY = result.pos.y + 1;
 		surface->atlasPageIndex = (int)result.pageIndex;
 	}
 
@@ -95,114 +96,81 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 
 		for (size_t i = 0; i < mesh->surfaces.size(); i++)
 		{
-			Surface* surface = mesh->surfaces[i].get();
-			if (surface->atlasPageIndex != pageIndex)
+			Surface* targetSurface = mesh->surfaces[i].get();
+			if (targetSurface->atlasPageIndex != pageIndex)
 				continue;
-
-			int sampleWidth = surface->texWidth;
-			int sampleHeight = surface->texHeight;
-
-			int firstLight = sceneLightPos;
-			int lightCount = (int)surface->LightList.size();
-			sceneLightPos += lightCount;
-
-			LightInfo2* lightinfo = &sceneLights[firstLight];
-			for (ThingLight* light : surface->LightList)
-			{
-				lightinfo->Origin = light->LightOrigin();
-				lightinfo->Radius = light->LightRadius();
-				lightinfo->Intensity = light->intensity;
-				lightinfo->InnerAngleCos = light->innerAngleCos;
-				lightinfo->OuterAngleCos = light->outerAngleCos;
-				lightinfo->SpotDir = light->SpotDir();
-				lightinfo->Color = light->rgb;
-				lightinfo++;
-			}
 
 			VkViewport viewport = {};
 			viewport.maxDepth = 1;
-			viewport.x = (float)surface->atlasX;
-			viewport.y = (float)surface->atlasY;
-			viewport.width = (float)sampleWidth;
-			viewport.height = (float)sampleHeight;
+			viewport.x = (float)targetSurface->atlasX - 1;
+			viewport.y = (float)targetSurface->atlasY - 1;
+			viewport.width = (float)(targetSurface->texWidth + 2);
+			viewport.height = (float)(targetSurface->texHeight + 2);
 			cmdbuffer->setViewport(0, 1, &viewport);
 
-			PushConstants2 pc;
-			pc.LightStart = firstLight;
-			pc.LightEnd = firstLight + lightCount;
-			pc.SurfaceIndex = (int32_t)i;
-			pc.TileTL = vec2(0.0f);
-			pc.TileBR = vec2(1.0f);
-			pc.LightmapOrigin = surface->worldOrigin;
-			pc.LightmapStepX = surface->worldStepX * (float)sampleWidth;
-			pc.LightmapStepY = surface->worldStepY * (float)sampleHeight;
-			cmdbuffer->pushConstants(raytrace.pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
-
-			if (vertexList.size() < surface->lightUV.size())
-				vertexList.resize(surface->lightUV.size());
-
-#if 1
-			// Draw tile
-			int firstVertex = sceneVertexPos;
-			int vertexCount = 4;
-			sceneVertexPos += vertexCount;
-
-			SceneVertex* vertex = &sceneVertices[firstVertex];
-			vertex[0].Position = vec2(0.0f, 0.0f);
-			vertex[1].Position = vec2(1.0f, 0.0f);
-			vertex[2].Position = vec2(1.0f, 1.0f);
-			vertex[3].Position = vec2(0.0f, 1.0f);
-
-			cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
-#else
-			// Convert to triangle fan and correct orientation
-			int vertexCount = (int)surface->lightUV.size();
-			if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+			// Paint all surfaces part of the smoothing group into the surface
+			for (const auto& surface : mesh->surfaces)
 			{
-				if (IsNegativelyOriented(surface->lightUV[0], surface->lightUV[1], surface->lightUV[2]))
+				if (surface->smoothingGroupIndex != targetSurface->smoothingGroupIndex)
+					continue;
+
+				vec2 minUV = ToUV(surface->bounds.min, targetSurface);
+				vec2 maxUV = ToUV(surface->bounds.max, targetSurface);
+				if (surface.get() != targetSurface && (maxUV.x < 0.0f || maxUV.y < 0.0f || minUV.x > 1.0f || minUV.y > 1.0f))
+					continue; // Bounding box not visible
+
+				int firstLight = sceneLightPos;
+				int lightCount = (int)surface->LightList.size();
+				if (sceneLightPos + lightCount > SceneLightBufferSize)
+					throw std::runtime_error("SceneLightBuffer is too small!");
+				sceneLightPos += lightCount;
+
+				LightInfo2* lightinfo = &sceneLights[firstLight];
+				for (ThingLight* light : surface->LightList)
+				{
+					lightinfo->Origin = light->LightOrigin();
+					lightinfo->Radius = light->LightRadius();
+					lightinfo->Intensity = light->intensity;
+					lightinfo->InnerAngleCos = light->innerAngleCos;
+					lightinfo->OuterAngleCos = light->outerAngleCos;
+					lightinfo->SpotDir = light->SpotDir();
+					lightinfo->Color = light->rgb;
+					lightinfo++;
+				}
+
+				PushConstants2 pc;
+				pc.LightStart = firstLight;
+				pc.LightEnd = firstLight + lightCount;
+				pc.SurfaceIndex = (int32_t)i;
+				pc.LightmapOrigin = targetSurface->worldOrigin - targetSurface->worldStepX - targetSurface->worldStepY;
+				pc.LightmapStepX = targetSurface->worldStepX * viewport.width;
+				pc.LightmapStepY = targetSurface->worldStepY * viewport.height;
+				cmdbuffer->pushConstants(raytrace.pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants2), &pc);
+
+				int firstVertex = sceneVertexPos;
+				int vertexCount = (int)surface->verts.size();
+				if (sceneVertexPos + vertexCount > SceneVertexBufferSize)
+					throw std::runtime_error("SceneVertexBuffer is too small!");
+				sceneVertexPos += vertexCount;
+				SceneVertex* vertex = &sceneVertices[firstVertex];
+
+				if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
 				{
 					for (int idx = 0; idx < vertexCount; idx++)
 					{
-						vertexList[idx] = surface->lightUV[idx];
+						(vertex++)->Position = ToUV(surface->verts[idx], targetSurface);
 					}
 				}
 				else
 				{
-					for (int idx = 0; idx < vertexCount; idx++)
-					{
-						vertexList[idx] = surface->lightUV[vertexCount - 1 - idx];
-					}
+					(vertex++)->Position = ToUV(surface->verts[0], targetSurface);
+					(vertex++)->Position = ToUV(surface->verts[2], targetSurface);
+					(vertex++)->Position = ToUV(surface->verts[3], targetSurface);
+					(vertex++)->Position = ToUV(surface->verts[1], targetSurface);
 				}
-			}
-			else
-			{
-				if (IsNegativelyOriented(surface->lightUV[0], surface->lightUV[2], surface->lightUV[3]))
-				{
-					vertexList[0] = surface->lightUV[0];
-					vertexList[1] = surface->lightUV[2];
-					vertexList[2] = surface->lightUV[3];
-					vertexList[3] = surface->lightUV[1];
-				}
-				else
-				{
-					vertexList[0] = surface->lightUV[1];
-					vertexList[1] = surface->lightUV[3];
-					vertexList[2] = surface->lightUV[2];
-					vertexList[3] = surface->lightUV[0];
-				}
-			}
 
-			// Draw polygon
-			int firstVertex = sceneVertexPos;
-			sceneVertexPos += vertexCount;
-			SceneVertex* vertex = &sceneVertices[firstVertex];
-			for (int idx = 0; idx < vertexCount; idx++)
-			{
-				auto& uv = vertexList[idx];
-				(vertex++)->Position = vec2(uv.x / sampleWidth, uv.y / sampleHeight);
+				cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
 			}
-			cmdbuffer->draw(vertexCount, 1, firstVertex, 0);
-#endif
 		}
 		cmdbuffer->endRenderPass();
 	}
@@ -243,8 +211,6 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		pc.LightStart = 0;
 		pc.LightEnd = 0;
 		pc.SurfaceIndex = 0;
-		pc.TileTL = vec2(0.0f);
-		pc.TileBR = vec2(1.0f);
 		pc.LightmapOrigin = vec3(0.0f);
 		pc.LightmapStepX = vec3(0.0f);
 		pc.LightmapStepY = vec3(0.0f);
@@ -328,6 +294,14 @@ void GPURaytracer2::Raytrace(LevelMesh* level)
 		device->renderdoc->EndFrameCapture(0, 0);
 
 	printf("Ray trace complete\n");
+}
+
+vec2 GPURaytracer2::ToUV(const vec3& vert, const Surface* targetSurface)
+{
+	vec3 localPos = vert - targetSurface->translateWorldToLocal;
+	float u = (1.0f + dot(localPos, targetSurface->projLocalToU)) / (targetSurface->texWidth + 2);
+	float v = (1.0f + dot(localPos, targetSurface->projLocalToV)) / (targetSurface->texHeight + 2);
+	return vec2(u, v);
 }
 
 void GPURaytracer2::CreateVulkanObjects()

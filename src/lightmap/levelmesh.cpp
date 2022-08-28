@@ -113,6 +113,38 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 		BuildSurfaceParams(surfaces[i].get());
 	}
 
+	printf("Finding smoothing groups...\n\n");
+
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		// Is this surface in the same plane as an existing smoothing group?
+		int smoothingGroupIndex = -1;
+		for (size_t j = 0; j < smoothingGroups.size(); j++)
+		{
+			float direction = std::abs(dot(smoothingGroups[j].Normal(), surfaces[i]->plane.Normal()));
+			if (direction >= 0.9999f && direction <= 1.001f)
+			{
+				float dist = std::abs(smoothingGroups[j].Distance(surfaces[i]->plane.Normal() * surfaces[i]->plane.d));
+				if (dist <= 0.01f)
+				{
+					smoothingGroupIndex = (int)j;
+					break;
+				}
+			}
+		}
+
+		// Surface is in a new plane. Create a smoothing group for it
+		if (smoothingGroupIndex == -1)
+		{
+			smoothingGroupIndex = smoothingGroups.size();
+			smoothingGroups.push_back(surfaces[i]->plane);
+		}
+
+		surfaces[i]->smoothingGroupIndex = smoothingGroupIndex;
+	}
+
+	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
+
 	printf("Building collision data...\n\n");
 
 	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
@@ -160,6 +192,7 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 
 	plane = &surface->plane;
 	bounds = GetBoundsFromSurface(surface);
+	surface->bounds = bounds;
 
 	if (surface->sampleDimension < 0) surface->sampleDimension = 1;
 	surface->sampleDimension = Math::RoundPowerOfTwo(surface->sampleDimension);
@@ -216,24 +249,28 @@ void LevelMesh::BuildSurfaceParams(Surface* surface)
 		height = (textureHeight - 2);
 	}
 
+	surface->translateWorldToLocal = bounds.min;
+	surface->projLocalToU = tCoords[0];
+	surface->projLocalToV = tCoords[1];
+
 	surface->lightUV.resize(surface->verts.size());
 	for (i = 0; i < (int)surface->verts.size(); i++)
 	{
-		vec3 tDelta = surface->verts[i] - bounds.min;
-		surface->lightUV[i].x = dot(tDelta, tCoords[0]);
-		surface->lightUV[i].y = dot(tDelta, tCoords[1]);
+		vec3 tDelta = surface->verts[i] - surface->translateWorldToLocal;
+		surface->lightUV[i].x = dot(tDelta, surface->projLocalToU);
+		surface->lightUV[i].y = dot(tDelta, surface->projLocalToV);
 	}
 
 	tOrigin = bounds.min;
 
 	// project tOrigin and tCoords so they lie on the plane
-	d = (plane->Distance(bounds.min) - plane->d) / plane->Normal()[axis];
+	d = (plane->Distance(bounds.min)) / plane->Normal()[axis];
 	tOrigin[axis] -= d;
 
 	for (i = 0; i < 2; i++)
 	{
 		tCoords[i] = normalize(tCoords[i]);
-		d = plane->Distance(tCoords[i]) / plane->Normal()[axis];
+		d = dot(tCoords[i], plane->Normal()) / plane->Normal()[axis];
 		tCoords[i][axis] -= d;
 	}
 
