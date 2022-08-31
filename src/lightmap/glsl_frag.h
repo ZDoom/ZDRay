@@ -1,7 +1,7 @@
 static const char* glsl_frag = R"glsl(
 
 #if defined(USE_RAYQUERY)
-layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
+layout(set = 1, binding = 0) uniform accelerationStructureEXT acc;
 #else
 struct CollisionNode
 {
@@ -19,7 +19,7 @@ layout(set = 1, binding = 1) buffer VertexBuffer { vec3 vertices[]; };
 layout(set = 1, binding = 2) buffer ElementBuffer { vec3 elements[]; };
 #endif
 
-layout(set = 0, binding = 1) uniform Uniforms
+layout(set = 0, binding = 0) uniform Uniforms
 {
 	vec3 SunDir;
 	float Padding1;
@@ -49,9 +49,9 @@ struct LightInfo
 	float Padding2;
 };
 
-layout(set = 0, binding = 2) buffer SurfaceIndexBuffer { uint surfaceIndices[]; };
-layout(set = 0, binding = 3) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
-layout(set = 0, binding = 4) buffer LightBuffer { LightInfo lights[]; };
+layout(set = 0, binding = 1) buffer SurfaceIndexBuffer { uint surfaceIndices[]; };
+layout(set = 0, binding = 2) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
+layout(set = 0, binding = 3) buffer LightBuffer { LightInfo lights[]; };
 
 layout(push_constant) uniform PushConstants
 {

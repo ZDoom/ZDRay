@@ -120,6 +120,7 @@ private:
 	void PrintVulkanInfo();
 
 	std::vector<SurfaceInfo> CreateSurfaceInfo();
+	std::vector<CollisionNode> CreateCollisionNodes();
 
 	static vec2 ToUV(const vec3& vert, const Surface* targetSurface);
 
@@ -149,6 +150,7 @@ private:
 	std::unique_ptr<VulkanBuffer> transferBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceIndexBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceBuffer;
+	std::unique_ptr<VulkanBuffer> nodesBuffer;
 
 	std::unique_ptr<VulkanBuffer> blScratchBuffer;
 	std::unique_ptr<VulkanBuffer> blAccelStructBuffer;
@@ -166,12 +168,15 @@ private:
 
 	struct
 	{
-		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout0;
+		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout1;
 		std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
 		std::unique_ptr<VulkanPipeline> pipeline;
 		std::unique_ptr<VulkanRenderPass> renderPass;
-		std::unique_ptr<VulkanDescriptorPool> descriptorPool;
-		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
+		std::unique_ptr<VulkanDescriptorPool> descriptorPool0;
+		std::unique_ptr<VulkanDescriptorPool> descriptorPool1;
+		std::unique_ptr<VulkanDescriptorSet> descriptorSet0;
+		std::unique_ptr<VulkanDescriptorSet> descriptorSet1;
 	} raytrace;
 
 	struct
@@ -194,4 +199,20 @@ private:
 
 	std::vector<LightmapImage> atlasImages;
 	static const int atlasImageSize = 2048;
+};
+
+class BufferTransfer
+{
+public:
+	BufferTransfer& AddBuffer(VulkanBuffer* buffer, const void* data, size_t size);
+	std::unique_ptr<VulkanBuffer> Execute(VulkanDevice* device, VulkanCommandBuffer* cmdbuffer);
+
+private:
+	struct BufferCopy
+	{
+		const void* data;
+		size_t size;
+		VulkanBuffer* buffer;
+	};
+	std::vector<BufferCopy> bufferCopies;
 };

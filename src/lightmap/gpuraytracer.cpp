@@ -96,7 +96,8 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 	VkDeviceSize offset = 0;
 	cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
 	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipeline.get());
-	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet.get());
+	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet0.get());
+	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 1, raytrace.descriptorSet1.get());
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
@@ -342,10 +343,6 @@ void GPURaytracer::CreateVulkanObjects()
 		CreateBottomLevelAccelerationStructure();
 		CreateTopLevelAccelerationStructure();
 	}
-	else
-	{
-		// To do: upload mesh->Collision->nodes (vertices and elements are already uploaded in CreateVertexAndIndexBuffers)
-	}
 	CreateShaders();
 	CreateRaytracePipeline();
 	CreateResolvePipeline();
@@ -417,20 +414,7 @@ void GPURaytracer::FinishCommands()
 void GPURaytracer::CreateVertexAndIndexBuffers()
 {
 	std::vector<SurfaceInfo> surfaces = CreateSurfaceInfo();
-
-	if (surfaces.empty()) // vulkan doesn't support zero byte buffers
-		surfaces.push_back(SurfaceInfo());
-
-	size_t vertexbuffersize = (size_t)mesh->MeshVertices.Size() * sizeof(vec3);
-	size_t indexbuffersize = (size_t)mesh->MeshElements.Size() * sizeof(uint32_t);
-	size_t surfaceindexbuffersize = (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t);
-	size_t surfacebuffersize = (size_t)surfaces.size() * sizeof(SurfaceInfo);
-	size_t transferbuffersize = vertexbuffersize + indexbuffersize + surfaceindexbuffersize + surfacebuffersize;
-	size_t vertexoffset = 0;
-	size_t indexoffset = vertexoffset + vertexbuffersize;
-	size_t surfaceindexoffset = indexoffset + indexbuffersize;
-	size_t surfaceoffset = surfaceindexoffset + surfaceindexbuffersize;
-	size_t lightoffset = surfaceoffset + surfacebuffersize;
+	std::vector<CollisionNode> nodes = CreateCollisionNodes();
 
 	vertexBuffer = BufferBuilder()
 		.Usage(
@@ -440,7 +424,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 				VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
 				VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR : 0) |
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-		.Size(vertexbuffersize)
+		.Size((size_t)mesh->MeshVertices.Size() * sizeof(vec3))
 		.DebugName("vertexBuffer")
 		.Create(device.get());
 
@@ -452,39 +436,35 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 				VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
 				VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR : 0) |
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-		.Size(indexbuffersize)
+		.Size((size_t)mesh->MeshElements.Size() * sizeof(uint32_t))
 		.DebugName("indexBuffer")
 		.Create(device.get());
 
 	surfaceIndexBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-		.Size(surfaceindexbuffersize)
+		.Size((size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t))
 		.DebugName("surfaceIndexBuffer")
 		.Create(device.get());
 
 	surfaceBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-		.Size(surfacebuffersize)
+		.Size(surfaces.size() * sizeof(SurfaceInfo))
 		.DebugName("surfaceBuffer")
 		.Create(device.get());
 
-	transferBuffer = BufferBuilder()
-		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
-		.Size(transferbuffersize)
-		.DebugName("transferBuffer")
+	nodesBuffer = BufferBuilder()
+		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+		.Size(nodes.size() * sizeof(CollisionNode))
+		.DebugName("nodesBuffer")
 		.Create(device.get());
 
-	uint8_t* data = (uint8_t*)transferBuffer->Map(0, transferbuffersize);
-	memcpy(data + vertexoffset, mesh->MeshVertices.Data(), vertexbuffersize);
-	memcpy(data + indexoffset, mesh->MeshElements.Data(), indexbuffersize);
-	memcpy(data + surfaceindexoffset, mesh->MeshSurfaces.Data(), surfaceindexbuffersize);
-	memcpy(data + surfaceoffset, surfaces.data(), surfacebuffersize);
-	transferBuffer->Unmap();
-
-	cmdbuffer->copyBuffer(transferBuffer.get(), vertexBuffer.get(), vertexoffset);
-	cmdbuffer->copyBuffer(transferBuffer.get(), indexBuffer.get(), indexoffset);
-	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceIndexBuffer.get(), surfaceindexoffset);
-	cmdbuffer->copyBuffer(transferBuffer.get(), surfaceBuffer.get(), surfaceoffset);
+	transferBuffer = BufferTransfer()
+		.AddBuffer(vertexBuffer.get(), mesh->MeshVertices.Data(), (size_t)mesh->MeshVertices.Size() * sizeof(vec3))
+		.AddBuffer(indexBuffer.get(), mesh->MeshElements.Data(), (size_t)mesh->MeshElements.Size() * sizeof(uint32_t))
+		.AddBuffer(surfaceIndexBuffer.get(), mesh->MeshSurfaces.Data(), (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t))
+		.AddBuffer(surfaceBuffer.get(), surfaces.data(), surfaces.size() * sizeof(SurfaceInfo))
+		.AddBuffer(nodesBuffer.get(), nodes.data(), nodes.size() * sizeof(CollisionNode))
+		.Execute(device.get(), cmdbuffer.get());
 
 	PipelineBarrier()
 		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
@@ -659,19 +639,34 @@ void GPURaytracer::CreateShaders()
 
 void GPURaytracer::CreateRaytracePipeline()
 {
-	// To do: use rayQuery boolean to specify the alternative descriptor set
-
-	raytrace.descriptorSetLayout = DescriptorSetLayoutBuilder()
-		.AddBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.AddBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+	raytrace.descriptorSetLayout0 = DescriptorSetLayoutBuilder()
+		.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+		.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.DebugName("raytrace.descriptorSetLayout")
+		.DebugName("raytrace.descriptorSetLayout0")
 		.Create(device.get());
 
+	if (useRayQuery)
+	{
+		raytrace.descriptorSetLayout1 = DescriptorSetLayoutBuilder()
+			.AddBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.DebugName("raytrace.descriptorSetLayout1")
+			.Create(device.get());
+	}
+	else
+	{
+		raytrace.descriptorSetLayout1 = DescriptorSetLayoutBuilder()
+			.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.DebugName("raytrace.descriptorSetLayout1")
+			.Create(device.get());
+	}
+
 	raytrace.pipelineLayout = PipelineLayoutBuilder()
-		.AddSetLayout(raytrace.descriptorSetLayout.get())
+		.AddSetLayout(raytrace.descriptorSetLayout0.get())
+		.AddSetLayout(raytrace.descriptorSetLayout1.get())
 		.AddPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants))
 		.DebugName("raytrace.pipelineLayout")
 		.Create(device.get());
@@ -709,23 +704,56 @@ void GPURaytracer::CreateRaytracePipeline()
 		.DebugName("raytrace.pipeline")
 		.Create(device.get());
 
-	raytrace.descriptorPool = DescriptorPoolBuilder()
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1)
+	raytrace.descriptorPool0 = DescriptorPoolBuilder()
 		.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
 		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
 		.MaxSets(1)
-		.DebugName("raytrace.descriptorPool")
+		.DebugName("raytrace.descriptorPool0")
 		.Create(device.get());
 
-	raytrace.descriptorSet = raytrace.descriptorPool->allocate(raytrace.descriptorSetLayout.get());
-	raytrace.descriptorSet->SetDebugName("raytrace.descriptorSet");
+	if (useRayQuery)
+	{
+		raytrace.descriptorPool1 = DescriptorPoolBuilder()
+			.AddPoolSize(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1)
+			.MaxSets(1)
+			.DebugName("raytrace.descriptorPool1")
+			.Create(device.get());
+	}
+	else
+	{
+		raytrace.descriptorPool1 = DescriptorPoolBuilder()
+			.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
+			.MaxSets(1)
+			.DebugName("raytrace.descriptorPool1")
+			.Create(device.get());
+	}
+
+	raytrace.descriptorSet0 = raytrace.descriptorPool0->allocate(raytrace.descriptorSetLayout0.get());
+	raytrace.descriptorSet0->SetDebugName("raytrace.descriptorSet1");
+
+	raytrace.descriptorSet1 = raytrace.descriptorPool1->allocate(raytrace.descriptorSetLayout1.get());
+	raytrace.descriptorSet1->SetDebugName("raytrace.descriptorSet1");
+
+	if (useRayQuery)
+	{
+		WriteDescriptors()
+			.AddAccelerationStructure(raytrace.descriptorSet1.get(), 0, tlAccelStruct.get())
+			.Execute(device.get());
+	}
+	else
+	{
+		WriteDescriptors()
+			.AddBuffer(raytrace.descriptorSet1.get(), 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nodesBuffer.get())
+			.AddBuffer(raytrace.descriptorSet1.get(), 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, vertexBuffer.get())
+			.AddBuffer(raytrace.descriptorSet1.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, indexBuffer.get())
+			.Execute(device.get());
+	}
 
 	WriteDescriptors()
-		.AddAccelerationStructure(raytrace.descriptorSet.get(), 0, tlAccelStruct.get())
-		.AddBuffer(raytrace.descriptorSet.get(), 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get(), 0, sizeof(Uniforms))
-		.AddBuffer(raytrace.descriptorSet.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
-		.AddBuffer(raytrace.descriptorSet.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
-		.AddBuffer(raytrace.descriptorSet.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneLightBuffer.get())
+		.AddBuffer(raytrace.descriptorSet0.get(), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer.get(), 0, sizeof(Uniforms))
+		.AddBuffer(raytrace.descriptorSet0.get(), 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
+		.AddBuffer(raytrace.descriptorSet0.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
+		.AddBuffer(raytrace.descriptorSet0.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneLightBuffer.get())
 		.Execute(device.get());
 }
 
@@ -867,7 +895,28 @@ std::vector<SurfaceInfo> GPURaytracer::CreateSurfaceInfo()
 		info.SamplingDistance = float(surface->sampleDimension);
 		surfaces.push_back(info);
 	}
+	if (surfaces.empty()) // vulkan doesn't support zero byte buffers
+		surfaces.push_back(SurfaceInfo());
 	return surfaces;
+}
+
+std::vector<CollisionNode> GPURaytracer::CreateCollisionNodes()
+{
+	std::vector<CollisionNode> nodes;
+	nodes.reserve(mesh->Collision->get_nodes().size());
+	for (const auto& node : mesh->Collision->get_nodes())
+	{
+		CollisionNode info;
+		info.center = node.aabb.Center;
+		info.extents = node.aabb.Extents;
+		info.left = node.left;
+		info.right = node.right;
+		info.element_index = node.element_index;
+		nodes.push_back(info);
+	}
+	if (nodes.empty()) // vulkan doesn't support zero byte buffers
+		nodes.push_back(CollisionNode());
+	return nodes;
 }
 
 void GPURaytracer::PrintVulkanInfo()
@@ -891,4 +940,47 @@ void GPURaytracer::PrintVulkanInfo()
 	printf("Vulkan device: %s\n", props.deviceName);
 	printf("Vulkan device type: %s\n", deviceType.c_str());
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+BufferTransfer& BufferTransfer::AddBuffer(VulkanBuffer* buffer, const void* data, size_t size)
+{
+	bufferCopies.push_back({ data, size, buffer });
+	return *this;
+}
+
+std::unique_ptr<VulkanBuffer> BufferTransfer::Execute(VulkanDevice* device, VulkanCommandBuffer* cmdbuffer)
+{
+	size_t transferbuffersize = 0;
+	for (const auto& copy : bufferCopies)
+		transferbuffersize += copy.size;
+
+	if (transferbuffersize == 0)
+		return nullptr;
+
+	auto transferBuffer = BufferBuilder()
+		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
+		.Size(transferbuffersize)
+		.DebugName("BufferTransfer.transferBuffer")
+		.Create(device);
+
+	uint8_t* data = (uint8_t*)transferBuffer->Map(0, transferbuffersize);
+	size_t pos = 0;
+	for (const auto& copy : bufferCopies)
+	{
+		memcpy(data + pos, copy.data, copy.size);
+		pos += copy.size;
+	}
+	transferBuffer->Unmap();
+
+	pos = 0;
+	for (const auto& copy : bufferCopies)
+	{
+		if (copy.size > 0)
+			cmdbuffer->copyBuffer(transferBuffer.get(), copy.buffer, pos, 0, copy.size);
+		pos += copy.size;
+	}
+
+	return transferBuffer;
 }

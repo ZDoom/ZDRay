@@ -101,7 +101,6 @@ public:
 
 	static TraceHit find_first_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end);
 
-private:
 	struct Node
 	{
 		Node() = default;
@@ -114,6 +113,9 @@ private:
 		int element_index = -1;
 	};
 
+	const std::vector<Node>& get_nodes() const { return nodes; }
+
+private:
 	const vec3 *vertices = nullptr;
 	const int num_vertices = 0;
 	const unsigned int *elements = nullptr;
