@@ -416,6 +416,15 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 	std::vector<SurfaceInfo> surfaces = CreateSurfaceInfo();
 	std::vector<CollisionNode> nodes = CreateCollisionNodes();
 
+	// std430 alignment rules forces us to convert the vec3 to a vec4
+	std::vector<vec4> vertices;
+	vertices.reserve(mesh->MeshVertices.Size());
+	for (const vec3& v : mesh->MeshVertices)
+		vertices.push_back({ v, 1.0f });
+
+	CollisionNodeBufferHeader nodesHeader;
+	nodesHeader.root = mesh->Collision->get_root();
+
 	vertexBuffer = BufferBuilder()
 		.Usage(
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
@@ -424,7 +433,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 				VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
 				VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR : 0) |
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-		.Size((size_t)mesh->MeshVertices.Size() * sizeof(vec3))
+		.Size(vertices.size() * sizeof(vec4))
 		.DebugName("vertexBuffer")
 		.Create(device.get());
 
@@ -454,16 +463,16 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 
 	nodesBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-		.Size(nodes.size() * sizeof(CollisionNode))
+		.Size(sizeof(CollisionNodeBufferHeader) + nodes.size() * sizeof(CollisionNode))
 		.DebugName("nodesBuffer")
 		.Create(device.get());
 
 	transferBuffer = BufferTransfer()
-		.AddBuffer(vertexBuffer.get(), mesh->MeshVertices.Data(), (size_t)mesh->MeshVertices.Size() * sizeof(vec3))
+		.AddBuffer(vertexBuffer.get(), vertices.data(), vertices.size() * sizeof(vec4))
 		.AddBuffer(indexBuffer.get(), mesh->MeshElements.Data(), (size_t)mesh->MeshElements.Size() * sizeof(uint32_t))
 		.AddBuffer(surfaceIndexBuffer.get(), mesh->MeshSurfaces.Data(), (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t))
 		.AddBuffer(surfaceBuffer.get(), surfaces.data(), surfaces.size() * sizeof(SurfaceInfo))
-		.AddBuffer(nodesBuffer.get(), nodes.data(), nodes.size() * sizeof(CollisionNode))
+		.AddBuffer(nodesBuffer.get(), &nodesHeader, sizeof(CollisionNodeBufferHeader), nodes.data(), nodes.size() * sizeof(CollisionNode))
 		.Execute(device.get(), cmdbuffer.get());
 
 	PipelineBarrier()
@@ -482,9 +491,9 @@ void GPURaytracer::CreateBottomLevelAccelerationStructure()
 	accelStructBLDesc.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 	accelStructBLDesc.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 	accelStructBLDesc.geometry.triangles = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR };
-	accelStructBLDesc.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+	accelStructBLDesc.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	accelStructBLDesc.geometry.triangles.vertexData.deviceAddress = vertexBuffer->GetDeviceAddress();
-	accelStructBLDesc.geometry.triangles.vertexStride = sizeof(vec3);
+	accelStructBLDesc.geometry.triangles.vertexStride = sizeof(vec4);
 	accelStructBLDesc.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
 	accelStructBLDesc.geometry.triangles.indexData.deviceAddress = indexBuffer->GetDeviceAddress();
 	accelStructBLDesc.geometry.triangles.maxVertex = mesh->MeshVertices.Size() - 1;
@@ -946,7 +955,13 @@ void GPURaytracer::PrintVulkanInfo()
 
 BufferTransfer& BufferTransfer::AddBuffer(VulkanBuffer* buffer, const void* data, size_t size)
 {
-	bufferCopies.push_back({ data, size, buffer });
+	bufferCopies.push_back({ buffer, data, size, nullptr, 0 });
+	return *this;
+}
+
+BufferTransfer& BufferTransfer::AddBuffer(VulkanBuffer* buffer, const void* data0, size_t size0, const void* data1, size_t size1)
+{
+	bufferCopies.push_back({ buffer, data0, size0, data1, size1 });
 	return *this;
 }
 
@@ -954,7 +969,7 @@ std::unique_ptr<VulkanBuffer> BufferTransfer::Execute(VulkanDevice* device, Vulk
 {
 	size_t transferbuffersize = 0;
 	for (const auto& copy : bufferCopies)
-		transferbuffersize += copy.size;
+		transferbuffersize += copy.size0 + copy.size1;
 
 	if (transferbuffersize == 0)
 		return nullptr;
@@ -969,17 +984,23 @@ std::unique_ptr<VulkanBuffer> BufferTransfer::Execute(VulkanDevice* device, Vulk
 	size_t pos = 0;
 	for (const auto& copy : bufferCopies)
 	{
-		memcpy(data + pos, copy.data, copy.size);
-		pos += copy.size;
+		memcpy(data + pos, copy.data0, copy.size0);
+		pos += copy.size0;
+		memcpy(data + pos, copy.data1, copy.size1);
+		pos += copy.size1;
 	}
 	transferBuffer->Unmap();
 
 	pos = 0;
 	for (const auto& copy : bufferCopies)
 	{
-		if (copy.size > 0)
-			cmdbuffer->copyBuffer(transferBuffer.get(), copy.buffer, pos, 0, copy.size);
-		pos += copy.size;
+		if (copy.size0 > 0)
+			cmdbuffer->copyBuffer(transferBuffer.get(), copy.buffer, pos, 0, copy.size0);
+		pos += copy.size0;
+
+		if (copy.size1 > 0)
+			cmdbuffer->copyBuffer(transferBuffer.get(), copy.buffer, pos, copy.size0, copy.size1);
+		pos += copy.size1;
 	}
 
 	return transferBuffer;

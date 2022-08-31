@@ -114,6 +114,7 @@ public:
 	};
 
 	const std::vector<Node>& get_nodes() const { return nodes; }
+	int get_root() const { return root; }
 
 private:
 	const vec3 *vertices = nullptr;
