@@ -97,6 +97,12 @@ private:
 	void CreateSceneVertexBuffer();
 	void CreateSceneLightBuffer();
 
+	void UploadUniforms();
+	void CreateAtlasImages();
+	void RenderAtlasImage(size_t pageIndex);
+	void ResolveAtlasImage(size_t pageIndex);
+	void DownloadAtlasImage(size_t pageIndex);
+
 	LightmapImage CreateImage(int width, int height);
 
 	void BeginCommands();
@@ -175,4 +181,7 @@ private:
 	std::unique_ptr<VulkanFence> submitFence;
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
+
+	std::vector<LightmapImage> atlasImages;
+	static const int atlasImageSize = 2048;
 };
