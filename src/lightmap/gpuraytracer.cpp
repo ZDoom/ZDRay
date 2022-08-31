@@ -7,6 +7,8 @@
 #include "framework/templates.h"
 #include "framework/halffloat.h"
 #include "vulkanbuilders.h"
+#include "vulkancompatibledevice.h"
+#include "stacktrace.h"
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -21,10 +23,22 @@
 extern bool VKDebug;
 extern bool NoRtx;
 
+void VulkanPrintLog(const char* typestr, const std::string& msg)
+{
+	printf("[%s] %s\n", typestr, msg.c_str());
+	printf("%s\n", CaptureStackTraceText(2).c_str());
+}
+
+void VulkanError(const char* text)
+{
+	throw std::runtime_error(text);
+}
+
 GPURaytracer::GPURaytracer()
 {
-	device = std::make_unique<VulkanDevice>(0, VKDebug);
-	useRayQuery = !NoRtx;// && device->physicalDevice.rayQueryProperties.supportsRayQuery;
+	auto instance = std::make_shared<VulkanInstance>(VKDebug);
+	device = std::make_unique<VulkanDevice>(instance, nullptr, VulkanCompatibleDevice::SelectDevice(instance, nullptr, 0));
+	useRayQuery = !NoRtx && device->PhysicalDevice.Features.RayQuery.rayQuery;
 	PrintVulkanInfo();
 }
 
@@ -37,9 +51,6 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	mesh = level;
 
 	printf("Building Vulkan acceleration structures\n");
-
-	if (device->renderdoc)
-		device->renderdoc->StartFrameCapture(0, 0);
 
 	CreateVulkanObjects();
 
@@ -78,9 +89,6 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	{
 		DownloadAtlasImage(pageIndex);
 	}
-
-	if (device->renderdoc)
-		device->renderdoc->EndFrameCapture(0, 0);
 
 	printf("Ray trace complete\n");
 }
@@ -332,7 +340,7 @@ vec2 GPURaytracer::ToUV(const vec3& vert, const Surface* targetSurface)
 void GPURaytracer::CreateVulkanObjects()
 {
 	submitFence = std::make_unique<VulkanFence>(device.get());
-	cmdpool = std::make_unique<VulkanCommandPool>(device.get(), device->graphicsFamily);
+	cmdpool = std::make_unique<VulkanCommandPool>(device.get(), device->GraphicsFamily);
 
 	BeginCommands();
 
@@ -402,7 +410,7 @@ void GPURaytracer::FinishCommands()
 
 	QueueSubmit()
 		.AddCommandBuffer(cmdbuffer.get())
-		.Execute(device.get(), device->graphicsQueue, submitFence.get());
+		.Execute(device.get(), device->GraphicsQueue, submitFence.get());
 
 	VkResult result = vkWaitForFences(device->device, 1, &submitFence->fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 	if (result != VK_SUCCESS)
@@ -623,8 +631,8 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 
 void GPURaytracer::CreateShaders()
 {
-	FString prefix = "#version 460\r\n#line 1\r\n";
-	FString traceprefix = "#version 460\r\n";
+	std::string prefix = "#version 460\r\n#line 1\r\n";
+	std::string traceprefix = "#version 460\r\n";
 	if (useRayQuery)
 	{
 		traceprefix += "#extension GL_EXT_ray_query : require\r\n";
@@ -878,7 +886,7 @@ LightmapImage GPURaytracer::CreateImage(int width, int height)
 
 void GPURaytracer::CreateUniformBuffer()
 {
-	VkDeviceSize align = device->physicalDevice.properties.limits.minUniformBufferOffsetAlignment;
+	VkDeviceSize align = device->PhysicalDevice.Properties.limits.minUniformBufferOffsetAlignment;
 	uniformStructStride = (sizeof(Uniforms) + align - 1) / align * align;
 
 	uniformBuffer = BufferBuilder()
@@ -932,7 +940,7 @@ std::vector<CollisionNode> GPURaytracer::CreateCollisionNodes()
 
 void GPURaytracer::PrintVulkanInfo()
 {
-	const auto& props = device->physicalDevice.properties;
+	const auto& props = device->PhysicalDevice.Properties;
 
 	std::string deviceType;
 	switch (props.deviceType)

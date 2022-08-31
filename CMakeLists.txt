@@ -180,6 +180,12 @@ set( SOURCES
 	src/lightmap/vulkanobjects.h
 	src/lightmap/vulkanbuilders.cpp
 	src/lightmap/vulkanbuilders.h
+	src/lightmap/vulkancompatibledevice.cpp
+	src/lightmap/vulkancompatibledevice.h
+	src/lightmap/vulkaninstance.cpp
+	src/lightmap/vulkaninstance.h
+	src/lightmap/vulkansurface.cpp
+	src/lightmap/vulkansurface.h
 	src/lightmap/stacktrace.cpp
 	src/lightmap/stacktrace.h
 	src/lightmap/surfaceclip.cpp

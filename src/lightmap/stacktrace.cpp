@@ -4,6 +4,7 @@
 #ifdef WIN32
 #include <Windows.h>
 #include <DbgHelp.h>
+#include <psapi.h>
 #else
 #include <execinfo.h>
 #include <cxxabi.h>
@@ -17,8 +18,16 @@
 class NativeSymbolResolver
 {
 public:
-	NativeSymbolResolver() { SymInitialize(GetCurrentProcess(), nullptr, TRUE); }
-	~NativeSymbolResolver() { SymCleanup(GetCurrentProcess()); }
+	NativeSymbolResolver()
+	{
+		SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+		GetModuleInformation(GetCurrentProcess(), GetModuleHandle(0), &moduleInfo, sizeof(MODULEINFO));
+	}
+
+	~NativeSymbolResolver()
+	{
+		SymCleanup(GetCurrentProcess());
+	}
 
 	std::string GetName(void* frame)
 	{
@@ -34,6 +43,9 @@ public:
 		BOOL result = SymGetSymFromAddr64(GetCurrentProcess(), (DWORD64)frame, &displacement, symbol64);
 		if (result)
 		{
+			if ((DWORD64)frame < (DWORD64)moduleInfo.lpBaseOfDll || (DWORD64)frame >= ((DWORD64)moduleInfo.lpBaseOfDll + moduleInfo.SizeOfImage))
+				return s; // Ignore anything not from the exe itself
+
 			IMAGEHLP_LINE64 line64;
 			DWORD displacement = 0;
 			memset(&line64, 0, sizeof(IMAGEHLP_LINE64));
@@ -51,6 +63,8 @@ public:
 
 		return s;
 	}
+
+	MODULEINFO moduleInfo = {};
 };
 #else
 class NativeSymbolResolver

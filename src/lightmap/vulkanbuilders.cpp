@@ -109,77 +109,45 @@ static const TBuiltInResource DefaultTBuiltInResource = {
 	}
 };
 
+void ShaderBuilder::Init()
+{
+	ShInitialize();
+}
+
+void ShaderBuilder::Deinit()
+{
+	ShFinalize();
+}
+
 ShaderBuilder::ShaderBuilder()
 {
 }
 
-ShaderBuilder& ShaderBuilder::VertexShader(const FString &c)
+ShaderBuilder& ShaderBuilder::VertexShader(const std::string& c)
 {
 	code = c;
 	stage = EShLanguage::EShLangVertex;
 	return *this;
 }
 
-ShaderBuilder& ShaderBuilder::FragmentShader(const FString &c)
+ShaderBuilder& ShaderBuilder::FragmentShader(const std::string& c)
 {
 	code = c;
 	stage = EShLanguage::EShLangFragment;
 	return *this;
 }
 
-ShaderBuilder& ShaderBuilder::RayGenShader(const FString& c)
-{
-	code = c;
-	stage = EShLanguage::EShLangRayGen;
-	return *this;
-}
-
-ShaderBuilder& ShaderBuilder::IntersectShader(const FString& c)
-{
-	code = c;
-	stage = EShLanguage::EShLangIntersect;
-	return *this;
-}
-
-ShaderBuilder& ShaderBuilder::AnyHitShader(const FString& c)
-{
-	code = c;
-	stage = EShLanguage::EShLangAnyHit;
-	return *this;
-}
-
-ShaderBuilder& ShaderBuilder::ClosestHitShader(const FString& c)
-{
-	code = c;
-	stage = EShLanguage::EShLangClosestHit;
-	return *this;
-}
-
-ShaderBuilder& ShaderBuilder::MissShader(const FString& c)
-{
-	code = c;
-	stage = EShLanguage::EShLangMiss;
-	return *this;
-}
-
-ShaderBuilder& ShaderBuilder::CallableShader(const FString& c)
-{
-	code = c;
-	stage = EShLanguage::EShLangCallable;
-	return *this;
-}
-
 std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, VulkanDevice *device)
 {
 	EShLanguage stage = (EShLanguage)this->stage;
-	const char *sources[] = { code.GetChars() };
+	const char *sources[] = { code.c_str() };
 
 	TBuiltInResource resources = DefaultTBuiltInResource;
 
 	glslang::TShader shader(stage);
 	shader.setStrings(sources, 1);
 	shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 100);
-    if (device->ApiVersion >= VK_API_VERSION_1_2)
+    if (device->Instance->ApiVersion >= VK_API_VERSION_1_2)
     {
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
         shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
@@ -192,7 +160,7 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
 	bool compileSuccess = shader.parse(&resources, 110, false, EShMsgVulkanRules);
 	if (!compileSuccess)
 	{
-		throw std::runtime_error(std::string("Could not compile shader ") + shadername + ": " + shader.getInfoLog());
+		throw std::runtime_error(std::string("Shader compile failed: ") + shader.getInfoLog());
 	}
 
 	glslang::TProgram program;
@@ -200,13 +168,13 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
 	bool linkSuccess = program.link(EShMsgDefault);
 	if (!linkSuccess)
 	{
-		throw std::runtime_error(std::string("Could not link shader ") + shadername + ": " + program.getInfoLog());
+		throw std::runtime_error(std::string("Shader link failed: ") + program.getInfoLog());
 	}
 
 	glslang::TIntermediate *intermediate = program.getIntermediate(stage);
 	if (!intermediate)
 	{
-		throw std::runtime_error(std::string("Internal shader compile error while processing: ") + shadername);
+		throw std::runtime_error("Internal shader compiler error");
 	}
 
 	glslang::SpvOptions spvOptions;
@@ -226,9 +194,7 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
 	VkShaderModule shaderModule;
 	VkResult result = vkCreateShaderModule(device->device, &createInfo, nullptr, &shaderModule);
 	if (result != VK_SUCCESS)
-	{
 		throw std::runtime_error("Could not create vulkan shader module");
-	}
 
 	auto obj = std::make_unique<VulkanShader>(device, shaderModule);
 	if (debugName)
@@ -297,7 +263,7 @@ ImageBuilder& ImageBuilder::MemoryType(VkMemoryPropertyFlags requiredFlags, VkMe
 bool ImageBuilder::IsFormatSupported(VulkanDevice* device, VkFormatFeatureFlags bufferFeatures)
 {
 	VkImageFormatProperties properties = { };
-	VkResult result = vkGetPhysicalDeviceImageFormatProperties(device->physicalDevice.device, imageInfo.format, imageInfo.imageType, imageInfo.tiling, imageInfo.usage, imageInfo.flags, &properties);
+	VkResult result = vkGetPhysicalDeviceImageFormatProperties(device->PhysicalDevice.Device, imageInfo.format, imageInfo.imageType, imageInfo.tiling, imageInfo.usage, imageInfo.flags, &properties);
 	if (result != VK_SUCCESS) return false;
 	if (imageInfo.extent.width > properties.maxExtent.width) return false;
 	if (imageInfo.extent.height > properties.maxExtent.height) return false;
@@ -308,7 +274,7 @@ bool ImageBuilder::IsFormatSupported(VulkanDevice* device, VkFormatFeatureFlags 
 	if (bufferFeatures != 0)
 	{
 		VkFormatProperties formatProperties = { };
-		vkGetPhysicalDeviceFormatProperties(device->physicalDevice.device, imageInfo.format, &formatProperties);
+		vkGetPhysicalDeviceFormatProperties(device->PhysicalDevice.Device, imageInfo.format, &formatProperties);
 		if ((formatProperties.bufferFeatures & bufferFeatures) != bufferFeatures)
 			return false;
 	}
@@ -321,8 +287,7 @@ std::unique_ptr<VulkanImage> ImageBuilder::Create(VulkanDevice* device, VkDevice
 	VmaAllocation allocation;
 
 	VkResult result = vmaCreateImage(device->allocator, &imageInfo, &allocInfo, &image, &allocation, nullptr);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create vulkan image");
+	CheckVulkanError(result, "Could not create vulkan image");
 
 	if (allocatedBytes != nullptr)
 	{
@@ -385,8 +350,7 @@ std::unique_ptr<VulkanImageView> ImageViewBuilder::Create(VulkanDevice* device)
 {
 	VkImageView view;
 	VkResult result = vkCreateImageView(device->device, &viewInfo, nullptr, &view);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create texture image view");
+	CheckVulkanError(result, "Could not create texture image view");
 
 	auto obj = std::make_unique<VulkanImageView>(device, view);
 	if (debugName)
@@ -457,6 +421,12 @@ SamplerBuilder& SamplerBuilder::Anisotropy(float maxAnisotropy)
 	return *this;
 }
 
+SamplerBuilder& SamplerBuilder::MipLodBias(float bias)
+{
+	samplerInfo.mipLodBias = bias;
+	return *this;
+}
+
 SamplerBuilder& SamplerBuilder::MaxLod(float value)
 {
 	samplerInfo.maxLod = value;
@@ -467,8 +437,7 @@ std::unique_ptr<VulkanSampler> SamplerBuilder::Create(VulkanDevice* device)
 {
 	VkSampler sampler;
 	VkResult result = vkCreateSampler(device->device, &samplerInfo, nullptr, &sampler);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create texture sampler");
+	CheckVulkanError(result, "Could not create texture sampler");
 	auto obj = std::make_unique<VulkanSampler>(device, sampler);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -511,8 +480,7 @@ std::unique_ptr<VulkanBuffer> BufferBuilder::Create(VulkanDevice* device)
 	VmaAllocation allocation;
 
 	VkResult result = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not allocate memory for vulkan buffer");
+	CheckVulkanError(result, "Could not allocate memory for vulkan buffer");
 
 	auto obj = std::make_unique<VulkanBuffer>(device, buffer, allocation, bufferInfo.size);
 	if (debugName)
@@ -562,131 +530,6 @@ std::unique_ptr<VulkanAccelerationStructure> AccelerationStructureBuilder::Creat
 
 /////////////////////////////////////////////////////////////////////////////
 
-RayTracingPipelineBuilder::RayTracingPipelineBuilder()
-{
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::Layout(VulkanPipelineLayout* layout)
-{
-	pipelineInfo.layout = layout->layout;
-	return *this;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::MaxPipelineRayRecursionDepth(int depth)
-{
-	pipelineInfo.maxPipelineRayRecursionDepth = depth;
-	return *this;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::AddShader(VkShaderStageFlagBits stage, VulkanShader* shader)
-{
-	VkPipelineShaderStageCreateInfo stageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-	stageInfo.stage = stage;
-	stageInfo.module = shader->module;
-	stageInfo.pName = "main";
-	stages.push_back(stageInfo);
-
-	pipelineInfo.pStages = stages.data();
-	pipelineInfo.stageCount = (uint32_t)stages.size();
-
-	return *this;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::AddRayGenGroup(int rayGenShader)
-{
-	VkRayTracingShaderGroupCreateInfoKHR group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-	group.generalShader = rayGenShader;
-	group.closestHitShader = VK_SHADER_UNUSED_KHR;
-	group.anyHitShader = VK_SHADER_UNUSED_KHR;
-	group.intersectionShader = VK_SHADER_UNUSED_KHR;
-	groups.push_back(group);
-
-	pipelineInfo.pGroups = groups.data();
-	pipelineInfo.groupCount = (uint32_t)groups.size();
-
-	return *this;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::AddMissGroup(int missShader)
-{
-	VkRayTracingShaderGroupCreateInfoKHR group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-	group.generalShader = missShader;
-	group.closestHitShader = VK_SHADER_UNUSED_KHR;
-	group.anyHitShader = VK_SHADER_UNUSED_KHR;
-	group.intersectionShader = VK_SHADER_UNUSED_KHR;
-	groups.push_back(group);
-
-	pipelineInfo.pGroups = groups.data();
-	pipelineInfo.groupCount = (uint32_t)groups.size();
-
-	return *this;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::AddTrianglesHitGroup(int closestHitShader, int anyHitShader)
-{
-	VkRayTracingShaderGroupCreateInfoKHR group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
-	group.generalShader = VK_SHADER_UNUSED_KHR;
-	group.closestHitShader = closestHitShader;
-	group.anyHitShader = anyHitShader;
-	group.intersectionShader = VK_SHADER_UNUSED_KHR;
-	groups.push_back(group);
-
-	pipelineInfo.pGroups = groups.data();
-	pipelineInfo.groupCount = (uint32_t)groups.size();
-
-	return *this;
-}
-
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::AddProceduralHitGroup(int intersectionShader, int closestHitShader, int anyHitShader)
-{
-	VkRayTracingShaderGroupCreateInfoKHR group = {};
-	group.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
-	group.generalShader = VK_SHADER_UNUSED_KHR;
-	group.closestHitShader = closestHitShader;
-	group.anyHitShader = anyHitShader;
-	group.intersectionShader = intersectionShader;
-	groups.push_back(group);
-
-	pipelineInfo.pGroups = groups.data();
-	pipelineInfo.groupCount = (uint32_t)groups.size();
-
-	return *this;
-}
-
-std::unique_ptr<VulkanPipeline> RayTracingPipelineBuilder::Create(VulkanDevice* device)
-{
-	VkPipeline pipeline;
-	VkResult result = vkCreateRayTracingPipelinesKHR(device->device, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("vkCreateRayTracingPipelinesKHR failed");
-
-	std::vector<uint8_t> shaderGroupHandles(device->physicalDevice.rayTracingProperties.shaderGroupHandleSize * groups.size());
-	if (!groups.empty())
-	{
-		result = vkGetRayTracingShaderGroupHandlesKHR(device->device, pipeline, 0, (uint32_t)groups.size(), shaderGroupHandles.size(), shaderGroupHandles.data());
-		if (result != VK_SUCCESS)
-		{
-			vkDestroyPipeline(device->device, pipeline, nullptr);
-			throw std::runtime_error("vkGetRayTracingShaderGroupHandlesKHR failed");
-		}
-	}
-
-	auto obj = std::make_unique<VulkanPipeline>(device, pipeline, shaderGroupHandles);
-	if (debugName)
-		obj->SetDebugName(debugName);
-	return obj;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
 ComputePipelineBuilder::ComputePipelineBuilder()
 {
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -723,10 +566,15 @@ std::unique_ptr<VulkanPipeline> ComputePipelineBuilder::Create(VulkanDevice* dev
 
 DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder()
 {
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::AddBinding(int index, VkDescriptorType type, int arrayCount, VkShaderStageFlags stageFlags)
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::Flags(VkDescriptorSetLayoutCreateFlags flags)
+{
+	layoutInfo.flags = flags;
+	return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::AddBinding(int index, VkDescriptorType type, int arrayCount, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags flags)
 {
 	VkDescriptorSetLayoutBinding binding = { };
 	binding.binding = index;
@@ -734,10 +582,18 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::AddBinding(int index, Vk
 	binding.descriptorCount = arrayCount;
 	binding.stageFlags = stageFlags;
 	binding.pImmutableSamplers = nullptr;
-	bindings.Push(binding);
+	bindings.push_back(binding);
+	bindingFlags.push_back(flags);
 
-	layoutInfo.bindingCount = (uint32_t)bindings.Size();
-	layoutInfo.pBindings = &bindings[0];
+	layoutInfo.bindingCount = (uint32_t)bindings.size();
+	layoutInfo.pBindings = bindings.data();
+
+	bindingFlagsInfo.bindingCount = (uint32_t)bindings.size();
+	bindingFlagsInfo.pBindingFlags = bindingFlags.data();
+
+	if (flags != 0)
+		layoutInfo.pNext = &bindingFlagsInfo;
+
 	return *this;
 }
 
@@ -745,8 +601,7 @@ std::unique_ptr<VulkanDescriptorSetLayout> DescriptorSetLayoutBuilder::Create(Vu
 {
 	VkDescriptorSetLayout layout;
 	VkResult result = vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &layout);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create descriptor set layout");
+	CheckVulkanError(result, "Could not create descriptor set layout");
 	auto obj = std::make_unique<VulkanDescriptorSetLayout>(device, layout);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -760,6 +615,12 @@ DescriptorPoolBuilder::DescriptorPoolBuilder()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.maxSets = 1;
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+}
+
+DescriptorPoolBuilder& DescriptorPoolBuilder::Flags(VkDescriptorPoolCreateFlags flags)
+{
+	poolInfo.flags = flags | VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	return *this;
 }
 
 DescriptorPoolBuilder& DescriptorPoolBuilder::MaxSets(int value)
@@ -784,8 +645,7 @@ std::unique_ptr<VulkanDescriptorPool> DescriptorPoolBuilder::Create(VulkanDevice
 {
 	VkDescriptorPool descriptorPool;
 	VkResult result = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create descriptor pool");
+	CheckVulkanError(result, "Could not create descriptor pool");
 	auto obj = std::make_unique<VulkanDescriptorPool>(device, descriptorPool);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -811,8 +671,7 @@ std::unique_ptr<VulkanQueryPool> QueryPoolBuilder::Create(VulkanDevice* device)
 {
 	VkQueryPool queryPool;
 	VkResult result = vkCreateQueryPool(device->device, &poolInfo, nullptr, &queryPool);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create query pool");
+	CheckVulkanError(result, "Could not create query pool");
 	auto obj = std::make_unique<VulkanQueryPool>(device, queryPool);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -862,8 +721,7 @@ std::unique_ptr<VulkanFramebuffer> FramebufferBuilder::Create(VulkanDevice* devi
 {
 	VkFramebuffer framebuffer = 0;
 	VkResult result = vkCreateFramebuffer(device->device, &framebufferInfo, nullptr, &framebuffer);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create framebuffer");
+	CheckVulkanError(result, "Could not create framebuffer");
 	auto obj = std::make_unique<VulkanFramebuffer>(device, framebuffer);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -1179,8 +1037,7 @@ std::unique_ptr<VulkanPipeline> GraphicsPipelineBuilder::Create(VulkanDevice* de
 {
 	VkPipeline pipeline = 0;
 	VkResult result = vkCreateGraphicsPipelines(device->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create graphics pipeline");
+	CheckVulkanError(result, "Could not create graphics pipeline");
 	auto obj = std::make_unique<VulkanPipeline>(device, pipeline);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -1218,8 +1075,7 @@ std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::Create(VulkanDevice
 {
 	VkPipelineLayout pipelineLayout;
 	VkResult result = vkCreatePipelineLayout(device->device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create pipeline layout");
+	CheckVulkanError(result, "Could not create pipeline layout");
 	auto obj = std::make_unique<VulkanPipelineLayout>(device, pipelineLayout);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -1323,8 +1179,7 @@ std::unique_ptr<VulkanRenderPass> RenderPassBuilder::Create(VulkanDevice* device
 {
 	VkRenderPass renderPass = 0;
 	VkResult result = vkCreateRenderPass(device->device, &renderPassInfo, nullptr, &renderPass);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not create render pass");
+	CheckVulkanError(result, "Could not create render pass");
 	auto obj = std::make_unique<VulkanRenderPass>(device, renderPass);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -1466,9 +1321,8 @@ QueueSubmit& QueueSubmit::AddSignal(VulkanSemaphore* semaphore)
 
 void QueueSubmit::Execute(VulkanDevice* device, VkQueue queue, VulkanFence* fence)
 {
-	VkResult result = vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, fence ? fence->fence : VK_NULL_HANDLE);
-	if (result != VK_SUCCESS)
-		throw std::runtime_error("Could not submit command buffer");
+	VkResult result = vkQueueSubmit(device->GraphicsQueue, 1, &submitInfo, fence ? fence->fence : VK_NULL_HANDLE);
+	CheckVulkanError(result, "Could not submit command buffer");
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1501,28 +1355,6 @@ WriteDescriptors& WriteDescriptors::AddBuffer(VulkanDescriptorSet* descriptorSet
 	return *this;
 }
 
-WriteDescriptors& WriteDescriptors::AddSampledImage(VulkanDescriptorSet* descriptorSet, int binding, VulkanImageView* view, VkImageLayout imageLayout)
-{
-	VkDescriptorImageInfo imageInfo = {};
-	imageInfo.imageView = view->view;
-	imageInfo.imageLayout = imageLayout;
-
-	auto extra = std::make_unique<WriteExtra>();
-	extra->imageInfo = imageInfo;
-
-	VkWriteDescriptorSet descriptorWrite = {};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = descriptorSet->set;
-	descriptorWrite.dstBinding = binding;
-	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	descriptorWrite.descriptorCount = 1;
-	descriptorWrite.pImageInfo = &extra->imageInfo;
-	writes.push_back(descriptorWrite);
-	writeExtras.push_back(std::move(extra));
-	return *this;
-}
-
 WriteDescriptors& WriteDescriptors::AddStorageImage(VulkanDescriptorSet* descriptorSet, int binding, VulkanImageView* view, VkImageLayout imageLayout)
 {
 	VkDescriptorImageInfo imageInfo = {};
@@ -1547,9 +1379,14 @@ WriteDescriptors& WriteDescriptors::AddStorageImage(VulkanDescriptorSet* descrip
 
 WriteDescriptors& WriteDescriptors::AddCombinedImageSampler(VulkanDescriptorSet* descriptorSet, int binding, VulkanImageView* view, VulkanSampler* sampler, VkImageLayout imageLayout)
 {
+	return AddCombinedImageSampler(descriptorSet, binding, 0, view, sampler, imageLayout);
+}
+
+WriteDescriptors& WriteDescriptors::AddCombinedImageSampler(VulkanDescriptorSet* descriptorSet, int binding, int arrayIndex, VulkanImageView* view, VulkanSampler* sampler, VkImageLayout imageLayout)
+{
 	VkDescriptorImageInfo imageInfo = {};
 	imageInfo.imageView = view->view;
-	imageInfo.sampler = sampler ? sampler->sampler : nullptr;
+	imageInfo.sampler = sampler->sampler;
 	imageInfo.imageLayout = imageLayout;
 
 	auto extra = std::make_unique<WriteExtra>();
@@ -1559,7 +1396,7 @@ WriteDescriptors& WriteDescriptors::AddCombinedImageSampler(VulkanDescriptorSet*
 	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrite.dstSet = descriptorSet->set;
 	descriptorWrite.dstBinding = binding;
-	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.dstArrayElement = arrayIndex;
 	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrite.descriptorCount = 1;
 	descriptorWrite.pImageInfo = &extra->imageInfo;
@@ -1591,5 +1428,6 @@ WriteDescriptors& WriteDescriptors::AddAccelerationStructure(VulkanDescriptorSet
 
 void WriteDescriptors::Execute(VulkanDevice* device)
 {
-	vkUpdateDescriptorSets(device->device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
+	if (!writes.empty())
+		vkUpdateDescriptorSets(device->device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
 }

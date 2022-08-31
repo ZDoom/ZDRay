@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vulkanobjects.h"
-#include "framework/zstring.h"
 #include <cassert>
 
 class ImageBuilder
@@ -55,6 +54,7 @@ public:
 	SamplerBuilder& MagFilter(VkFilter magFilter);
 	SamplerBuilder& MipmapMode(VkSamplerMipmapMode mode);
 	SamplerBuilder& Anisotropy(float maxAnisotropy);
+	SamplerBuilder& MipLodBias(float bias);
 	SamplerBuilder& MaxLod(float value);
 	SamplerBuilder& DebugName(const char* name) { debugName = name; return *this; }
 
@@ -88,20 +88,17 @@ class ShaderBuilder
 public:
 	ShaderBuilder();
 
-	ShaderBuilder& VertexShader(const FString &code);
-	ShaderBuilder& FragmentShader(const FString &code);
-	ShaderBuilder& RayGenShader(const FString& code);
-	ShaderBuilder& IntersectShader(const FString& code);
-	ShaderBuilder& AnyHitShader(const FString& code);
-	ShaderBuilder& ClosestHitShader(const FString& code);
-	ShaderBuilder& MissShader(const FString& code);
-	ShaderBuilder& CallableShader(const FString& code);
+	static void Init();
+	static void Deinit();
+
+	ShaderBuilder& VertexShader(const std::string &code);
+	ShaderBuilder& FragmentShader(const std::string&code);
 	ShaderBuilder& DebugName(const char* name) { debugName = name; return *this; }
 
 	std::unique_ptr<VulkanShader> Create(const char *shadername, VulkanDevice *device);
 
 private:
-	FString code;
+	std::string code;
 	int stage = 0;
 	const char* debugName = nullptr;
 };
@@ -120,29 +117,6 @@ public:
 
 private:
 	VkAccelerationStructureCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
-	const char* debugName = nullptr;
-};
-
-class RayTracingPipelineBuilder
-{
-public:
-	RayTracingPipelineBuilder();
-
-	RayTracingPipelineBuilder& Layout(VulkanPipelineLayout* layout);
-	RayTracingPipelineBuilder& MaxPipelineRayRecursionDepth(int depth);
-	RayTracingPipelineBuilder& AddShader(VkShaderStageFlagBits stage, VulkanShader* shader);
-	RayTracingPipelineBuilder& AddRayGenGroup(int rayGenShader);
-	RayTracingPipelineBuilder& AddMissGroup(int missShader);
-	RayTracingPipelineBuilder& AddTrianglesHitGroup(int closestHitShader, int anyHitShader = VK_SHADER_UNUSED_KHR);
-	RayTracingPipelineBuilder& AddProceduralHitGroup(int intersectionShader, int closestHitShader, int anyHitShader);
-	RayTracingPipelineBuilder& DebugName(const char* name) { debugName = name; return *this; }
-
-	std::unique_ptr<VulkanPipeline> Create(VulkanDevice* device);
-
-private:
-	VkRayTracingPipelineCreateInfoKHR pipelineInfo = {};
-	std::vector<VkPipelineShaderStageCreateInfo> stages;
-	std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
 	const char* debugName = nullptr;
 };
 
@@ -168,14 +142,17 @@ class DescriptorSetLayoutBuilder
 public:
 	DescriptorSetLayoutBuilder();
 
-	DescriptorSetLayoutBuilder& AddBinding(int binding, VkDescriptorType type, int arrayCount, VkShaderStageFlags stageFlags);
+	DescriptorSetLayoutBuilder& Flags(VkDescriptorSetLayoutCreateFlags flags);
+	DescriptorSetLayoutBuilder& AddBinding(int binding, VkDescriptorType type, int arrayCount, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags flags = 0);
 	DescriptorSetLayoutBuilder& DebugName(const char* name) { debugName = name; return *this; }
 
 	std::unique_ptr<VulkanDescriptorSetLayout> Create(VulkanDevice *device);
 
 private:
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	TArray<VkDescriptorSetLayoutBinding> bindings;
+	VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlagsInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	std::vector<VkDescriptorBindingFlags> bindingFlags;
 	const char* debugName = nullptr;
 };
 
@@ -184,6 +161,7 @@ class DescriptorPoolBuilder
 public:
 	DescriptorPoolBuilder();
 
+	DescriptorPoolBuilder& Flags(VkDescriptorPoolCreateFlags flags);
 	DescriptorPoolBuilder& MaxSets(int value);
 	DescriptorPoolBuilder& AddPoolSize(VkDescriptorType type, int count);
 	DescriptorPoolBuilder& DebugName(const char* name) { debugName = name; return *this; }
@@ -388,9 +366,9 @@ class WriteDescriptors
 public:
 	WriteDescriptors& AddBuffer(VulkanDescriptorSet *descriptorSet, int binding, VkDescriptorType type, VulkanBuffer *buffer);
 	WriteDescriptors& AddBuffer(VulkanDescriptorSet *descriptorSet, int binding, VkDescriptorType type, VulkanBuffer *buffer, size_t offset, size_t range);
-	WriteDescriptors& AddSampledImage(VulkanDescriptorSet* descriptorSet, int binding, VulkanImageView* view, VkImageLayout imageLayout);
 	WriteDescriptors& AddStorageImage(VulkanDescriptorSet *descriptorSet, int binding, VulkanImageView *view, VkImageLayout imageLayout);
 	WriteDescriptors& AddCombinedImageSampler(VulkanDescriptorSet *descriptorSet, int binding, VulkanImageView *view, VulkanSampler *sampler, VkImageLayout imageLayout);
+	WriteDescriptors& AddCombinedImageSampler(VulkanDescriptorSet* descriptorSet, int binding, int arrayIndex, VulkanImageView* view, VulkanSampler* sampler, VkImageLayout imageLayout);
 	WriteDescriptors& AddAccelerationStructure(VulkanDescriptorSet* descriptorSet, int binding, VulkanAccelerationStructure* accelStruct);
 	void Execute(VulkanDevice *device);
 
