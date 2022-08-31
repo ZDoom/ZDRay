@@ -115,12 +115,9 @@ bool			 HaveSSE1, HaveSSE2;
 int				 SSELevel;
 int				 NumThreads = 0;
 int				 LMDims = 1024;
-bool			 CPURaytrace = false;
 bool			 VKDebug = false;
 bool			 DumpMesh = false;
 
-int coverageSampleCount = 256;
-int bounceSampleCount = 2048;
 int ambientSampleCount = 2048;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
@@ -158,14 +155,13 @@ static option long_opts[] =
 	{"comments",		no_argument,		0,	'c'},
 	{"threads",			required_argument,	0,	'j'},
 	{"size",			required_argument,	0,	'S'},
-	{"cpu-raytrace",	no_argument,		0,	'C'},
 	{"vkdebug",			no_argument,		0,	'D'},
 	{"dump-mesh",		no_argument,		0,	1004},
 	{"preview",			no_argument,		0,	1005},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:CD::";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:D::";
 
 // CODE --------------------------------------------------------------------
 
@@ -453,9 +449,6 @@ static void ParseArgs(int argc, char **argv)
 			if (LMDims > 1024) LMDims = 1024;
 			LMDims = Math::RoundPowerOfTwo(LMDims);
 			break;
-		case 'C':
-			CPURaytrace = true;
-			break;
 		case 'D':
 			VKDebug = true;
 			break;
@@ -463,8 +456,6 @@ static void ParseArgs(int argc, char **argv)
 			DumpMesh = true;
 			break;
 		case 1005:
-			coverageSampleCount = 4;
-			bounceSampleCount = 16;
 			ambientSampleCount = 16;
 			break;
 		case 1000:
@@ -510,7 +501,6 @@ static void ShowUsage()
 		"  -P, --no-polyobjs        Do not check for polyobject subsector splits\n"
 		"  -j, --threads=NNN        Number of threads used for raytracing (default %d)\n"
 		"  -S, --size=NNN           lightmap texture dimensions for width and height must be in powers of two (1, 2, 4, 8, 16, etc)\n"
-		"  -C, --cpu-raytrace       Use the CPU for ray tracing\n"
 		"  -D, --vkdebug            Print messages from the Vulkan validation layer\n"
 		"      --dump-mesh          Export level mesh and lightmaps for debugging\n"
 		"  -w, --warn               Show warning messages\n"

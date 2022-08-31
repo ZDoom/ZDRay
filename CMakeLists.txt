@@ -189,8 +189,6 @@ set( SOURCES
 	src/lightmap/glsl_frag.h
 	src/lightmap/glsl_vert.h
 	src/lightmap/glsl_frag_resolve.h
-	src/lightmap/cpuraytracer.cpp
-	src/lightmap/cpuraytracer.h
 	src/math/mat.cpp
 	src/math/plane.cpp
 	src/math/angle.cpp

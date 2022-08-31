@@ -19,7 +19,6 @@
 */
 
 #include "level/level.h"
-#include "lightmap/cpuraytracer.h"
 #include "lightmap/gpuraytracer.h"
 #include "math/vec.h"
 //#include "rejectbuilder.h"
@@ -31,7 +30,6 @@
 #endif
 
 extern int LMDims;
-extern bool CPURaytrace;
 
 extern void ShowView (FLevel *level);
 
@@ -752,8 +750,6 @@ void FProcessor::BuildNodes()
 	}
 }
 
-//#define USE_GPU_RAYTRACER
-
 void FProcessor::BuildLightmaps()
 {
 	Level.PostLoadInitialization();
@@ -767,29 +763,8 @@ void FProcessor::BuildLightmaps()
 
 	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.DefaultSamples, LMDims);
 
-	std::unique_ptr<GPURaytracer> gpuraytracer;
-	if (!CPURaytrace)
-	{
-		try
-		{
-			gpuraytracer = std::make_unique<GPURaytracer>();
-		}
-		catch (std::exception msg)
-		{
-			printf("%s\n", msg.what());
-			printf("Falling back to CPU ray tracing\n");
-		}
-	}
-
-	if (gpuraytracer)
-	{
-		gpuraytracer->Raytrace(LightmapMesh.get());
-	}
-	else
-	{
-		CPURaytracer raytracer;
-		raytracer.Raytrace(LightmapMesh.get());
-	}
+	std::unique_ptr<GPURaytracer> gpuraytracer = std::make_unique<GPURaytracer>();
+	gpuraytracer->Raytrace(LightmapMesh.get());
 
 	LightmapMesh->CreateTextures();
 }
