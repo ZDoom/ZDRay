@@ -337,8 +337,15 @@ void GPURaytracer::CreateVulkanObjects()
 	CreateSceneLightBuffer();
 	CreateVertexAndIndexBuffers();
 	CreateUniformBuffer();
-	CreateBottomLevelAccelerationStructure();
-	CreateTopLevelAccelerationStructure();
+	if (useRayQuery)
+	{
+		CreateBottomLevelAccelerationStructure();
+		CreateTopLevelAccelerationStructure();
+	}
+	else
+	{
+		// To do: upload mesh->Collision->nodes (vertices and elements are already uploaded in CreateVertexAndIndexBuffers)
+	}
 	CreateShaders();
 	CreateRaytracePipeline();
 	CreateResolvePipeline();
@@ -429,8 +436,9 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		.Usage(
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+			(useRayQuery ?
+				VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+				VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR : 0) |
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		.Size(vertexbuffersize)
 		.DebugName("vertexBuffer")
@@ -440,8 +448,9 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		.Usage(
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+			(useRayQuery ?
+				VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+				VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR : 0) |
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		.Size(indexbuffersize)
 		.DebugName("indexBuffer")
@@ -479,7 +488,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 
 	PipelineBarrier()
 		.AddMemory(VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT)
-		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
+		.Execute(cmdbuffer.get(), VK_PIPELINE_STAGE_TRANSFER_BIT, useRayQuery ? VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
 void GPURaytracer::CreateBottomLevelAccelerationStructure()
@@ -623,24 +632,35 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 
 void GPURaytracer::CreateShaders()
 {
+	FString prefix = "#version 460\r\n#line 1\r\n";
+	FString traceprefix = "#version 460\r\n";
+	if (useRayQuery) // To do: check if ray query is available
+	{
+		traceprefix += "#extension GL_EXT_ray_query : require\r\n";
+		traceprefix += "#define USE_RAYQUERY\r\n";
+	}
+	traceprefix += "#line 1\r\n";
+
 	vertShader = ShaderBuilder()
-		.VertexShader(glsl_vert)
+		.VertexShader(prefix + glsl_vert)
 		.DebugName("vertShader")
 		.Create("vertShader", device.get());
 
 	fragShader = ShaderBuilder()
-		.FragmentShader(glsl_frag)
+		.FragmentShader(traceprefix + glsl_frag)
 		.DebugName("fragShader")
 		.Create("fragShader", device.get());
 
 	fragResolveShader = ShaderBuilder()
-		.FragmentShader(glsl_frag_resolve)
+		.FragmentShader(prefix + glsl_frag_resolve)
 		.DebugName("fragResolveShader")
 		.Create("fragResolveShader", device.get());
 }
 
 void GPURaytracer::CreateRaytracePipeline()
 {
+	// To do: use rayQuery boolean to specify the alternative descriptor set
+
 	raytrace.descriptorSetLayout = DescriptorSetLayoutBuilder()
 		.AddBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)

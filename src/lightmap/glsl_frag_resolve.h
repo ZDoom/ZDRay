@@ -1,8 +1,5 @@
 static const char* glsl_frag_resolve = R"glsl(
 
-#version 460
-#extension GL_EXT_ray_query : require
-
 layout(set = 0, binding = 0) uniform sampler2DMS tex;
 
 layout(location = 0) in vec3 worldpos;

@@ -17,5 +17,4 @@ private:
 	int textureWidth;
 	int textureHeight;
 	std::vector<uint16_t> mPixels;
-	std::vector<int> allocBlocks;
 };

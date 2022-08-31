@@ -1,7 +1,5 @@
 static const char* glsl_vert = R"glsl(
 
-#version 460
-
 layout(push_constant) uniform PushConstants
 {
 	uint LightStart;

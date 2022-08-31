@@ -1,9 +1,23 @@
 static const char* glsl_frag = R"glsl(
 
-#version 460
-#extension GL_EXT_ray_query : require
-
+#if defined(USE_RAYQUERY)
 layout(set = 0, binding = 0) uniform accelerationStructureEXT acc;
+#else
+struct CollisionNode
+{
+	vec3 center;
+	float padding1;
+	vec3 extents;
+	float padding2;
+	int left;
+	int right;
+	int element_index;
+	int padding3;
+};
+layout(set = 1, binding = 0) buffer NodeBuffer { CollisionNode nodes[]; };
+layout(set = 1, binding = 1) buffer VertexBuffer { vec3 vertices[]; };
+layout(set = 1, binding = 2) buffer ElementBuffer { vec3 elements[]; };
+#endif
 
 layout(set = 0, binding = 1) uniform Uniforms
 {
@@ -62,6 +76,10 @@ float TraceAmbientOcclusion(vec3 origin, vec3 normal);
 vec2 Hammersley(uint i, uint N);
 float RadicalInverse_VdC(uint bits);
 
+bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax);
+int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax);
+int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t);
+
 void main()
 {
 	vec3 normal = surfaces[SurfaceIndex].Normal;
@@ -105,12 +123,7 @@ vec3 TraceLight(vec3 origin, vec3 normal, LightInfo light)
 		float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
 		if (attenuation > 0.0)
 		{
-			rayQueryEXT rayQuery;
-			rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, dir, dist);
-
-			while(rayQueryProceedEXT(rayQuery)) { }
-
-			if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionNoneEXT)
+			if (TraceAnyHit(origin, minDistance, dir, dist))
 			{
 				incoming.rgb += light.Color * (attenuation * light.Intensity);
 			}
@@ -125,20 +138,9 @@ vec3 TraceSunLight(vec3 origin)
 	vec3 incoming = vec3(0.0);
 	const float dist = 32768.0;
 
-	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, SunDir, dist);
-
-	while(rayQueryProceedEXT(rayQuery))
+	int primitiveID = TraceFirstHitTriangle(origin, minDistance, SunDir, dist);
+	if (primitiveID != -1)
 	{
-		if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
-		{
-			rayQueryConfirmIntersectionEXT(rayQuery);
-		}
-	}
-
-	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
-	{
-		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
 		SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
 		incoming.rgb += SunColor * SunIntensity * surface.Sky;
 	}
@@ -163,24 +165,13 @@ float TraceAmbientOcclusion(vec3 origin, vec3 normal)
 		vec3 H = normalize(vec3(Xi.x * 2.0f - 1.0f, Xi.y * 2.0f - 1.0f, 1.5 - length(Xi)));
 		vec3 L = H.x * tangent + H.y * bitangent + H.z * N;
 
-		rayQueryEXT rayQuery;
-		rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, minDistance, L, aoDistance);
-
-		while(rayQueryProceedEXT(rayQuery))
+		float hitDistance;
+		int primitiveID = TraceFirstHitTriangleT(origin, minDistance, L, aoDistance, hitDistance);
+		if (primitiveID != -1)
 		{
-			if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
-			{
-				rayQueryConfirmIntersectionEXT(rayQuery);
-			}
-		}
-
-		if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
-		{
-			int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
 			SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
 			if (surface.Sky == 0.0)
 			{
-				float hitDistance = rayQueryGetIntersectionTEXT(rayQuery, true);
 				ambience += clamp(hitDistance / aoDistance, 0.0, 1.0);
 			}
 		}
@@ -206,5 +197,85 @@ float RadicalInverse_VdC(uint bits)
 	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
 	return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
 }
+
+#if defined(USE_RAYQUERY)
+
+bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
+	while(rayQueryProceedEXT(rayQuery)) { }
+	return rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
+
+	while(rayQueryProceedEXT(rayQuery))
+	{
+		if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
+		{
+			rayQueryConfirmIntersectionEXT(rayQuery);
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+	{
+		return rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t)
+{
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
+
+	while(rayQueryProceedEXT(rayQuery))
+	{
+		if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
+		{
+			rayQueryConfirmIntersectionEXT(rayQuery);
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+	{
+		t = rayQueryGetIntersectionTEXT(rayQuery, true);
+		return rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+#else
+
+bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	// To do: port TriangleMeshShape::find_any_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end) to glsl
+	return false;
+}
+
+int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	float t;
+	return TraceFirstHitTriangleT(origin, tmin, dir, tmax, t);
+}
+
+int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t)
+{
+	// To do: port TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end) to glsl
+	return -1;
+}
+
+#endif
+
 
 )glsl";

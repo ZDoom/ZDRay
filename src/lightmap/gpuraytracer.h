@@ -50,6 +50,18 @@ struct LightInfo
 	float Padding2;
 };
 
+struct CollisionNode
+{
+	vec3 center;
+	float padding1;
+	vec3 extents;
+	float padding2;
+	int left;
+	int right;
+	int element_index;
+	int padding3;
+};
+
 struct LightmapImage
 {
 	struct
@@ -119,6 +131,8 @@ private:
 	VkDeviceSize uniformStructStride = sizeof(Uniforms);
 
 	std::unique_ptr<VulkanDevice> device;
+
+	bool useRayQuery = true;
 
 	static const int SceneVertexBufferSize = 1 * 1024 * 1024;
 	std::unique_ptr<VulkanBuffer> sceneVertexBuffer;

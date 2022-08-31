@@ -10,5 +10,4 @@ LightmapTexture::LightmapTexture(int width, int height) : textureWidth(width), t
 #else
 	mPixels.resize(width * height * 3, 0);
 #endif
-	allocBlocks.resize(width);
 }
