@@ -186,19 +186,6 @@ set( SOURCES
 	src/lightmap/surfaceclip.h
 	src/lightmap/gpuraytracer.cpp
 	src/lightmap/gpuraytracer.h
-	src/lightmap/gpuraytracer2.cpp
-	src/lightmap/gpuraytracer2.h
-	src/lightmap/glsl_rchit_bounce.h
-	src/lightmap/glsl_rchit_light.h
-	src/lightmap/glsl_rchit_sun.h
-	src/lightmap/glsl_rchit_ambient.h
-	src/lightmap/glsl_rgen_bounce.h
-	src/lightmap/glsl_rgen_light.h
-	src/lightmap/glsl_rgen_ambient.h
-	src/lightmap/glsl_rmiss_bounce.h
-	src/lightmap/glsl_rmiss_light.h
-	src/lightmap/glsl_rmiss_sun.h
-	src/lightmap/glsl_rmiss_ambient.h
 	src/lightmap/glsl_frag.h
 	src/lightmap/glsl_vert.h
 	src/lightmap/glsl_frag_resolve.h

@@ -8,23 +8,24 @@ class LevelMesh;
 
 struct Uniforms
 {
-	uint32_t SampleIndex;
-	uint32_t SampleCount;
-	uint32_t PassType;
-	uint32_t Padding0;
 	vec3 SunDir;
 	float Padding1;
 	vec3 SunColor;
 	float SunIntensity;
-	vec3 HemisphereVec;
-	float Padding2;
 };
 
 struct PushConstants
 {
 	uint32_t LightStart;
 	uint32_t LightEnd;
-	ivec2 pushPadding;
+	int32_t SurfaceIndex;
+	int32_t PushPadding1;
+	vec3 LightmapOrigin;
+	float PushPadding2;
+	vec3 LightmapStepX;
+	float PushPadding3;
+	vec3 LightmapStepY;
+	float PushPadding4;
 };
 
 struct SurfaceInfo
@@ -52,9 +53,28 @@ struct LightInfo
 	float Padding2;
 };
 
-struct TraceTask
+struct LightmapImage
 {
-	int id, x, y;
+	struct
+	{
+		std::unique_ptr<VulkanImage> Image;
+		std::unique_ptr<VulkanImageView> View;
+		std::unique_ptr<VulkanFramebuffer> Framebuffer;
+	} raytrace;
+
+	struct
+	{
+		std::unique_ptr<VulkanImage> Image;
+		std::unique_ptr<VulkanImageView> View;
+		std::unique_ptr<VulkanFramebuffer> Framebuffer;
+	} resolve;
+
+	std::unique_ptr<VulkanBuffer> Transfer;
+};
+
+struct SceneVertex
+{
+	vec2 Position;
 };
 
 class GPURaytracer
@@ -66,31 +86,34 @@ public:
 	void Raytrace(LevelMesh* level);
 
 private:
-	void CreateTasks(std::vector<TraceTask>& tasks);
 	void CreateVulkanObjects();
 	void CreateVertexAndIndexBuffers();
 	void CreateBottomLevelAccelerationStructure();
 	void CreateTopLevelAccelerationStructure();
 	void CreateShaders();
-	std::unique_ptr<VulkanShader> CompileRayGenShader(const char* code, const char* name);
-	std::unique_ptr<VulkanShader> CompileClosestHitShader(const char* code, const char* name);
-	std::unique_ptr<VulkanShader> CompileMissShader(const char* code, const char* name);
-	void CreatePipeline();
-	void CreateDescriptorSet();
+	void CreateRaytracePipeline();
+	void CreateResolvePipeline();
+	void CreateUniformBuffer();
+	void CreateSceneVertexBuffer();
+	void CreateSceneLightBuffer();
 
-	void UploadTasks(const TraceTask* tasks, size_t size);
-	void BeginTracing();
-	void RunTrace(const Uniforms& uniforms, const VkStridedDeviceAddressRegionKHR& rgenShader, int lightStart = 0, int lightEnd = 0);
-	void EndTracing();
-	void DownloadTasks(const TraceTask* tasks, size_t size);
-	void SubmitCommands();
+	void UploadUniforms();
+	void CreateAtlasImages();
+	void RenderAtlasImage(size_t pageIndex);
+	void ResolveAtlasImage(size_t pageIndex);
+	void DownloadAtlasImage(size_t pageIndex);
+
+	LightmapImage CreateImage(int width, int height);
+
+	void BeginCommands();
+	void FinishCommands();
 
 	void PrintVulkanInfo();
 
-	static float RadicalInverse_VdC(uint32_t bits);
-	static vec2 Hammersley(uint32_t i, uint32_t N);
+	std::vector<SurfaceInfo> CreateSurfaceInfo();
 
-	int rayTraceImageSize = 1024;
+	static vec2 ToUV(const vec3& vert, const Surface* targetSurface);
+	static bool IsNegativelyOriented(const vec2& v1, const vec2& v2, const vec2& v3);
 
 	LevelMesh* mesh = nullptr;
 
@@ -101,12 +124,21 @@ private:
 
 	std::unique_ptr<VulkanDevice> device;
 
+	static const int SceneVertexBufferSize = 1 * 1024 * 1024;
+	std::unique_ptr<VulkanBuffer> sceneVertexBuffer;
+	SceneVertex* sceneVertices = nullptr;
+	int sceneVertexPos = 0;
+
+	static const int SceneLightBufferSize = 2 * 1024 * 1024;
+	std::unique_ptr<VulkanBuffer> sceneLightBuffer;
+	LightInfo* sceneLights = nullptr;
+	int sceneLightPos = 0;
+
 	std::unique_ptr<VulkanBuffer> vertexBuffer;
 	std::unique_ptr<VulkanBuffer> indexBuffer;
 	std::unique_ptr<VulkanBuffer> transferBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceIndexBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceBuffer;
-	std::unique_ptr<VulkanBuffer> lightBuffer;
 
 	std::unique_ptr<VulkanBuffer> blScratchBuffer;
 	std::unique_ptr<VulkanBuffer> blAccelStructBuffer;
@@ -118,32 +150,38 @@ private:
 	std::unique_ptr<VulkanBuffer> tlAccelStructBuffer;
 	std::unique_ptr<VulkanAccelerationStructure> tlAccelStruct;
 
-	std::unique_ptr<VulkanShader> rgenBounce, rgenLight, rgenAmbient;
-	std::unique_ptr<VulkanShader> rmissBounce, rmissLight, rmissSun, rmissAmbient;
-	std::unique_ptr<VulkanShader> rchitBounce, rchitLight, rchitSun, rchitAmbient;
+	std::unique_ptr<VulkanShader> vertShader;
+	std::unique_ptr<VulkanShader> fragShader;
+	std::unique_ptr<VulkanShader> fragResolveShader;
 
-	std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+	struct
+	{
+		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+		std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
+		std::unique_ptr<VulkanPipeline> pipeline;
+		std::unique_ptr<VulkanRenderPass> renderPass;
+		std::unique_ptr<VulkanDescriptorPool> descriptorPool;
+		std::unique_ptr<VulkanDescriptorSet> descriptorSet;
+	} raytrace;
 
-	std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
-	std::unique_ptr<VulkanPipeline> pipeline;
-	std::unique_ptr<VulkanBuffer> shaderBindingTable;
-	std::unique_ptr<VulkanBuffer> sbtTransferBuffer;
-
-	VkStridedDeviceAddressRegionKHR rgenBounceRegion = {}, rgenLightRegion = {}, rgenAmbientRegion = {};
-	VkStridedDeviceAddressRegionKHR missRegion = {};
-	VkStridedDeviceAddressRegionKHR hitRegion = {};
-	VkStridedDeviceAddressRegionKHR callRegion = {};
-
-	std::unique_ptr<VulkanImage> startPositionsImage, positionsImage, outputImage;
-	std::unique_ptr<VulkanImageView> startPositionsImageView, positionsImageView, outputImageView;
-	std::unique_ptr<VulkanBuffer> imageTransferBuffer;
+	struct
+	{
+		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout;
+		std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
+		std::unique_ptr<VulkanPipeline> pipeline;
+		std::unique_ptr<VulkanRenderPass> renderPass;
+		std::unique_ptr<VulkanDescriptorPool> descriptorPool;
+		std::vector<std::unique_ptr<VulkanDescriptorSet>> descriptorSets;
+		std::unique_ptr<VulkanSampler> sampler;
+	} resolve;
 
 	std::unique_ptr<VulkanBuffer> uniformBuffer;
 	std::unique_ptr<VulkanBuffer> uniformTransferBuffer;
 
-	std::unique_ptr<VulkanDescriptorPool> descriptorPool;
-	std::unique_ptr<VulkanDescriptorSet> descriptorSet;
-
+	std::unique_ptr<VulkanFence> submitFence;
 	std::unique_ptr<VulkanCommandPool> cmdpool;
 	std::unique_ptr<VulkanCommandBuffer> cmdbuffer;
+
+	std::vector<LightmapImage> atlasImages;
+	static const int atlasImageSize = 2048;
 };
