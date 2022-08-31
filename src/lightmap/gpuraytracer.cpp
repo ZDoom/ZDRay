@@ -23,6 +23,7 @@ extern bool VKDebug;
 GPURaytracer::GPURaytracer()
 {
 	device = std::make_unique<VulkanDevice>(0, VKDebug);
+	//useRayQuery = device->physicalDevice.rayQueryProperties.supportsRayQuery;
 	PrintVulkanInfo();
 }
 
@@ -623,7 +624,7 @@ void GPURaytracer::CreateShaders()
 {
 	FString prefix = "#version 460\r\n#line 1\r\n";
 	FString traceprefix = "#version 460\r\n";
-	if (useRayQuery) // To do: check if ray query is available
+	if (useRayQuery)
 	{
 		traceprefix += "#extension GL_EXT_ray_query : require\r\n";
 		traceprefix += "#define USE_RAYQUERY\r\n";

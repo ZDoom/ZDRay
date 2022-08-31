@@ -99,7 +99,9 @@ void main()
 		incoming += TraceLight(origin, normal, lights[j]);
 	}
 
+#if defined(USE_RAYQUERY) // The non-rtx version of TraceFirstHitTriangle is too slow to do AO without the shader getting killed ;(
 	incoming.rgb *= TraceAmbientOcclusion(origin, normal);
+#endif
 
 	fragcolor = vec4(incoming, 1.0);
 }
@@ -409,15 +411,79 @@ bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
 	return false;
 }
 
+struct TraceHit
+{
+	float fraction;
+	int triangle;
+	float b;
+	float c;
+};
+
+TraceHit find_first_hit(RayBBox ray)
+{
+	TraceHit hit;
+	hit.fraction = 1.0;
+	hit.triangle = -1;
+	hit.b = 0.0;
+	hit.c = 0.0;
+
+	int stack[64];
+	int stackIndex = 0;
+	stack[stackIndex++] = nodesRoot;
+	do
+	{
+		int a = stack[--stackIndex];
+		if (overlap_bv_ray(ray, a))
+		{
+			if (is_leaf(a))
+			{
+				float baryB, baryC;
+				float t = intersect_triangle_ray(ray, a, baryB, baryC);
+				if (t < hit.fraction)
+				{
+					hit.fraction = t;
+					hit.triangle = nodes[a].element_index / 3;
+					hit.b = baryB;
+					hit.c = baryC;
+				}
+			}
+			else
+			{
+				stack[stackIndex++] = nodes[a].right;
+				stack[stackIndex++] = nodes[a].left;
+			}
+		}
+	} while (stackIndex > 0);
+	return hit;
+}
+
 int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
 {
 	float t;
 	return TraceFirstHitTriangleT(origin, tmin, dir, tmax, t);
 }
 
-int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t)
+int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float hitFraction)
 {
-	// To do: port TriangleMeshShape::find_first_hit(TriangleMeshShape *shape, const vec3 &ray_start, const vec3 &ray_end) to glsl
+	// Perform segmented tracing to keep the ray AABB box smaller
+	vec3 ray_start = origin;
+	vec3 ray_end = origin + dir * tmax;
+	vec3 ray_dir = dir;
+	float tracedist = tmax;
+	float segmentlen = max(200.0, tracedist / 20.0);
+	for (float t = 0.0; t < tracedist; t += segmentlen)
+	{
+		float segstart = t / tracedist;
+		float segend = min(t + segmentlen, tracedist) / tracedist;
+
+		RayBBox ray = create_ray(ray_start + ray_dir * segstart, ray_start + ray_dir * segend);
+		TraceHit hit = find_first_hit(ray);
+		if (hit.fraction < 1.0)
+		{
+			hit.fraction = segstart * (1.0 - hit.fraction) + segend * hit.fraction;
+			return hit.triangle;
+		}
+	}
 	return -1;
 }
 
