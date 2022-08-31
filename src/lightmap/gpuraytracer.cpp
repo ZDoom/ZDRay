@@ -19,11 +19,12 @@
 #include "glsl_vert.h"
 
 extern bool VKDebug;
+extern bool NoRtx;
 
 GPURaytracer::GPURaytracer()
 {
 	device = std::make_unique<VulkanDevice>(0, VKDebug);
-	//useRayQuery = device->physicalDevice.rayQueryProperties.supportsRayQuery;
+	useRayQuery = !NoRtx;// && device->physicalDevice.rayQueryProperties.supportsRayQuery;
 	PrintVulkanInfo();
 }
 

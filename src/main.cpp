@@ -117,6 +117,7 @@ int				 NumThreads = 0;
 int				 LMDims = 1024;
 bool			 VKDebug = false;
 bool			 DumpMesh = false;
+bool			 NoRtx = false;
 
 int ambientSampleCount = 2048;
 
@@ -158,10 +159,11 @@ static option long_opts[] =
 	{"vkdebug",			no_argument,		0,	'D'},
 	{"dump-mesh",		no_argument,		0,	1004},
 	{"preview",			no_argument,		0,	1005},
+	{"no-rtx",			no_argument,		0,	1006},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:D::";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:D:::";
 
 // CODE --------------------------------------------------------------------
 
@@ -458,6 +460,9 @@ static void ParseArgs(int argc, char **argv)
 		case 1005:
 			ambientSampleCount = 16;
 			break;
+		case 1006:
+			NoRtx = true;
+			break;
 		case 1000:
 			ShowUsage();
 			exit(0);
@@ -503,6 +508,7 @@ static void ShowUsage()
 		"  -S, --size=NNN           lightmap texture dimensions for width and height must be in powers of two (1, 2, 4, 8, 16, etc)\n"
 		"  -D, --vkdebug            Print messages from the Vulkan validation layer\n"
 		"      --dump-mesh          Export level mesh and lightmaps for debugging\n"
+		"      --no-rtx             Do not use RTX acceleration for the ray tracing\n"
 		"  -w, --warn               Show warning messages\n"
 #if HAVE_TIMING
 		"  -t, --no-timing          Suppress timing information\n"
