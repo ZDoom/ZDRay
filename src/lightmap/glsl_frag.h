@@ -16,12 +16,9 @@ layout(set = 0, binding = 1) uniform Uniforms
 struct SurfaceInfo
 {
 	vec3 Normal;
-	float EmissiveDistance;
-	vec3 EmissiveColor;
-	float EmissiveIntensity;
 	float Sky;
 	float SamplingDistance;
-	float Padding1, Padding2;
+	float Padding1, Padding2, Padding3;
 };
 
 struct LightInfo

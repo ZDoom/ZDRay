@@ -106,8 +106,6 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 		}
 	}
 
-	CreateLightProbes(doomMap);
-
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		BuildSurfaceParams(surfaces[i].get());
@@ -450,59 +448,6 @@ void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 			currentTexture[offs + j * 3 + 1] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].y, -65000.0f, 65000.0f));
 			currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, -65000.0f, 65000.0f));
 		}
-	}
-}
-
-void LevelMesh::CreateLightProbes(FLevel& map)
-{
-	float minX = std::floor(map.MinX / 65536.0f);
-	float minY = std::floor(map.MinY / 65536.0f);
-	float maxX = std::floor(map.MaxX / 65536.0f) + 1.0f;
-	float maxY = std::floor(map.MaxY / 65536.0f) + 1.0f;
-
-	float halfGridSize = map.GridSize * 0.5f;
-	float doubleGridSize = map.GridSize * 2.0f;
-
-	for (float y = minY; y < maxY; y += map.GridSize)
-	{
-		for (float x = minX; x < maxX; x += map.GridSize)
-		{
-			MapSubsectorEx* ssec = map.PointInSubSector((int)x, (int)y);
-			IntSector* sec = ssec ? map.GetSectorFromSubSector(ssec) : nullptr;
-			if (sec)
-			{
-				float z0 = sec->floorplane.zAt(x, y);
-				float z1 = sec->ceilingplane.zAt(x, y);
-				float delta = z1 - z0;
-				if (delta > doubleGridSize)
-				{
-					LightProbeSample p[3];
-					p[0].Position = vec3(x, y, z0 + halfGridSize);
-					p[1].Position = vec3(x, y, z0 + (z1 - z0) * 0.5f);
-					p[2].Position = vec3(x, y, z1 - halfGridSize);
-
-					for (int i = 0; i < 3; i++)
-					{
-						lightProbes.push_back(p[i]);
-					}
-				}
-				else if (delta > 0.0f)
-				{
-					LightProbeSample probe;
-					probe.Position.x = x;
-					probe.Position.y = y;
-					probe.Position.z = z0 + (z1 - z0) * 0.5f;
-					lightProbes.push_back(probe);
-				}
-			}
-		}
-	}
-
-	for (unsigned int i = 0; i < map.ThingLightProbes.Size(); i++)
-	{
-		LightProbeSample probe;
-		probe.Position = map.GetLightProbePosition(i);
-		lightProbes.push_back(probe);
 	}
 }
 
@@ -947,8 +892,7 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
 	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
-	int lightProbesSize = lightProbes.size() * 6 * sizeof(float);
-	int lumpSize = headerSize + lightProbesSize + surfacesSize + texCoordsSize + texDataSize;
+	int lumpSize = headerSize + surfacesSize + texCoordsSize + texDataSize;
 
 	// Setup buffer
 	std::vector<uint8_t> buffer(lumpSize);
@@ -961,19 +905,8 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	lumpFile.Write16(textures.size());
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
-	lumpFile.Write32(lightProbes.size());
+	lumpFile.Write32(0); // old light probes list
 	lumpFile.Write32(map->NumGLSubsectors);
-
-	// Write light probes
-	for (const LightProbeSample& probe : lightProbes)
-	{
-		lumpFile.WriteFloat(probe.Position.x);
-		lumpFile.WriteFloat(probe.Position.y);
-		lumpFile.WriteFloat(probe.Position.z);
-		lumpFile.WriteFloat(probe.Color.x);
-		lumpFile.WriteFloat(probe.Color.y);
-		lumpFile.WriteFloat(probe.Color.z);
-	}
 
 	// Write surfaces
 	int coordOffsets = 0;

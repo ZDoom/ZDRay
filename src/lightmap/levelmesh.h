@@ -107,13 +107,6 @@ struct Surface
 	int smoothingGroupIndex = -1;
 };
 
-class LightProbeSample
-{
-public:
-	vec3 Position = vec3(0.0f, 0.0f, 0.0f);
-	vec3 Color = vec3(0.0f, 0.0f, 0.0f);
-};
-
 class LevelMesh
 {
 public:
@@ -126,7 +119,6 @@ public:
 	FLevel* map = nullptr;
 
 	std::vector<std::unique_ptr<Surface>> surfaces;
-	std::vector<LightProbeSample> lightProbes;
 
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 
@@ -148,7 +140,6 @@ private:
 	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
 	void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
 	void CreateSideSurfaces(FLevel &doomMap, IntSideDef *side);
-	void CreateLightProbes(FLevel& doomMap);
 
 	void BuildSurfaceParams(Surface* surface);
 	BBox GetBoundsFromSurface(const Surface* surface);

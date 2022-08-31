@@ -300,7 +300,6 @@ struct FloatVertex
 
 #define THING_POINTLIGHT_STATIC	9876
 #define THING_SPOTLIGHT_STATIC	9881
-#define THING_LIGHTPROBE		9875
 #define THING_ZDRAYINFO			9890
 
 struct ThingLight
@@ -374,13 +373,6 @@ struct ThingLight
 	}
 };
 
-struct SurfaceLightDef
-{
-	float           distance;
-	float           intensity;
-	vec3            rgb;
-};
-
 enum mapFlags_t
 {
 	ML_BLOCKING = 1,    // Solid, is an obstacle.
@@ -425,14 +417,10 @@ struct FLevel
 	TArray<UDMFKey> props;
 
 	TArray<ThingLight> ThingLights;
-	TArray<SurfaceLightDef> SurfaceLights;
-	TArray<int> ThingLightProbes;
 
 	vec3 defaultSunColor;
 	vec3 defaultSunDirection;
 	int DefaultSamples;
-	int LightBounce;
-	float GridSize;
 
 	void FindMapBounds ();
 	void RemoveExtraLines ();
@@ -455,8 +443,6 @@ struct FLevel
 	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
 	FloatVertex GetSegVertex(int index);
-
-	vec3 GetLightProbePosition(int index);
 
 	int FindFirstSectorFromTag(int tag);
 

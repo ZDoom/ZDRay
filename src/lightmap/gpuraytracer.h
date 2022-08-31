@@ -31,12 +31,9 @@ struct PushConstants
 struct SurfaceInfo
 {
 	vec3 Normal;
-	float EmissiveDistance;
-	vec3 EmissiveColor;
-	float EmissiveIntensity;
 	float Sky;
 	float SamplingDistance;
-	float Padding1, Padding2;
+	float Padding1, Padding2, Padding3;
 };
 
 struct LightInfo
@@ -113,7 +110,6 @@ private:
 	std::vector<SurfaceInfo> CreateSurfaceInfo();
 
 	static vec2 ToUV(const vec3& vert, const Surface* targetSurface);
-	static bool IsNegativelyOriented(const vec2& v1, const vec2& v2, const vec2& v3);
 
 	LevelMesh* mesh = nullptr;
 

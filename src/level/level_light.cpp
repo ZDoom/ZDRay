@@ -43,18 +43,12 @@ void FLevel::SetupLights()
 	// GG to whoever memset'ed FLevel
 	defaultSunColor = vec3(1, 1, 1);
 	defaultSunDirection = vec3(0.45f, 0.3f, 0.9f);
-	DefaultSamples = 8;
-	LightBounce = 0;
-	GridSize = 32.0f;
+	DefaultSamples = 16;
 
 	for (int i = 0; i < (int)Things.Size(); ++i)
 	{
 		IntThing* thing = &Things[i];
-		if (thing->type == THING_LIGHTPROBE)
-		{
-			ThingLightProbes.Push(i);
-		}
-		else if (thing->type == THING_ZDRAYINFO)
+		if (thing->type == THING_ZDRAYINFO)
 		{
 			uint32_t lightcolor = 0xffffff;
 			vec3 sundir(0.0f, 0.0f, 0.0f);
@@ -85,21 +79,6 @@ void FLevel::SetupLights()
 					if (DefaultSamples < 8) DefaultSamples = 8;
 					if (DefaultSamples > 128) DefaultSamples = 128;
 					DefaultSamples = Math::RoundPowerOfTwo(DefaultSamples);
-				}
-				/*
-				// light bounces temporarily disabled
-				else if (!stricmp(key.key, "lm_bounces"))
-				{
-					LightBounce = atoi(key.value);
-					if (LightBounce < 0) LightBounce = 0;
-					if (LightBounce > 8) LightBounce = 8;
-				}
-				*/
-				else if (!stricmp(key.key, "lm_gridsize"))
-				{
-					GridSize = atof(key.value) ? atof(key.value) : 64.f;
-					if (GridSize < 1.f) GridSize = 1.f;
-					if (GridSize > 1024.f) GridSize = 1024.f;
 				}
 			}
 
@@ -440,25 +419,4 @@ void FLevel::CreateLights()
 	}
 
 	//printf("Surface lights: %i\n", (int)SurfaceLights.Size());
-}
-
-vec3 FLevel::GetLightProbePosition(int index)
-{
-	int thingIndex = ThingLightProbes[index];
-	const IntThing& thing = Things[thingIndex];
-
-	float x = (float)(thing.x >> FRACBITS);
-	float y = (float)(thing.y >> FRACBITS);
-	float z = 0.0f;
-
-	MapSubsectorEx* ssect = PointInSubSector(x, y);
-	if (ssect)
-	{
-		IntSector* sector = GetSectorFromSubSector(ssect);
-		if (sector)
-		{
-			z = sector->floorplane.zAt(x, y) + thing.height;
-		}
-	}
-	return vec3(x, y, z);
 }

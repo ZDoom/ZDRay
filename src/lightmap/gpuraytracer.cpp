@@ -841,49 +841,9 @@ std::vector<SurfaceInfo> GPURaytracer::CreateSurfaceInfo()
 	surfaces.reserve(mesh->surfaces.size());
 	for (const auto& surface : mesh->surfaces)
 	{
-		SurfaceLightDef* def = nullptr;
-		if (surface->type >= ST_MIDDLESIDE && surface->type <= ST_LOWERSIDE)
-		{
-			int lightdefidx = mesh->map->Sides[surface->typeIndex].lightdef;
-			if (lightdefidx != -1)
-			{
-				def = &mesh->map->SurfaceLights[lightdefidx];
-			}
-		}
-		else if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
-		{
-			MapSubsectorEx* sub = &mesh->map->GLSubsectors[surface->typeIndex];
-			IntSector* sector = mesh->map->GetSectorFromSubSector(sub);
-
-			if (sector && surface->verts.size() > 0)
-			{
-				if (sector->floorlightdef != -1 && surface->type == ST_FLOOR)
-				{
-					def = &mesh->map->SurfaceLights[sector->floorlightdef];
-				}
-				else if (sector->ceilinglightdef != -1 && surface->type == ST_CEILING)
-				{
-					def = &mesh->map->SurfaceLights[sector->ceilinglightdef];
-				}
-			}
-		}
-
 		SurfaceInfo info;
 		info.Sky = surface->bSky ? 1.0f : 0.0f;
 		info.Normal = surface->plane.Normal();
-		if (def)
-		{
-			info.EmissiveDistance = def->distance + def->distance;
-			info.EmissiveIntensity = def->intensity;
-			info.EmissiveColor = def->rgb;
-		}
-		else
-		{
-			info.EmissiveDistance = 0.0f;
-			info.EmissiveIntensity = 0.0f;
-			info.EmissiveColor = vec3(0.0f, 0.0f, 0.0f);
-		}
-
 		info.SamplingDistance = float(surface->sampleDimension);
 		surfaces.push_back(info);
 	}
@@ -911,13 +871,4 @@ void GPURaytracer::PrintVulkanInfo()
 	printf("Vulkan device: %s\n", props.deviceName);
 	printf("Vulkan device type: %s\n", deviceType.c_str());
 	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
-}
-
-bool GPURaytracer::IsNegativelyOriented(const vec2& v1, const vec2& v2, const vec2& v3)
-{
-	float A =
-		v1.x * v2.y - v2.x * v1.y +
-		v2.x * v3.y - v3.x * v2.y +
-		v3.x * v1.y - v1.x * v3.y;
-	return A < 0.0f;
 }
