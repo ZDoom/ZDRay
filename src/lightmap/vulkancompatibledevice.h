@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VulkanInstance.h"
+#include "vulkaninstance.h"
 
 class VulkanSurface;
 

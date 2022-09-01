@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VulkanInstance.h"
+#include "vulkaninstance.h"
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
