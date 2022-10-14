@@ -444,9 +444,9 @@ void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 			int offs = ((textureWidth * (i + surface->atlasY)) + surface->atlasX) * 3;
 
 			// convert RGB to bytes
-			currentTexture[offs + j * 3 + 0] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].x, -65000.0f, 65000.0f));
-			currentTexture[offs + j * 3 + 1] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].y, -65000.0f, 65000.0f));
-			currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, -65000.0f, 65000.0f));
+			currentTexture[offs + j * 3 + 0] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].x, 0.0f, 65000.0f));
+			currentTexture[offs + j * 3 + 1] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].y, 0.0f, 65000.0f));
+			currentTexture[offs + j * 3 + 2] = floatToHalf(clamp(colorSamples[i * sampleWidth + j].z, 0.0f, 65000.0f));
 		}
 	}
 }
