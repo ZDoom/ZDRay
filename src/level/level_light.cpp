@@ -229,9 +229,9 @@ void FLevel::CreateLights()
 		if (thing->type != THING_POINTLIGHT_STATIC && thing->type != THING_SPOTLIGHT_STATIC)
 			continue;
 
-		uint32_t lightcolor = 0xffffff;
-		float lightintensity = 1.0f;
-		float lightdistance = 0.0f;
+		vec3 lightColor(0, 0, 0);
+		float lightIntensity = 1.0f;
+		float lightDistance = 0.0f;
 		float innerAngleCos = -1.0f;
 		float outerAngleCos = -1.0f;
 
@@ -242,50 +242,48 @@ void FLevel::CreateLights()
 			int r = thing->args[0];
 			int g = thing->args[1];
 			int b = thing->args[2];
-			int rgb = r;
-			rgb = rgb << 8;
-			rgb |= g;
-			rgb = rgb << 8;
-			rgb |= b;
-			lightcolor = (uint32_t)rgb;
+			lightColor = vec3(r / 255.0, g / 255.0, b / 255.0);
 		}
 		else if (thing->type == THING_SPOTLIGHT_STATIC)
 		{
-			lightcolor = (uint32_t)thing->args[0];
+			auto rgb = (uint32_t)thing->args[0];
 
 			// UDB's color picker will assign the color as a hex string, stored
 			// in the arg0str field. detect this, so that it can be converted into an int
 			if (thing->arg0str.Len() > 0)
 			{
 				FString hex = "0x" + thing->arg0str;
-				int rgb = hex.ToULong();
-				lightcolor = (uint32_t)rgb;
+				rgb = (uint32_t)hex.ToULong();
 			}
+
+			lightColor = vec3(
+				((rgb >> 16) & 0xFF) / 255.0,
+				((rgb >> 8) & 0xFF) / 255.0,
+				((rgb) & 0xFF) / 255.0
+			);
 
 			innerAngleCos = std::cos((float)thing->args[1] * 3.14159265359f / 180.0f);
 			outerAngleCos = std::cos((float)thing->args[2] * 3.14159265359f / 180.0f);
 		}
 
 		// this is known as "intensity" on dynamic lights (and in UDB)
-		lightdistance = thing->args[3];
+		lightDistance = thing->args[3];
 
 		// static light intensity (not to be confused with dynamic lights' intensity, which is actually static light distance
-		lightintensity = thing->alpha;
+		lightIntensity = thing->alpha;
 
-		if (lightdistance > 0.0f && lightintensity > 0.0f && lightcolor != 0)
+		if (lightDistance > 0.0f && lightIntensity > 0.0f && lightColor != vec3(0, 0, 0))
 		{
 			int x = thing->x >> FRACBITS;
 			int y = thing->y >> FRACBITS;
 
 			ThingLight thingLight;
 			thingLight.mapThing = thing;
-			thingLight.rgb.x = ((lightcolor >> 16) & 0xff) / 255.0f;
-			thingLight.rgb.y = ((lightcolor >> 8) & 0xff) / 255.0f;
-			thingLight.rgb.z = (lightcolor & 0xff) / 255.0f;
-			thingLight.intensity = lightintensity;
+			thingLight.rgb = lightColor;
+			thingLight.intensity = lightIntensity;
 			thingLight.innerAngleCos = std::max(innerAngleCos, outerAngleCos);
 			thingLight.outerAngleCos = outerAngleCos;
-			thingLight.radius = lightdistance;
+			thingLight.radius = lightDistance;
 			thingLight.height = thing->height;
 			thingLight.bCeiling = false;
 			thingLight.ssect = PointInSubSector(x, y);
