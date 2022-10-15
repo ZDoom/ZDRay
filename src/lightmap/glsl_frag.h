@@ -473,8 +473,8 @@ int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out fl
 	float segmentlen = max(200.0, tracedist / 20.0);
 	for (float t = 0.0; t < tracedist; t += segmentlen)
 	{
-		float segstart = t / tracedist;
-		float segend = min(t + segmentlen, tracedist) / tracedist;
+		float segstart = t;
+		float segend = min(t + segmentlen, tracedist);
 
 		RayBBox ray = create_ray(ray_start + ray_dir * segstart, ray_start + ray_dir * segend);
 		TraceHit hit = find_first_hit(ray);
