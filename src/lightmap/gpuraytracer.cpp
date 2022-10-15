@@ -97,17 +97,20 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 {
 	LightmapImage& img = atlasImages[pageIndex];
 
-	RenderPassBegin()
-		.RenderPass(raytrace.renderPass.get())
-		.RenderArea(0, 0, atlasImageSize, atlasImageSize)
-		.Framebuffer(img.raytrace.Framebuffer.get())
-		.Execute(cmdbuffer.get());
+	const auto beginPass = [&]() {
+		RenderPassBegin()
+			.RenderPass(raytrace.renderPass.get())
+			.RenderArea(0, 0, atlasImageSize, atlasImageSize)
+			.Framebuffer(img.raytrace.Framebuffer.get())
+			.Execute(cmdbuffer.get());
 
-	VkDeviceSize offset = 0;
-	cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
-	cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipeline.get());
-	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet0.get());
-	cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 1, raytrace.descriptorSet1.get());
+		VkDeviceSize offset = 0;
+		cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
+		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipeline.get());
+		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet0.get());
+		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 1, raytrace.descriptorSet1.get());
+	};
+	beginPass();
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
@@ -135,10 +138,29 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 				continue; // Bounding box not visible
 
 			int firstLight = sceneLightPos;
+			int firstVertex = sceneVertexPos;
 			int lightCount = (int)surface->LightList.size();
-			if (sceneLightPos + lightCount > SceneLightBufferSize)
-				throw std::runtime_error("SceneLightBuffer is too small!");
+			int vertexCount = (int)surface->verts.size();
+			if (sceneLightPos + lightCount > SceneLightBufferSize || sceneVertexPos + vertexCount > SceneVertexBufferSize)
+			{
+				// Flush scene buffers
+				FinishCommands();
+				sceneLightPos = 0;
+				sceneVertexPos = 0;
+				BeginCommands();
+				beginPass();
+
+				if (sceneLightPos + lightCount > SceneLightBufferSize)
+				{
+					throw std::runtime_error("SceneLightBuffer is too small!");
+				}
+				else if (sceneVertexPos + vertexCount > SceneVertexBufferSize)
+				{
+					throw std::runtime_error("SceneVertexBuffer is too small!");
+				}
+			}
 			sceneLightPos += lightCount;
+			sceneVertexPos += vertexCount;
 
 			LightInfo* lightinfo = &sceneLights[firstLight];
 			for (ThingLight* light : surface->LightList)
@@ -162,11 +184,6 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 			pc.LightmapStepY = targetSurface->worldStepY * viewport.height;
 			cmdbuffer->pushConstants(raytrace.pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pc);
 
-			int firstVertex = sceneVertexPos;
-			int vertexCount = (int)surface->verts.size();
-			if (sceneVertexPos + vertexCount > SceneVertexBufferSize)
-				throw std::runtime_error("SceneVertexBuffer is too small!");
-			sceneVertexPos += vertexCount;
 			SceneVertex* vertex = &sceneVertices[firstVertex];
 
 			if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
