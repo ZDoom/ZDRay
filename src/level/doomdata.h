@@ -259,21 +259,21 @@ struct MapThing2
 
 struct IntThing
 {
-	unsigned short thingid;
-	fixed_t		x;	// full precision coordinates for UDMF support
-	fixed_t		y;
+	unsigned short thingid = 0;
+	fixed_t		x = 0;	// full precision coordinates for UDMF support
+	fixed_t		y = 0;
 	// everything else is not needed or has no extended form in UDMF
-	short		z;
-	short		angle;
-	short		type;
-	short		flags;
-	int			special;
-	int			args[5];
+	short		z = 0;
+	short		angle = 0;
+	short		type = 0;
+	short		flags = 0;
+	int			special = 0;
+	int			args[5] = {};
 	FString		arg0str;
 
-	short pitch; // UDMF
-	float height; // UDMF
-	float alpha;
+	short pitch = 0; // UDMF
+	float height = 0; // UDMF
+	float alpha = 1.0;
 
 	TArray<UDMFKey> props;
 };

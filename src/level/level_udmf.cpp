@@ -163,8 +163,6 @@ fixed_t CheckFixed(const char *key)
 
 void FProcessor::ParseThing(IntThing *th)
 {
-	th->pitch = 0;
-
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
 	{
@@ -219,7 +217,6 @@ void FProcessor::ParseThing(IntThing *th)
 		{
 			th->args[4] = CheckInt(key);
 		}
-		th->alpha = 1.0f;
 		if (!stricmp(key, "alpha"))
 		{
 			th->alpha = CheckFloat(key);
