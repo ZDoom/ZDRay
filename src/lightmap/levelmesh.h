@@ -59,6 +59,11 @@ enum SurfaceType
 	ST_FLOOR
 };
 
+struct Portal
+{
+	mat4 transformation = mat4::identity();
+};
+
 struct Surface
 {
 	// Surface geometry
@@ -76,6 +81,10 @@ struct Surface
 	IntSector* controlSector = nullptr;
 	int sampleDimension = 0;
 	bool bSky = false;
+
+	// Portal
+	int portalDestinationIndex = -1; // line or sector index
+	int portalIndex = -1;
 
 	// Touching light sources
 	std::vector<ThingLight*> LightList;
@@ -123,6 +132,8 @@ public:
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 
 	std::vector<Plane> smoothingGroups;
+
+	std::vector<std::unique_ptr<Portal>> portals;
 
 	int defaultSamples = 16;
 	int textureWidth = 128;

@@ -480,6 +480,117 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 	vec2 dx(v2.x - v1.x, v2.y - v1.y);
 	float distance = length(dx);
 
+	// line portal
+	if (side->line->special == Line_SetPortal && side->line->frontsector == front)
+	{
+		const unsigned destLineIndex = doomMap.FindFirstLineId(side->line->args[0]);
+
+		if (destLineIndex < doomMap.Lines.Size())
+		{
+			float texWidth = 128.0f;
+			float texHeight = 128.0f;
+
+			auto surf = std::make_unique<Surface>();
+			surf->material = side->midtexture;
+			surf->verts.resize(4);
+			surf->bSky = false;
+
+			surf->verts[0].x = surf->verts[2].x = v1.x;
+			surf->verts[0].y = surf->verts[2].y = v1.y;
+			surf->verts[1].x = surf->verts[3].x = v2.x;
+			surf->verts[1].y = surf->verts[3].y = v2.y;
+			surf->verts[0].z = v1Bottom;
+			surf->verts[1].z = v2Bottom;
+			surf->verts[2].z = v1Top;
+			surf->verts[3].z = v2Top;
+
+			surf->plane.SetNormal(surf->verts[0], surf->verts[1], surf->verts[2], surf->verts[3]);
+			surf->plane.SetDistance(surf->verts[0]);
+			surf->type = ST_MIDDLESIDE;
+			surf->typeIndex = typeIndex;
+			surf->controlSector = nullptr;
+			surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
+
+			float texZ = surf->verts[0].z;
+
+			surf->texUV.resize(4);
+			surf->texUV[0].x = 0.0f;
+			surf->texUV[1].x = distance / texWidth;
+			surf->texUV[2].x = 0.0f;
+			surf->texUV[3].x = distance / texWidth;
+			surf->texUV[0].y = (surf->verts[0].z - texZ) / texHeight;
+			surf->texUV[1].y = (surf->verts[1].z - texZ) / texHeight;
+			surf->texUV[2].y = (surf->verts[2].z - texZ) / texHeight;
+			surf->texUV[3].y = (surf->verts[3].z - texZ) / texHeight;
+
+			surf->portalDestinationIndex = destLineIndex;
+
+			// Portal calculation
+			{
+				auto portal = std::make_unique<Portal>();
+
+				// Calculate portal transformation
+				{
+					auto& destLine = doomMap.Lines[destLineIndex];
+					FloatVertex destV1 = doomMap.GetSegVertex(destLine.v1);
+					FloatVertex destV2 = doomMap.GetSegVertex(destLine.v2);
+
+					int alignment = side->line->args[3];
+
+					double dstAZ = 0;
+					double dstBZ = 0;
+					double srcAZ = 0;
+					double srcBZ = 0;
+
+					const auto* dstFront = doomMap.GetFrontSector(&doomMap.Sides[destLine.sidenum[0]]);
+
+					if (alignment == 1) // floor
+					{
+						srcAZ = front->floorplane.zAt(v1.x, v1.y);
+						srcBZ = front->floorplane.zAt(v2.x, v2.y);
+						dstAZ = dstFront->floorplane.zAt(destV1.x, destV1.y);
+						dstBZ = dstFront->floorplane.zAt(destV2.x, destV2.y);
+					}
+					else if (alignment == 2) // ceiling
+					{
+						srcAZ = front->ceilingplane.zAt(v1.x, v1.y);
+						srcBZ = front->ceilingplane.zAt(v2.x, v2.y);
+						dstAZ = dstFront->ceilingplane.zAt(destV1.x, destV1.y);
+						dstBZ = dstFront->ceilingplane.zAt(destV2.x, destV2.y);
+					}
+
+					const vec3 vecSrcA = vec3(vec2(v1.x, v1.y), srcAZ);
+					const vec3 vecSrcB = vec3(vec2(v2.x, v2.y), srcAZ);
+					const vec3 vecDstA = vec3(vec2(destV1.x, destV1.y), dstAZ);
+					const vec3 vecDstB = vec3(vec2(destV2.x, destV2.y), dstBZ);
+
+					// Translation
+					vec3 originSrc = (vecSrcB + vecSrcA) * 0.5f;
+					vec3 originDst = (vecDstB + vecDstA) * 0.5f;
+
+					vec3 translation = originDst - originSrc;
+
+					// Rotation
+					// TODO :(
+
+					// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
+
+					portal->transformation = mat4::translate(translation);
+				}
+
+				surf->portalIndex = portals.size();
+				portals.push_back(std::move(portal));
+			}
+
+			surfaces.push_back(std::move(surf));
+			return;
+		}
+		else
+		{
+			// Warn about broken portal?
+		}
+	}
+
 	// line_horizont consumes everything
 	if (side->line->special == Line_Horizon && front != back)
 	{

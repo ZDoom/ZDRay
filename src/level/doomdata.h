@@ -445,6 +445,7 @@ struct FLevel
 	FloatVertex GetSegVertex(int index);
 
 	int FindFirstSectorFromTag(int tag);
+	unsigned FindFirstLineId(int lineId);
 
 	inline IntSector* PointInSector(const dvec2& pos) { return GetSectorFromSubSector(PointInSubSector(int(pos.x), int(pos.y))); }
 private:

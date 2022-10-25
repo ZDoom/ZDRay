@@ -33,8 +33,18 @@ struct SurfaceInfo
 	vec3 Normal;
 	float Sky;
 	float SamplingDistance;
-	float Padding1, Padding2, Padding3;
+	uint32_t PortalIndex;
+	float Padding1, Padding2;
 };
+
+static_assert(sizeof(SurfaceInfo) == sizeof(float) * 8);
+
+struct PortalInfo
+{
+	mat4 Transformation;
+};
+
+static_assert(sizeof(PortalInfo) == sizeof(float) * 16);
 
 struct LightInfo
 {
@@ -128,6 +138,7 @@ private:
 	void PrintVulkanInfo();
 
 	std::vector<SurfaceInfo> CreateSurfaceInfo();
+	std::vector<PortalInfo> CreatePortalInfo();
 	std::vector<CollisionNode> CreateCollisionNodes();
 
 	static vec2 ToUV(const vec3& vert, const Surface* targetSurface);
@@ -158,6 +169,7 @@ private:
 	std::unique_ptr<VulkanBuffer> transferBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceIndexBuffer;
 	std::unique_ptr<VulkanBuffer> surfaceBuffer;
+	std::unique_ptr<VulkanBuffer> portalBuffer;
 	std::unique_ptr<VulkanBuffer> nodesBuffer;
 
 	std::unique_ptr<VulkanBuffer> blScratchBuffer;

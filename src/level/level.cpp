@@ -551,6 +551,19 @@ int FLevel::FindFirstSectorFromTag(int tag)
 	return -1;
 }
 
+unsigned FLevel::FindFirstLineId(int lineId)
+{
+	for (unsigned i = 0; i < Lines.Size(); ++i)
+	{
+		for (const auto& e : Lines[i].ids)
+		{
+			if (e == lineId)
+				return i;
+		}
+	}
+	return -1;
+}
+
 void FProcessor::GetPolySpots ()
 {
 	if (Extended && CheckPolyobjs)
