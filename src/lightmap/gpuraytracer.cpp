@@ -8,6 +8,7 @@
 #include "framework/halffloat.h"
 #include "vulkanbuilders.h"
 #include "vulkancompatibledevice.h"
+#include "renderdoc_app.h"
 #include "stacktrace.h"
 #include <map>
 #include <vector>
@@ -23,6 +24,42 @@
 extern bool VKDebug;
 extern bool NoRtx;
 
+RENDERDOC_API_1_4_2* rdoc_api;
+
+void LoadRenderDoc()
+{
+#ifdef _WIN32
+	if (auto mod = GetModuleHandle("renderdoc.dll"))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);
+		assert(ret == 1);
+
+		if (ret != 1)
+		{
+			printf("RENDERDOC_GetAPI returned %d\n", ret);
+		}
+	}
+#else
+	if (void* mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);
+		assert(ret == 1);
+
+		if (ret != 1)
+		{
+			printf("RENDERDOC_GetAPI returned %d\n", ret);
+		}
+	}
+#endif
+
+	if (rdoc_api)
+	{
+		printf("RenderDoc enabled\n");
+	}
+}
+
 void VulkanPrintLog(const char* typestr, const std::string& msg)
 {
 	printf("[%s] %s\n", typestr, msg.c_str());
@@ -36,6 +73,9 @@ void VulkanError(const char* text)
 
 GPURaytracer::GPURaytracer()
 {
+	if(!rdoc_api)
+		LoadRenderDoc();
+
 	auto instance = std::make_shared<VulkanInstance>(VKDebug);
 	device = std::make_unique<VulkanDevice>(instance, nullptr, VulkanCompatibleDevice::SelectDevice(instance, nullptr, 0));
 	useRayQuery = !NoRtx && device->PhysicalDevice.Features.RayQuery.rayQuery;
@@ -48,6 +88,8 @@ GPURaytracer::~GPURaytracer()
 
 void GPURaytracer::Raytrace(LevelMesh* level)
 {
+	if (rdoc_api) rdoc_api->StartFrameCapture(nullptr, nullptr);
+
 	mesh = level;
 
 	printf("Building Vulkan acceleration structures\n");
@@ -91,6 +133,8 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 	}
 
 	printf("Ray trace complete\n");
+
+	if (rdoc_api) rdoc_api->EndFrameCapture(nullptr, nullptr);
 }
 
 void GPURaytracer::RenderAtlasImage(size_t pageIndex)

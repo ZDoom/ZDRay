@@ -195,6 +195,7 @@ set( SOURCES
 	src/lightmap/glsl_frag.h
 	src/lightmap/glsl_vert.h
 	src/lightmap/glsl_frag_resolve.h
+	src/lightmap/renderdoc_app.h
 	src/math/mat.cpp
 	src/math/plane.cpp
 	src/math/angle.cpp
