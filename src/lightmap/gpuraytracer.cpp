@@ -24,6 +24,10 @@
 extern bool VKDebug;
 extern bool NoRtx;
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 RENDERDOC_API_1_4_2* rdoc_api;
 
 void LoadRenderDoc()
