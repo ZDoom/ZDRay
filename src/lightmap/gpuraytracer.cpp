@@ -1015,7 +1015,7 @@ std::vector<PortalInfo> GPURaytracer::CreatePortalInfo()
 
 	for (const auto& surface : mesh->surfaces)
 	{
-		if (surface->portalDestinationIndex >= 0)
+		if (surface->portalIndex >= 0)
 		{
 			PortalInfo info;
 			info.Transformation = mesh->portals[surface->portalIndex]->transformation;

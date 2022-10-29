@@ -160,5 +160,8 @@ private:
 
 	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);
 
+	int CheckAndMakePortal(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, int typeIndex, int plane);
+
 	int CreateLinePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
+	int CreatePlanePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
 };
