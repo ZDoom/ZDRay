@@ -63,6 +63,45 @@ enum SurfaceType
 struct Portal
 {
 	mat4 transformation = mat4::identity();
+
+	inline vec3 TransformPosition(const vec3& pos) const
+	{
+		auto v = transformation * vec4(pos, 1.0);
+		return vec3(v.x, v.y, v.z);
+	}
+
+	inline vec3 TransformRotation(const vec3& dir) const
+	{
+		auto v = transformation * vec4(dir, 0.0);
+		return vec3(v.x, v.y, v.z);
+	}
+ 
+	// Check if the portal is inverse
+	inline bool IsInversePortal(const Portal& portal) const
+	{
+		auto diff = portal.TransformPosition(TransformPosition(vec3(0)));
+		return abs(diff.x) < 0.001 && abs(diff.y) < 0.001 && abs(diff.z) < 0.001;
+	}
+
+	// Check if the portal transformation is equal
+	inline bool IsEqualPortal(const Portal& portal) const
+	{
+		auto diff = portal.TransformPosition(vec3(0)) - TransformPosition(vec3(0));
+		return (abs(diff.x) < 0.001 && abs(diff.y) < 0.001 && abs(diff.z) < 0.001);
+	}
+
+};
+
+
+	
+// for use with std::set to recursively go through portals
+struct RejectRecursivePortals
+{
+	bool operator()(const Portal& a, const Portal& b) const
+	{
+		static_assert(sizeof(Portal) == sizeof(float) * 4 * 4);
+		return !(a.IsInversePortal(b) || a.IsEqualPortal(b)) && std::memcmp(&a.transformation, &b.transformation, sizeof(mat4)) < 0;
+	}
 };
 
 struct Surface
@@ -148,6 +187,8 @@ public:
 	std::unique_ptr<TriangleMeshShape> Collision;
 
 private:
+	std::vector<std::unique_ptr<ThingLight>> portalLights; // Portal generated lights
+
 	void CreateSubsectorSurfaces(FLevel &doomMap);
 	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
 	void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
@@ -155,6 +196,10 @@ private:
 
 	void BuildSurfaceParams(Surface* surface);
 	BBox GetBoundsFromSurface(const Surface* surface);
+
+	void BuildLightLists(FLevel &doomMap);
+	void PropagateLight(FLevel& doomMap, ThingLight* thing);
+
 	void BlurSurfaces();
 	void FinishSurface(RectPacker& packer, Surface* surface);
 

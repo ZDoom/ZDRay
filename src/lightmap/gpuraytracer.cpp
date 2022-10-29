@@ -216,6 +216,7 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 			for (ThingLight* light : surface->LightList)
 			{
 				lightinfo->Origin = light->LightOrigin();
+				lightinfo->RelativeOrigin = light->LightRelativeOrigin();
 				lightinfo->Radius = light->LightRadius();
 				lightinfo->Intensity = light->intensity;
 				lightinfo->InnerAngleCos = light->innerAngleCos;

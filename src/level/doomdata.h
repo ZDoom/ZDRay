@@ -329,6 +329,19 @@ struct ThingLight
 	IntSector       *sector;
 	MapSubsectorEx  *ssect;
 
+	vec3 relativePosition = vec3(0);
+
+	// Portal aware position
+	vec3 LightRelativeOrigin() const
+	{
+		if (relativePosition != vec3(0))
+		{
+			return relativePosition;
+		}
+		return LightOrigin();
+	}
+
+	// Absolute X, Y, Z position of the light
 	vec3 LightOrigin() const
 	{
 		float originZ;

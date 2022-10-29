@@ -148,30 +148,7 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
 
 	printf("Building light list...\n\n");
-
-	for (ThingLight& light : map->ThingLights)
-	{
-		SphereShape sphere;
-		sphere.center = light.LightOrigin();
-		sphere.radius = light.LightRadius();
-
-		for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
-		{
-			Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
-			bool found = false;
-			for (ThingLight* light2 : surface->LightList)
-			{
-				if (light2 == &light)
-				{
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-				surface->LightList.push_back(&light);
-		}
-	}
-
+	BuildLightLists(doomMap);
 	/*
 	std::map<int, int> lightStats;
 	for (auto& surface : surfaces)
@@ -180,6 +157,73 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 		printf("%d lights: %d surfaces\n", it.first, it.second);
 	printf("\n");
 	*/
+}
+
+#include <set> // hack
+std::set<Portal, RejectRecursivePortals> touchedPortals;
+
+int depth = 0;
+
+void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
+{
+	if (depth > 4)
+	{
+		return;
+	}
+
+	SphereShape sphere;
+	sphere.center = light->LightRelativeOrigin();
+	sphere.radius = light->LightRadius();
+	depth++;
+	std::set<Portal, RejectRecursivePortals> portalsToErase;
+	for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
+	{
+		Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
+		
+		if (surface->portalIndex >= 0)
+		{
+			auto portal = portals[surface->portalIndex].get();
+
+			if (touchedPortals.insert(*portal).second)
+			{
+				auto fakeLight = std::make_unique<ThingLight>(*light);
+
+				fakeLight->relativePosition = portal->TransformPosition(light->LightRelativeOrigin());
+
+				PropagateLight(doomMap, fakeLight.get());
+				portalsToErase.insert(*portal);
+				portalLights.push_back(std::move(fakeLight));
+			}
+		}
+
+		// Add light to the list if it isn't already there
+		bool found = false;
+		for (ThingLight* light2 : surface->LightList)
+		{
+			if (light2 == light)
+			{
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			surface->LightList.push_back(light);
+
+	}
+	
+	for (auto& portal : portalsToErase)
+	{
+		touchedPortals.erase(portal);
+	}
+	depth--;
+}
+
+void LevelMesh::BuildLightLists(FLevel& doomMap)
+{
+	for (ThingLight& light : map->ThingLights)
+	{
+		PropagateLight(doomMap, &light);
+	}
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.
