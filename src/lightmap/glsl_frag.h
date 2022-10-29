@@ -39,7 +39,13 @@ struct SurfaceInfo
 	vec3 Normal;
 	float Sky;
 	float SamplingDistance;
-	float Padding1, Padding2, Padding3;
+	uint PortalIndex;
+	float Padding1, Padding2;
+};
+
+struct PortalInfo
+{
+	mat4 Transformation;
 };
 
 struct LightInfo
@@ -59,6 +65,7 @@ struct LightInfo
 layout(set = 0, binding = 1) buffer SurfaceIndexBuffer { uint surfaceIndices[]; };
 layout(set = 0, binding = 2) buffer SurfaceBuffer { SurfaceInfo surfaces[]; };
 layout(set = 0, binding = 3) buffer LightBuffer { LightInfo lights[]; };
+layout(set = 0, binding = 4) buffer PortalBuffer { PortalInfo portals[]; };
 
 layout(push_constant) uniform PushConstants
 {
@@ -209,38 +216,7 @@ float RadicalInverse_VdC(uint bits)
 
 #if defined(USE_RAYQUERY)
 
-bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
-{
-	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
-	while(rayQueryProceedEXT(rayQuery)) { }
-	return rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT;
-}
-
-int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
-{
-	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
-
-	while(rayQueryProceedEXT(rayQuery))
-	{
-		if (rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCommittedIntersectionTriangleEXT)
-		{
-			rayQueryConfirmIntersectionEXT(rayQuery);
-		}
-	}
-
-	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
-	{
-		return rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
-	}
-	else
-	{
-		return -1;
-	}
-}
-
-int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t)
+int TraceFirstHitTriangleNoPortal(vec3 origin, float tmin, vec3 dir, float tmax, out float t)
 {
 	rayQueryEXT rayQuery;
 	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
@@ -263,6 +239,16 @@ int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out fl
 		return -1;
 	}
 }
+
+/*
+bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, acc, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, tmin, dir, tmax);
+	while(rayQueryProceedEXT(rayQuery)) { }
+	return rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+*/
 
 #else
 
@@ -376,6 +362,7 @@ bool is_leaf(int node_index)
 	return nodes[node_index].element_index != -1;
 }
 
+/*
 bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
 {
 	if (tmax <= 0.0f)
@@ -410,6 +397,7 @@ bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
 	} while (stackIndex > 0);
 	return false;
 }
+*/
 
 struct TraceHit
 {
@@ -457,13 +445,7 @@ TraceHit find_first_hit(RayBBox ray)
 	return hit;
 }
 
-int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
-{
-	float t;
-	return TraceFirstHitTriangleT(origin, tmin, dir, tmax, t);
-}
-
-int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float hitFraction)
+int TraceFirstHitTriangleNoPortal(vec3 origin, float tmin, vec3 dir, float tmax, out float tparam)
 {
 	// Perform segmented tracing to keep the ray AABB box smaller
 	vec3 ray_start = origin;
@@ -480,14 +462,54 @@ int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out fl
 		TraceHit hit = find_first_hit(ray);
 		if (hit.fraction < 1.0)
 		{
-			hit.fraction = segstart * (1.0 - hit.fraction) + segend * hit.fraction;
+			tparam = hit.fraction = segstart * (1.0 - hit.fraction) + segend * hit.fraction;
 			return hit.triangle;
 		}
 	}
 	return -1;
 }
 
+
 #endif
 
+int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t)
+{
+	int primitiveID;
+	while(true)
+	{
+		primitiveID = TraceFirstHitTriangleNoPortal(origin, tmin, dir, tmax, t);
+
+		if(primitiveID < 0)
+		{
+			break;
+		}
+
+		SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
+
+		if(surface.PortalIndex == 0)
+		{
+			break;
+		}
+
+		// Portal was hit: Apply transformation onto the ray
+		mat4 transformationMatrix = portals[surface.PortalIndex].Transformation;
+
+		origin = (transformationMatrix * vec4(origin + dir * t, 1.0)).xyz;
+		dir = (transformationMatrix * vec4(dir, 0.0)).xyz;
+		tmax -= t;
+	}
+	return primitiveID;
+}
+
+int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	float t;
+	return TraceFirstHitTriangleT(origin, tmin, dir, tmax, t);
+}
+
+bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
+{
+	return TraceFirstHitTriangle(origin, tmin, dir, tmax) >= 0;
+}
 
 )glsl";

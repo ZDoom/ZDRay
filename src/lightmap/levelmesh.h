@@ -45,6 +45,7 @@ typedef dp::rect_pack::RectPacker<int> RectPacker;
 struct MapSubsectorEx;
 struct IntSector;
 struct IntSideDef;
+struct IntLineDef;
 struct FLevel;
 struct ThingLight;
 class FWadWriter;
@@ -57,6 +58,11 @@ enum SurfaceType
 	ST_LOWERSIDE,
 	ST_CEILING,
 	ST_FLOOR
+};
+
+struct Portal
+{
+	mat4 transformation = mat4::identity();
 };
 
 struct Surface
@@ -76,6 +82,10 @@ struct Surface
 	IntSector* controlSector = nullptr;
 	int sampleDimension = 0;
 	bool bSky = false;
+
+	// Portal
+	int portalDestinationIndex = -1; // line or sector index
+	int portalIndex = -1;
 
 	// Touching light sources
 	std::vector<ThingLight*> LightList;
@@ -124,6 +134,8 @@ public:
 
 	std::vector<Plane> smoothingGroups;
 
+	std::vector<std::unique_ptr<Portal>> portals;
+
 	int defaultSamples = 16;
 	int textureWidth = 128;
 	int textureHeight = 128;
@@ -147,4 +159,9 @@ private:
 	void FinishSurface(RectPacker& packer, Surface* surface);
 
 	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);
+
+	int CheckAndMakePortal(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, int typeIndex, int plane);
+
+	int CreateLinePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
+	int CreatePlanePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
 };

@@ -489,6 +489,7 @@ void GPURaytracer::FinishCommands()
 void GPURaytracer::CreateVertexAndIndexBuffers()
 {
 	std::vector<SurfaceInfo> surfaces = CreateSurfaceInfo();
+	std::vector<PortalInfo> portals = CreatePortalInfo();
 	std::vector<CollisionNode> nodes = CreateCollisionNodes();
 
 	// std430 alignment rules forces us to convert the vec3 to a vec4
@@ -536,6 +537,12 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		.DebugName("surfaceBuffer")
 		.Create(device.get());
 
+	portalBuffer = BufferBuilder()
+		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+		.Size(portals.size() * sizeof(PortalInfo))
+		.DebugName("portalBuffer")
+		.Create(device.get());
+
 	nodesBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
 		.Size(sizeof(CollisionNodeBufferHeader) + nodes.size() * sizeof(CollisionNode))
@@ -547,6 +554,7 @@ void GPURaytracer::CreateVertexAndIndexBuffers()
 		.AddBuffer(indexBuffer.get(), mesh->MeshElements.Data(), (size_t)mesh->MeshElements.Size() * sizeof(uint32_t))
 		.AddBuffer(surfaceIndexBuffer.get(), mesh->MeshSurfaces.Data(), (size_t)mesh->MeshSurfaces.Size() * sizeof(uint32_t))
 		.AddBuffer(surfaceBuffer.get(), surfaces.data(), surfaces.size() * sizeof(SurfaceInfo))
+		.AddBuffer(portalBuffer.get(), portals.data(), portals.size() * sizeof(PortalInfo))
 		.AddBuffer(nodesBuffer.get(), &nodesHeader, sizeof(CollisionNodeBufferHeader), nodes.data(), nodes.size() * sizeof(CollisionNode))
 		.Execute(device.get(), cmdbuffer.get());
 
@@ -728,6 +736,7 @@ void GPURaytracer::CreateRaytracePipeline()
 		.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.DebugName("raytrace.descriptorSetLayout0")
 		.Create(device.get());
 
@@ -838,6 +847,7 @@ void GPURaytracer::CreateRaytracePipeline()
 		.AddBuffer(raytrace.descriptorSet0.get(), 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceIndexBuffer.get())
 		.AddBuffer(raytrace.descriptorSet0.get(), 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, surfaceBuffer.get())
 		.AddBuffer(raytrace.descriptorSet0.get(), 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneLightBuffer.get())
+		.AddBuffer(raytrace.descriptorSet0.get(), 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, portalBuffer.get())
 		.Execute(device.get());
 }
 
@@ -977,11 +987,43 @@ std::vector<SurfaceInfo> GPURaytracer::CreateSurfaceInfo()
 		info.Sky = surface->bSky ? 1.0f : 0.0f;
 		info.Normal = surface->plane.Normal();
 		info.SamplingDistance = float(surface->sampleDimension);
+
+		if (surface->portalIndex >= 0)
+		{
+			info.PortalIndex = surface->portalIndex + 1; // Index 0 is already occupied. See GPURaytracer::CreatePortalInfo()
+		}
+		else
+		{
+			info.PortalIndex = 0;
+		}
+
 		surfaces.push_back(info);
 	}
 	if (surfaces.empty()) // vulkan doesn't support zero byte buffers
 		surfaces.push_back(SurfaceInfo());
 	return surfaces;
+}
+
+std::vector<PortalInfo> GPURaytracer::CreatePortalInfo()
+{
+	std::vector<PortalInfo> portals;
+	{
+		PortalInfo noPortal;
+		noPortal.Transformation = mat4::identity(); // index 0 will always contain identity matrix (for convenience)
+		portals.push_back(noPortal);
+	}
+
+	for (const auto& surface : mesh->surfaces)
+	{
+		if (surface->portalIndex >= 0)
+		{
+			PortalInfo info;
+			info.Transformation = mesh->portals[surface->portalIndex]->transformation;
+			portals.push_back(info);
+		}
+	}
+
+	return portals;
 }
 
 std::vector<CollisionNode> GPURaytracer::CreateCollisionNodes()

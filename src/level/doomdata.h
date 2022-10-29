@@ -153,11 +153,23 @@ struct IntSector
 		struct { bool skyFloor, skyCeiling; };
 	};
 
-	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }
-
 	TArray<UDMFKey> props;
 
 	TArray<IntLineDef*> lines;
+
+	// Utility functions
+	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }
+
+	inline bool HasTag(int sectorTag) const
+	{
+		if (tags.Size() <= 0 && sectorTag == 0)
+			return true;
+		for (auto tag : tags)
+		{
+			if (tag == sectorTag) return true;
+		}
+		return false;
+	}
 };
 
 struct MapSubsector
@@ -445,6 +457,7 @@ struct FLevel
 	FloatVertex GetSegVertex(int index);
 
 	int FindFirstSectorFromTag(int tag);
+	unsigned FindFirstLineId(int lineId);
 
 	inline IntSector* PointInSector(const dvec2& pos) { return GetSectorFromSubSector(PointInSubSector(int(pos.x), int(pos.y))); }
 private:
