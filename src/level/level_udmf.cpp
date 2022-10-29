@@ -243,9 +243,6 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 {
 	std::vector<int> moreids;
 	SC_MustGetStringName("{");
-	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
-	ld->flags = 0;
-	ld->special = 0;
 	while (!SC_CheckString("}"))
 	{
 		const char *value;

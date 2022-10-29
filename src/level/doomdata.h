@@ -96,17 +96,17 @@ struct IntSector;
 
 struct IntLineDef
 {
-	uint32_t v1;
-	uint32_t v2;
-	int flags;
-	int special;
-	int args[5];
-	uint32_t sidenum[2];
+	uint32_t v1 = NO_INDEX;
+	uint32_t v2 = NO_INDEX;
+	int flags = 0;
+	int special = 0;
+	int args[5] = {};
+	uint32_t sidenum[2] = {NO_INDEX, NO_INDEX};
 
 	TArray<UDMFKey> props;
 	TArray<int> ids;
 
-	IntSector *frontsector, *backsector;
+	IntSector *frontsector = nullptr, *backsector = nullptr;
 };
 
 struct MapSector
