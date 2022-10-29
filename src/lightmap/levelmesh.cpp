@@ -451,6 +451,65 @@ void LevelMesh::FinishSurface(RectPacker& packer, Surface* surface)
 	}
 }
 
+int LevelMesh::CreateLinePortal(FLevel& doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine)
+{
+	auto portal = std::make_unique<Portal>();
+
+	// Calculate portal transformation
+	{
+		FloatVertex srcV1 = doomMap.GetSegVertex(srcLine.v1);
+		FloatVertex srcV2 = doomMap.GetSegVertex(srcLine.v2);
+		FloatVertex dstV1 = doomMap.GetSegVertex(dstLine.v1);
+		FloatVertex dstV2 = doomMap.GetSegVertex(dstLine.v2);
+
+		int alignment = srcLine.args[3];
+
+		double srcAZ = 0;
+		double srcBZ = 0;
+		double dstAZ = 0;
+		double dstBZ = 0;
+
+		const auto* srcFront = srcLine.frontsector;
+		const auto* dstFront = dstLine.frontsector;
+
+		if (alignment == 1) // floor
+		{
+			srcAZ = srcFront->floorplane.zAt(srcV1.x, srcV1.y);
+			srcBZ = srcFront->floorplane.zAt(srcV2.x, srcV2.y);
+			dstAZ = dstFront->floorplane.zAt(dstV1.x, dstV1.y);
+			dstBZ = dstFront->floorplane.zAt(dstV2.x, dstV2.y);
+		}
+		else if (alignment == 2) // ceiling
+		{
+			srcAZ = srcFront->ceilingplane.zAt(srcV1.x, srcV1.y);
+			srcBZ = srcFront->ceilingplane.zAt(srcV2.x, srcV2.y);
+			dstAZ = dstFront->ceilingplane.zAt(dstV1.x, dstV1.y);
+			dstBZ = dstFront->ceilingplane.zAt(dstV2.x, dstV2.y);
+		}
+
+		const vec3 vecSrcA = vec3(vec2(srcV1.x, srcV1.y), srcAZ);
+		const vec3 vecSrcB = vec3(vec2(srcV2.x, srcV2.y), srcAZ);
+		const vec3 vecDstA = vec3(vec2(dstV1.x, dstV1.y), dstAZ);
+		const vec3 vecDstB = vec3(vec2(dstV2.x, dstV2.y), dstBZ);
+
+		// Translation
+		vec3 originSrc = (vecSrcB + vecSrcA) * 0.5f;
+		vec3 originDst = (vecDstB + vecDstA) * 0.5f;
+
+		vec3 translation = originDst - originSrc;
+
+		// Rotation
+		// TODO :(
+
+		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
+
+		portal->transformation = mat4::translate(translation);
+	}
+
+	portals.push_back(std::move(portal));
+	return int(portals.size() - 1);
+}
+
 void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
 	IntSector *front;
@@ -525,64 +584,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 
 			surf->portalDestinationIndex = destLineIndex;
 
-			// Portal calculation
-			{
-				auto portal = std::make_unique<Portal>();
-
-				// Calculate portal transformation
-				{
-					auto& destLine = doomMap.Lines[destLineIndex];
-					FloatVertex destV1 = doomMap.GetSegVertex(destLine.v1);
-					FloatVertex destV2 = doomMap.GetSegVertex(destLine.v2);
-
-					int alignment = side->line->args[3];
-
-					double dstAZ = 0;
-					double dstBZ = 0;
-					double srcAZ = 0;
-					double srcBZ = 0;
-
-					const auto* dstFront = doomMap.GetFrontSector(&doomMap.Sides[destLine.sidenum[0]]);
-
-					if (alignment == 1) // floor
-					{
-						srcAZ = front->floorplane.zAt(v1.x, v1.y);
-						srcBZ = front->floorplane.zAt(v2.x, v2.y);
-						dstAZ = dstFront->floorplane.zAt(destV1.x, destV1.y);
-						dstBZ = dstFront->floorplane.zAt(destV2.x, destV2.y);
-					}
-					else if (alignment == 2) // ceiling
-					{
-						srcAZ = front->ceilingplane.zAt(v1.x, v1.y);
-						srcBZ = front->ceilingplane.zAt(v2.x, v2.y);
-						dstAZ = dstFront->ceilingplane.zAt(destV1.x, destV1.y);
-						dstBZ = dstFront->ceilingplane.zAt(destV2.x, destV2.y);
-					}
-
-					const vec3 vecSrcA = vec3(vec2(v1.x, v1.y), srcAZ);
-					const vec3 vecSrcB = vec3(vec2(v2.x, v2.y), srcAZ);
-					const vec3 vecDstA = vec3(vec2(destV1.x, destV1.y), dstAZ);
-					const vec3 vecDstB = vec3(vec2(destV2.x, destV2.y), dstBZ);
-
-					// Translation
-					vec3 originSrc = (vecSrcB + vecSrcA) * 0.5f;
-					vec3 originDst = (vecDstB + vecDstA) * 0.5f;
-
-					vec3 translation = originDst - originSrc;
-
-					// Rotation
-					// TODO :(
-
-					// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
-
-					portal->transformation = mat4::translate(translation);
-				}
-
-				surf->portalIndex = portals.size();
-				portals.push_back(std::move(portal));
-			}
-
-			surfaces.push_back(std::move(surf));
+			surf->portalIndex = CreateLinePortal(doomMap, *side->line, doomMap.Lines[destLineIndex]);
 			return;
 		}
 		else

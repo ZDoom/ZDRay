@@ -45,6 +45,7 @@ typedef dp::rect_pack::RectPacker<int> RectPacker;
 struct MapSubsectorEx;
 struct IntSector;
 struct IntSideDef;
+struct IntLineDef;
 struct FLevel;
 struct ThingLight;
 class FWadWriter;
@@ -158,4 +159,6 @@ private:
 	void FinishSurface(RectPacker& packer, Surface* surface);
 
 	static bool IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2);
+
+	int CreateLinePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
 };
