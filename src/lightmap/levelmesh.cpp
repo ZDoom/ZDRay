@@ -205,7 +205,7 @@ void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 				{
 					auto fakeLight = std::make_unique<ThingLight>(*light);
 
-					fakeLight->relativePosition = portal->TransformPosition(light->LightRelativeOrigin());
+					fakeLight->relativePosition.emplace(portal->TransformPosition(light->LightRelativeOrigin()));
 					fakeLight->sectorGroup = portal->targetSectorGroup;
 
 					PropagateLight(doomMap, fakeLight.get());

@@ -7,6 +7,7 @@
 #include "math/mathlib.h"
 #include <memory>
 #include <cmath>
+#include <optional>
 #undef MIN
 #undef MAX
 #undef min
@@ -346,15 +347,15 @@ struct ThingLight
 	MapSubsectorEx  *ssect;
 
 	// Portal related functionality
-	vec3 relativePosition = vec3(0);
+	std::optional<vec3> relativePosition;
 	int sectorGroup = 0;
 
 	// Portal aware position
 	vec3 LightRelativeOrigin() const
 	{
-		if (relativePosition != vec3(0))
+		if (relativePosition)
 		{
-			return relativePosition;
+			return *relativePosition;
 		}
 		return LightOrigin();
 	}
