@@ -32,6 +32,7 @@
 #include <string>
 #include <cstring>
 #include <map>
+#include <set>
 
 #include "framework/tarray.h"
 #include "framework/halffloat.h"
@@ -154,8 +155,13 @@ public:
 	std::unique_ptr<TriangleMeshShape> Collision;
 
 private:
-	std::vector<std::unique_ptr<ThingLight>> portalLights; // Portal generated lights
+	// Portal to portals[] index
 	std::map<Portal, int, IdenticalPortalComparator> portalCache;
+
+	// Portal lights
+	std::vector<std::unique_ptr<ThingLight>> portalLights;
+	std::set<Portal, RecursivePortalComparator> touchedPortals;
+	int lightPropagationRecursiveDepth = 0;
 
 	void CreateSubsectorSurfaces(FLevel &doomMap);
 	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);

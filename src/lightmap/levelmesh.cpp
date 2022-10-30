@@ -178,16 +178,9 @@ void LevelMesh::BuildSmoothingGroups(FLevel& doomMap)
 	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
 }
 
-
-#include <set> // hack
-std::set<Portal, RejectRecursivePortals> touchedPortals;
-
-int depth = 0;
-
 void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 {
-	// Because of sectorGroups, this will unlikely get this deep anyway
-	if (depth > 32)
+	if (lightPropagationRecursiveDepth > 32)
 	{
 		return;
 	}
@@ -195,17 +188,17 @@ void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 	SphereShape sphere;
 	sphere.center = light->LightRelativeOrigin();
 	sphere.radius = light->LightRadius();
-	depth++;
-	std::set<Portal, RejectRecursivePortals> portalsToErase;
+	lightPropagationRecursiveDepth++;
+	std::set<Portal, RecursivePortalComparator> portalsToErase;
 	for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
 	{
 		Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
-		// Reject any surface which isn't physically connected to the sector group in which the light resided
+
+		// skip any surface which isn't physically connected to the sector group in which the light resides
 		if (light->sectorGroup == surface->sectorGroup)
 		{
 			if (surface->portalIndex >= 0)
 			{			
-
 				auto portal = portals[surface->portalIndex].get();
 
 				if (touchedPortals.insert(*portal).second)
@@ -240,7 +233,8 @@ void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 	{
 		touchedPortals.erase(portal);
 	}
-	depth--;
+
+	lightPropagationRecursiveDepth--;
 }
 
 void LevelMesh::BuildLightLists(FLevel& doomMap)
