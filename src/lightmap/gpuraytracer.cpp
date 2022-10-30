@@ -195,6 +195,8 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 				FinishCommands();
 				sceneLightPos = 0;
 				sceneVertexPos = 0;
+				firstLight = 0;
+				firstVertex = 0;
 				BeginCommands();
 				beginPass();
 
