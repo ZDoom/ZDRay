@@ -31,6 +31,7 @@
 #include <memory>
 #include <string>
 #include <cstring>
+#include <map>
 
 #include "framework/tarray.h"
 #include "framework/halffloat.h"
@@ -92,16 +93,52 @@ struct Portal
 		return (abs(diff.x) < 0.001 && abs(diff.y) < 0.001 && abs(diff.z) < 0.001);
 	}
 
+	// Do the portals travel between the same group of sectors?
+	/*
+	inline bool IsTravelingBetweenSameSectorGroupsInEitherDirection(const Portal& portal) const
+	{
+		int thisGroupA = sourceSectorGroup < targetSectorGroup ? sourceSectorGroup : targetSectorGroup;
+		int thisGroupB = sourceSectorGroup > targetSectorGroup ? sourceSectorGroup : targetSectorGroup;
+
+		int otherGroupA = portal.sourceSectorGroup < portal.targetSectorGroup ? portal.sourceSectorGroup : portal.targetSectorGroup;
+		int otherGroupB = portal.sourceSectorGroup > portal.targetSectorGroup ? portal.sourceSectorGroup : portal.targetSectorGroup;
+
+		return thisGroupA == otherGroupA && thisGroupB == otherGroupB;
+	}
+	*/
+
+	// do both portals travel from sector group A to sector group B?
+	inline bool IsTravelingBetweenSameSectorGroups(const Portal& portal) const
+	{
+		return sourceSectorGroup == portal.sourceSectorGroup && targetSectorGroup == portal.targetSectorGroup;
+	}
 };
-
-
 	
 // for use with std::set to recursively go through portals
 struct RejectRecursivePortals
 {
+	inline bool IsEqual(const Portal& a, const Portal& b) const
+	{
+		return a.IsInversePortal(b) || a.IsEqualPortal(b);
+	}
+
 	bool operator()(const Portal& a, const Portal& b) const
 	{
-		return !(a.IsInversePortal(b) || a.IsEqualPortal(b)) && std::memcmp(&a.transformation, &b.transformation, sizeof(mat4)) < 0;
+		return !IsEqual(a, b) && std::memcmp(&a.transformation, &b.transformation, sizeof(mat4)) < 0;
+	}
+};
+
+// for use with std::map to reject portals which have equal transformation between equal sector groups
+struct IdenticalPortalComparator
+{
+	inline bool IsEqual(const Portal& a, const Portal& b) const
+	{
+		return a.IsEqualPortal(b) && a.IsTravelingBetweenSameSectorGroups(b);
+	}
+
+	bool operator()(const Portal& a, const Portal& b) const
+	{
+		return !IsEqual(a, b) && std::memcmp(&a.transformation, &b.transformation, sizeof(mat4)) < 0;
 	}
 };
 
@@ -189,6 +226,7 @@ public:
 
 private:
 	std::vector<std::unique_ptr<ThingLight>> portalLights; // Portal generated lights
+	std::map<Portal, int, IdenticalPortalComparator> portalCache;
 
 	void CreateSubsectorSurfaces(FLevel &doomMap);
 	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);

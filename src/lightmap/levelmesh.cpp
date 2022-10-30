@@ -563,8 +563,17 @@ int LevelMesh::CreateLinePortal(FLevel& doomMap, const IntLineDef& srcLine, cons
 		portal->targetSectorGroup = dstLine.GetSectorGroup();
 	}
 
-	portals.push_back(std::move(portal));
-	return int(portals.size() - 1);
+	// Deduplicate portals
+	auto it = portalCache.find(*portal);
+
+	if (it == portalCache.end())
+	{
+		int id = int(portals.size());
+		portalCache.emplace(*portal, id);
+		portals.push_back(std::move(portal));
+		return id;
+	}
+	return it->second;
 }
 
 int LevelMesh::CheckAndMakePortal(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, int typeIndex, int plane)
@@ -649,8 +658,17 @@ int LevelMesh::CreatePlanePortal(FLevel& doomMap, const IntLineDef& srcLine, con
 		portal->targetSectorGroup = dstLine.GetSectorGroup();
 	}
 
-	portals.push_back(std::move(portal));
-	return int(portals.size() - 1);
+	// Deduplicate portals
+	auto it = portalCache.find(*portal);
+
+	if (it == portalCache.end())
+	{
+		int id = int(portals.size());
+		portalCache.emplace(*portal, id);
+		portals.push_back(std::move(portal));
+		return id;
+	}
+	return it->second;
 }
 
 void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
