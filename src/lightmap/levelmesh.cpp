@@ -60,6 +60,13 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 
 	printf("Surfaces total: %i\n\n", (int)surfaces.size());
 
+	// Update sector group of the surfacesaa
+	for (auto& surface : surfaces)
+	{
+		surface->sectorGroup = surface->type == ST_CEILING || surface->type == ST_FLOOR ?
+			doomMap.GetSectorFromSubSector(&doomMap.GLSubsectors[surface->typeIndex])->group : (doomMap.Sides[surface->typeIndex].GetSectorGroup());
+	}
+
 	printf("Building level mesh...\n\n");
 
 	for (size_t i = 0; i < surfaces.size(); i++)
@@ -112,37 +119,7 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	}
 
 	printf("Finding smoothing groups...\n\n");
-
-	for (size_t i = 0; i < surfaces.size(); i++)
-	{
-		// Is this surface in the same plane as an existing smoothing group?
-		int smoothingGroupIndex = -1;
-		for (size_t j = 0; j < smoothingGroups.size(); j++)
-		{
-			float direction = std::abs(dot(smoothingGroups[j].Normal(), surfaces[i]->plane.Normal()));
-			if (direction >= 0.9999f && direction <= 1.001f)
-			{
-				float dist = std::abs(smoothingGroups[j].Distance(surfaces[i]->plane.Normal() * surfaces[i]->plane.d));
-				if (dist <= 0.01f)
-				{
-					smoothingGroupIndex = (int)j;
-					break;
-				}
-			}
-		}
-
-		// Surface is in a new plane. Create a smoothing group for it
-		if (smoothingGroupIndex == -1)
-		{
-			smoothingGroupIndex = smoothingGroups.size();
-			smoothingGroups.push_back(surfaces[i]->plane);
-		}
-
-		surfaces[i]->smoothingGroupIndex = smoothingGroupIndex;
-	}
-
-	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
-
+	BuildSmoothingGroups(doomMap);
 	printf("Building collision data...\n\n");
 
 	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
@@ -157,6 +134,50 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	printf("\n");
 	*/
 }
+
+void LevelMesh::BuildSmoothingGroups(FLevel& doomMap)
+{
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		// Is this surface in the same plane as an existing smoothing group?
+		int smoothingGroupIndex = -1;
+
+		auto surface = surfaces[i].get();
+
+		for (size_t j = 0; j < smoothingGroups.size(); j++)
+		{
+			if (surface->sectorGroup == smoothingGroups[j].sectorGroup)
+			{
+				float direction = std::abs(dot(smoothingGroups[j].plane.Normal(), surface->plane.Normal()));
+				if (direction >= 0.9999f && direction <= 1.001f)
+				{
+					float dist = std::abs(smoothingGroups[j].plane.Distance(surface->plane.Normal() * surface->plane.d));
+					if (dist <= 0.01f)
+					{
+						smoothingGroupIndex = (int)j;
+						break;
+					}
+				}
+			}
+		}
+
+		// Surface is in a new plane. Create a smoothing group for it
+		if (smoothingGroupIndex == -1)
+		{
+			smoothingGroupIndex = smoothingGroups.size();
+
+			SmoothingGroup group;
+			group.plane = surface->plane;
+			group.sectorGroup = surface->sectorGroup;
+			smoothingGroups.push_back(group);
+		}
+
+		surface->smoothingGroupIndex = smoothingGroupIndex;
+	}
+
+	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
+}
+
 
 #include <set> // hack
 std::set<Portal, RejectRecursivePortals> touchedPortals;
@@ -179,12 +200,8 @@ void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 	for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
 	{
 		Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
-		
-		auto surfaceSectorGroup = surface->type == ST_CEILING || surface->type == ST_FLOOR ?
-			doomMap.GetSectorFromSubSector(&doomMap.GLSubsectors[surface->typeIndex])->group : (doomMap.Sides[surface->typeIndex].GetSectorGroup());
-
 		// Reject any surface which isn't physically connected to the sector group in which the light resided
-		if (light->sectorGroup == surfaceSectorGroup)
+		if (light->sectorGroup == surface->sectorGroup)
 		{
 			if (surface->portalIndex >= 0)
 			{			

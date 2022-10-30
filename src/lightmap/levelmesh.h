@@ -83,6 +83,9 @@ struct Surface
 	// Portal
 	int portalDestinationIndex = -1; // line or sector index
 	int portalIndex = -1;
+	
+	// Sector group
+	int sectorGroup = 0;
 
 	// Touching light sources
 	std::vector<ThingLight*> LightList;
@@ -114,6 +117,12 @@ struct Surface
 	int smoothingGroupIndex = -1;
 };
 
+struct SmoothingGroup
+{
+	Plane plane = Plane(0, 0, 1, 0);
+	int sectorGroup = 0;
+};
+
 class LevelMesh
 {
 public:
@@ -129,7 +138,7 @@ public:
 
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 
-	std::vector<Plane> smoothingGroups;
+	std::vector<SmoothingGroup> smoothingGroups;
 
 	std::vector<std::unique_ptr<Portal>> portals;
 
@@ -158,6 +167,8 @@ private:
 
 	void BuildLightLists(FLevel &doomMap);
 	void PropagateLight(FLevel& doomMap, ThingLight* thing);
+
+	void BuildSmoothingGroups(FLevel& doomMap);
 
 	void BlurSurfaces();
 	void FinishSurface(RectPacker& packer, Surface* surface);
