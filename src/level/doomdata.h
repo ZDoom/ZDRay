@@ -70,6 +70,8 @@ struct IntSideDef
 	inline int GetSampleDistanceBottom() const { return sampleDistanceBottom ? sampleDistanceBottom : sampleDistance; }
 
 	TArray<UDMFKey> props;
+
+	inline int GetSectorGroup() const;
 };
 
 struct MapLineDef
@@ -107,6 +109,8 @@ struct IntLineDef
 	TArray<int> ids;
 
 	IntSector *frontsector = nullptr, *backsector = nullptr;
+
+	inline int GetSectorGroup() const;
 };
 
 struct MapSector
@@ -158,6 +162,8 @@ struct IntSector
 	TArray<IntLineDef*> lines;
 	TArray<IntLineDef*> portals;
 
+	int group = 0;
+
 	// Utility functions
 	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }
 
@@ -172,6 +178,16 @@ struct IntSector
 		return false;
 	}
 };
+
+inline int IntLineDef::GetSectorGroup() const
+{
+	return frontsector ? frontsector->group : (backsector ? backsector->group : 0);
+}
+
+inline int IntSideDef::GetSectorGroup() const
+{
+	return line ? line->GetSectorGroup() : 0;
+}
 
 struct MapSubsector
 {
@@ -329,7 +345,9 @@ struct ThingLight
 	IntSector       *sector;
 	MapSubsectorEx  *ssect;
 
+	// Portal related functionality
 	vec3 relativePosition = vec3(0);
+	int sectorGroup = 0;
 
 	// Portal aware position
 	vec3 LightRelativeOrigin() const

@@ -290,6 +290,7 @@ void FLevel::CreateLights()
 			thingLight.sector = GetSectorFromSubSector(thingLight.ssect);
 			thingLight.origin.x = x;
 			thingLight.origin.y = y;
+			thingLight.sectorGroup = thingLight.sector->group;
 
 			ThingLights.Push(thingLight);
 		}

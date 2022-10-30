@@ -147,7 +147,6 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 
 	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
 
-	printf("Building light list...\n\n");
 	BuildLightLists(doomMap);
 	/*
 	std::map<int, int> lightStats;
@@ -166,7 +165,8 @@ int depth = 0;
 
 void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 {
-	if (depth > 4)
+	// Because of sectorGroups, this will unlikely get this deep anyway
+	if (depth > 32)
 	{
 		return;
 	}
@@ -180,35 +180,43 @@ void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 	{
 		Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
 		
-		if (surface->portalIndex >= 0)
+		auto surfaceSectorGroup = surface->type == ST_CEILING || surface->type == ST_FLOOR ?
+			doomMap.GetSectorFromSubSector(&doomMap.GLSubsectors[surface->typeIndex])->group : (doomMap.Sides[surface->typeIndex].GetSectorGroup());
+
+		// Reject any surface which isn't physically connected to the sector group in which the light resided
+		if (light->sectorGroup == surfaceSectorGroup)
 		{
-			auto portal = portals[surface->portalIndex].get();
+			if (surface->portalIndex >= 0)
+			{			
 
-			if (touchedPortals.insert(*portal).second)
-			{
-				auto fakeLight = std::make_unique<ThingLight>(*light);
+				auto portal = portals[surface->portalIndex].get();
 
-				fakeLight->relativePosition = portal->TransformPosition(light->LightRelativeOrigin());
+				if (touchedPortals.insert(*portal).second)
+				{
+					auto fakeLight = std::make_unique<ThingLight>(*light);
 
-				PropagateLight(doomMap, fakeLight.get());
-				portalsToErase.insert(*portal);
-				portalLights.push_back(std::move(fakeLight));
+					fakeLight->relativePosition = portal->TransformPosition(light->LightRelativeOrigin());
+					fakeLight->sectorGroup = portal->targetSectorGroup;
+
+					PropagateLight(doomMap, fakeLight.get());
+					portalsToErase.insert(*portal);
+					portalLights.push_back(std::move(fakeLight));
+				}
 			}
-		}
 
-		// Add light to the list if it isn't already there
-		bool found = false;
-		for (ThingLight* light2 : surface->LightList)
-		{
-			if (light2 == light)
+			// Add light to the list if it isn't already there
+			bool found = false;
+			for (ThingLight* light2 : surface->LightList)
 			{
-				found = true;
-				break;
+				if (light2 == light)
+				{
+					found = true;
+					break;
+				}
 			}
+			if (!found)
+				surface->LightList.push_back(light);
 		}
-		if (!found)
-			surface->LightList.push_back(light);
-
 	}
 	
 	for (auto& portal : portalsToErase)
@@ -220,10 +228,13 @@ void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
 
 void LevelMesh::BuildLightLists(FLevel& doomMap)
 {
-	for (ThingLight& light : map->ThingLights)
+	for (unsigned i = 0; i < map->ThingLights.Size(); ++i)
 	{
-		PropagateLight(doomMap, &light);
+		printf("Building light lists: %u / %u\r", i, map->ThingLights.Size());
+		PropagateLight(doomMap, &map->ThingLights[i]);
 	}
+
+	printf("Building light lists: %u / %u\n", map->ThingLights.Size(), map->ThingLights.Size());
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.
@@ -548,6 +559,8 @@ int LevelMesh::CreateLinePortal(FLevel& doomMap, const IntLineDef& srcLine, cons
 		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
 
 		portal->transformation = mat4::translate(translation);
+		portal->sourceSectorGroup = srcLine.GetSectorGroup();
+		portal->targetSectorGroup = dstLine.GetSectorGroup();
 	}
 
 	portals.push_back(std::move(portal));
@@ -632,6 +645,8 @@ int LevelMesh::CreatePlanePortal(FLevel& doomMap, const IntLineDef& srcLine, con
 		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
 
 		portal->transformation = mat4::translate(translation);
+		portal->sourceSectorGroup = srcLine.GetSectorGroup();
+		portal->targetSectorGroup = dstLine.GetSectorGroup();
 	}
 
 	portals.push_back(std::move(portal));

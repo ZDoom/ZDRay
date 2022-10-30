@@ -63,6 +63,8 @@ enum SurfaceType
 struct Portal
 {
 	mat4 transformation = mat4::identity();
+	int sourceSectorGroup = 0;
+	int targetSectorGroup = 0;
 
 	inline vec3 TransformPosition(const vec3& pos) const
 	{
@@ -99,7 +101,6 @@ struct RejectRecursivePortals
 {
 	bool operator()(const Portal& a, const Portal& b) const
 	{
-		static_assert(sizeof(Portal) == sizeof(float) * 4 * 4);
 		return !(a.IsInversePortal(b) || a.IsEqualPortal(b)) && std::memcmp(&a.transformation, &b.transformation, sizeof(mat4)) < 0;
 	}
 };
