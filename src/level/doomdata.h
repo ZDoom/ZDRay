@@ -156,6 +156,7 @@ struct IntSector
 	TArray<UDMFKey> props;
 
 	TArray<IntLineDef*> lines;
+	TArray<IntLineDef*> portals;
 
 	// Utility functions
 	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }

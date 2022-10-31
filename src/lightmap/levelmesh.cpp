@@ -512,9 +512,7 @@ int LevelMesh::CreateLinePortal(FLevel& doomMap, const IntLineDef& srcLine, cons
 
 int LevelMesh::CheckAndMakePortal(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, int typeIndex, int plane)
 {
-	const auto& lines = doomMap.GetSectorFromSubSector(sub)->lines;
-
-	for (const auto& line : lines)
+	for (const auto line : sector->portals)
 	{
 		if (line->special == Sector_SetPortal && line->args[0] && line->args[2] == plane && !line->args[3] && sector->HasTag(line->args[0]))
 		{

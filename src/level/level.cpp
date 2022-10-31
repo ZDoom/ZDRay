@@ -674,6 +674,23 @@ void FLevel::PostLoadInitialization()
 		line->frontsector = (line->sidenum[0] != NO_INDEX) ? &Sectors[Sides[line->sidenum[0]].sector] : nullptr;
 		line->backsector = (line->sidenum[1] != NO_INDEX) ? &Sectors[Sides[line->sidenum[1]].sector] : nullptr;
 	}
+
+	// Find plane portals
+	{
+		for (auto& line : Lines)
+		{
+			if (line.special == Sector_SetPortal && line.args[0])
+			{
+				for (auto& sector : Sectors)
+				{
+					if (sector.HasTag(line.args[0]))
+					{
+						sector.portals.Push(&line);
+					}
+				}
+			}
+		}
+	}
 }
 
 void FProcessor::BuildNodes()
