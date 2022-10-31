@@ -60,6 +60,13 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 
 	printf("Surfaces total: %i\n\n", (int)surfaces.size());
 
+	// Update sector group of the surfacesaa
+	for (auto& surface : surfaces)
+	{
+		surface->sectorGroup = surface->type == ST_CEILING || surface->type == ST_FLOOR ?
+			doomMap.GetSectorFromSubSector(&doomMap.GLSubsectors[surface->typeIndex])->group : (doomMap.Sides[surface->typeIndex].GetSectorGroup());
+	}
+
 	printf("Building level mesh...\n\n");
 
 	for (size_t i = 0; i < surfaces.size(); i++)
@@ -112,66 +119,12 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	}
 
 	printf("Finding smoothing groups...\n\n");
-
-	for (size_t i = 0; i < surfaces.size(); i++)
-	{
-		// Is this surface in the same plane as an existing smoothing group?
-		int smoothingGroupIndex = -1;
-		for (size_t j = 0; j < smoothingGroups.size(); j++)
-		{
-			float direction = std::abs(dot(smoothingGroups[j].Normal(), surfaces[i]->plane.Normal()));
-			if (direction >= 0.9999f && direction <= 1.001f)
-			{
-				float dist = std::abs(smoothingGroups[j].Distance(surfaces[i]->plane.Normal() * surfaces[i]->plane.d));
-				if (dist <= 0.01f)
-				{
-					smoothingGroupIndex = (int)j;
-					break;
-				}
-			}
-		}
-
-		// Surface is in a new plane. Create a smoothing group for it
-		if (smoothingGroupIndex == -1)
-		{
-			smoothingGroupIndex = smoothingGroups.size();
-			smoothingGroups.push_back(surfaces[i]->plane);
-		}
-
-		surfaces[i]->smoothingGroupIndex = smoothingGroupIndex;
-	}
-
-	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
-
+	BuildSmoothingGroups(doomMap);
 	printf("Building collision data...\n\n");
 
 	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
 
-	printf("Building light list...\n\n");
-
-	for (ThingLight& light : map->ThingLights)
-	{
-		SphereShape sphere;
-		sphere.center = light.LightOrigin();
-		sphere.radius = light.LightRadius();
-
-		for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
-		{
-			Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
-			bool found = false;
-			for (ThingLight* light2 : surface->LightList)
-			{
-				if (light2 == &light)
-				{
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-				surface->LightList.push_back(&light);
-		}
-	}
-
+	BuildLightLists(doomMap);
 	/*
 	std::map<int, int> lightStats;
 	for (auto& surface : surfaces)
@@ -180,6 +133,119 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 		printf("%d lights: %d surfaces\n", it.first, it.second);
 	printf("\n");
 	*/
+}
+
+void LevelMesh::BuildSmoothingGroups(FLevel& doomMap)
+{
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		// Is this surface in the same plane as an existing smoothing group?
+		int smoothingGroupIndex = -1;
+
+		auto surface = surfaces[i].get();
+
+		for (size_t j = 0; j < smoothingGroups.size(); j++)
+		{
+			if (surface->sectorGroup == smoothingGroups[j].sectorGroup)
+			{
+				float direction = std::abs(dot(smoothingGroups[j].plane.Normal(), surface->plane.Normal()));
+				if (direction >= 0.9999f && direction <= 1.001f)
+				{
+					float dist = std::abs(smoothingGroups[j].plane.Distance(surface->plane.Normal() * surface->plane.d));
+					if (dist <= 0.01f)
+					{
+						smoothingGroupIndex = (int)j;
+						break;
+					}
+				}
+			}
+		}
+
+		// Surface is in a new plane. Create a smoothing group for it
+		if (smoothingGroupIndex == -1)
+		{
+			smoothingGroupIndex = smoothingGroups.size();
+
+			SmoothingGroup group;
+			group.plane = surface->plane;
+			group.sectorGroup = surface->sectorGroup;
+			smoothingGroups.push_back(group);
+		}
+
+		surface->smoothingGroupIndex = smoothingGroupIndex;
+	}
+
+	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
+}
+
+void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
+{
+	if (lightPropagationRecursiveDepth > 32)
+	{
+		return;
+	}
+
+	SphereShape sphere;
+	sphere.center = light->LightRelativeOrigin();
+	sphere.radius = light->LightRadius();
+	lightPropagationRecursiveDepth++;
+	std::set<Portal, RecursivePortalComparator> portalsToErase;
+	for (int triangleIndex : TriangleMeshShape::find_all_hits(Collision.get(), &sphere))
+	{
+		Surface* surface = surfaces[MeshSurfaces[triangleIndex]].get();
+
+		// skip any surface which isn't physically connected to the sector group in which the light resides
+		if (light->sectorGroup == surface->sectorGroup)
+		{
+			if (surface->portalIndex >= 0)
+			{			
+				auto portal = portals[surface->portalIndex].get();
+
+				if (touchedPortals.insert(*portal).second)
+				{
+					auto fakeLight = std::make_unique<ThingLight>(*light);
+
+					fakeLight->relativePosition.emplace(portal->TransformPosition(light->LightRelativeOrigin()));
+					fakeLight->sectorGroup = portal->targetSectorGroup;
+
+					PropagateLight(doomMap, fakeLight.get());
+					portalsToErase.insert(*portal);
+					portalLights.push_back(std::move(fakeLight));
+				}
+			}
+
+			// Add light to the list if it isn't already there
+			bool found = false;
+			for (ThingLight* light2 : surface->LightList)
+			{
+				if (light2 == light)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				surface->LightList.push_back(light);
+		}
+	}
+	
+	for (auto& portal : portalsToErase)
+	{
+		touchedPortals.erase(portal);
+	}
+
+	lightPropagationRecursiveDepth--;
+}
+
+void LevelMesh::BuildLightLists(FLevel& doomMap)
+{
+	for (unsigned i = 0; i < map->ThingLights.Size(); ++i)
+	{
+		printf("Building light lists: %u / %u\r", i, map->ThingLights.Size());
+		PropagateLight(doomMap, &map->ThingLights[i]);
+	}
+
+	printf("Building light lists: %u / %u\n", map->ThingLights.Size(), map->ThingLights.Size());
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.
@@ -504,10 +570,21 @@ int LevelMesh::CreateLinePortal(FLevel& doomMap, const IntLineDef& srcLine, cons
 		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
 
 		portal->transformation = mat4::translate(translation);
+		portal->sourceSectorGroup = srcLine.GetSectorGroup();
+		portal->targetSectorGroup = dstLine.GetSectorGroup();
 	}
 
-	portals.push_back(std::move(portal));
-	return int(portals.size() - 1);
+	// Deduplicate portals
+	auto it = portalCache.find(*portal);
+
+	if (it == portalCache.end())
+	{
+		int id = int(portals.size());
+		portalCache.emplace(*portal, id);
+		portals.push_back(std::move(portal));
+		return id;
+	}
+	return it->second;
 }
 
 int LevelMesh::CheckAndMakePortal(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, int typeIndex, int plane)
@@ -588,10 +665,21 @@ int LevelMesh::CreatePlanePortal(FLevel& doomMap, const IntLineDef& srcLine, con
 		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
 
 		portal->transformation = mat4::translate(translation);
+		portal->sourceSectorGroup = srcLine.GetSectorGroup();
+		portal->targetSectorGroup = dstLine.GetSectorGroup();
 	}
 
-	portals.push_back(std::move(portal));
-	return int(portals.size() - 1);
+	// Deduplicate portals
+	auto it = portalCache.find(*portal);
+
+	if (it == portalCache.end())
+	{
+		int id = int(portals.size());
+		portalCache.emplace(*portal, id);
+		portals.push_back(std::move(portal));
+		return id;
+	}
+	return it->second;
 }
 
 void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)

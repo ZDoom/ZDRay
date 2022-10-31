@@ -216,6 +216,7 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 			for (ThingLight* light : surface->LightList)
 			{
 				lightinfo->Origin = light->LightOrigin();
+				lightinfo->RelativeOrigin = light->LightRelativeOrigin();
 				lightinfo->Radius = light->LightRadius();
 				lightinfo->Intensity = light->intensity;
 				lightinfo->InnerAngleCos = light->innerAngleCos;
@@ -1015,14 +1016,11 @@ std::vector<PortalInfo> GPURaytracer::CreatePortalInfo()
 		portals.push_back(noPortal);
 	}
 
-	for (const auto& surface : mesh->surfaces)
+	for (const auto& portal : mesh->portals)
 	{
-		if (surface->portalIndex >= 0)
-		{
-			PortalInfo info;
-			info.Transformation = mesh->portals[surface->portalIndex]->transformation;
-			portals.push_back(info);
-		}
+		PortalInfo info;
+		info.Transformation = portal->transformation;
+		portals.push_back(info);
 	}
 
 	return portals;

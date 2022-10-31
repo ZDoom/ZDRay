@@ -31,12 +31,15 @@
 #include <memory>
 #include <string>
 #include <cstring>
+#include <map>
+#include <set>
 
 #include "framework/tarray.h"
 #include "framework/halffloat.h"
 #include "lightmaptexture.h"
 #include "math/mathlib.h"
 #include "collision.h"
+#include "portal.h"
 
 #include "dp_rect_pack/dp_rect_pack.h"
 
@@ -60,11 +63,6 @@ enum SurfaceType
 	ST_FLOOR
 };
 
-struct Portal
-{
-	mat4 transformation = mat4::identity();
-};
-
 struct Surface
 {
 	// Surface geometry
@@ -86,6 +84,9 @@ struct Surface
 	// Portal
 	int portalDestinationIndex = -1; // line or sector index
 	int portalIndex = -1;
+	
+	// Sector group
+	int sectorGroup = 0;
 
 	// Touching light sources
 	std::vector<ThingLight*> LightList;
@@ -117,6 +118,12 @@ struct Surface
 	int smoothingGroupIndex = -1;
 };
 
+struct SmoothingGroup
+{
+	Plane plane = Plane(0, 0, 1, 0);
+	int sectorGroup = 0;
+};
+
 class LevelMesh
 {
 public:
@@ -132,7 +139,7 @@ public:
 
 	std::vector<std::unique_ptr<LightmapTexture>> textures;
 
-	std::vector<Plane> smoothingGroups;
+	std::vector<SmoothingGroup> smoothingGroups;
 
 	std::vector<std::unique_ptr<Portal>> portals;
 
@@ -148,6 +155,14 @@ public:
 	std::unique_ptr<TriangleMeshShape> Collision;
 
 private:
+	// Portal to portals[] index
+	std::map<Portal, int, IdenticalPortalComparator> portalCache;
+
+	// Portal lights
+	std::vector<std::unique_ptr<ThingLight>> portalLights;
+	std::set<Portal, RecursivePortalComparator> touchedPortals;
+	int lightPropagationRecursiveDepth = 0;
+
 	void CreateSubsectorSurfaces(FLevel &doomMap);
 	void CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
 	void CreateFloorSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSector *sector, int typeIndex, bool is3DFloor);
@@ -155,6 +170,12 @@ private:
 
 	void BuildSurfaceParams(Surface* surface);
 	BBox GetBoundsFromSurface(const Surface* surface);
+
+	void BuildLightLists(FLevel &doomMap);
+	void PropagateLight(FLevel& doomMap, ThingLight* thing);
+
+	void BuildSmoothingGroups(FLevel& doomMap);
+
 	void BlurSurfaces();
 	void FinishSurface(RectPacker& packer, Surface* surface);
 

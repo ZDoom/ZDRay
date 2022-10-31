@@ -50,15 +50,19 @@ struct LightInfo
 {
 	vec3 Origin;
 	float Padding0;
+	vec3 RelativeOrigin;
+	float Padding1;
 	float Radius;
 	float Intensity;
 	float InnerAngleCos;
 	float OuterAngleCos;
 	vec3 SpotDir;
-	float Padding1;
-	vec3 Color;
 	float Padding2;
+	vec3 Color;
+	float Padding3;
 };
+
+static_assert(sizeof(LightInfo) == sizeof(float) * 20);
 
 struct CollisionNodeBufferHeader
 {

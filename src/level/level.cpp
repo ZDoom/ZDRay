@@ -691,6 +691,49 @@ void FLevel::PostLoadInitialization()
 			}
 		}
 	}
+
+	// Discover sector groups (graph islands)
+	{
+		int groupId = 0;
+		std::vector<IntSector*> candidates;
+
+		auto canPass = [&](IntLineDef* line) {
+			// Further conditions can be added to further split the map into groups
+			return line->special == 0 || (line->special != Line_SetPortal && line->special != Line_Horizon);
+		};
+
+		for (auto& sector : Sectors)
+		{
+			if (!sector.group)
+			{
+				sector.group = ++groupId;
+				candidates.push_back(&sector);
+
+				while (!candidates.empty())
+				{
+					auto* sector = candidates[candidates.size() - 1];
+					candidates.pop_back();
+
+					for (const auto& line : sector->lines)
+					{
+						if (canPass(line))
+						{
+							if (line->frontsector && !line->frontsector->group)
+							{
+								line->frontsector->group = groupId;
+								candidates.push_back(line->frontsector);
+							}
+							if (line->backsector && !line->backsector->group)
+							{
+								line->backsector->group = groupId;
+								candidates.push_back(line->backsector);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 void FProcessor::BuildNodes()

@@ -8,7 +8,7 @@ include( CheckCXXCompilerFlag )
 
 project( ZDRay )
 
-SET( CMAKE_CXX_STANDARD 14 )
+SET( CMAKE_CXX_STANDARD 17 )
 
 IF( NOT CMAKE_BUILD_TYPE )
 	SET( CMAKE_BUILD_TYPE Debug CACHE STRING
@@ -196,6 +196,7 @@ set( SOURCES
 	src/lightmap/glsl_vert.h
 	src/lightmap/glsl_frag_resolve.h
 	src/lightmap/renderdoc_app.h
+	src/lightmap/portal.h
 	src/math/mat.cpp
 	src/math/plane.cpp
 	src/math/angle.cpp

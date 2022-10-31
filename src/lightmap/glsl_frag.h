@@ -52,14 +52,16 @@ struct LightInfo
 {
 	vec3 Origin;
 	float Padding0;
+	vec3 RelativeOrigin;
+	float Padding1;
 	float Radius;
 	float Intensity;
 	float InnerAngleCos;
 	float OuterAngleCos;
 	vec3 SpotDir;
-	float Padding1;
-	vec3 Color;
 	float Padding2;
+	vec3 Color;
+	float Padding3;
 };
 
 layout(set = 0, binding = 1) buffer SurfaceIndexBuffer { uint surfaceIndices[]; };
@@ -91,6 +93,7 @@ vec2 Hammersley(uint i, uint N);
 float RadicalInverse_VdC(uint bits);
 
 bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax);
+bool TracePoint(vec3 origin, vec3 target, float tmin, vec3 dir, float tmax);
 int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax);
 int TraceFirstHitTriangleT(vec3 origin, float tmin, vec3 dir, float tmax, out float t);
 
@@ -117,10 +120,10 @@ vec3 TraceLight(vec3 origin, vec3 normal, LightInfo light)
 {
 	const float minDistance = 0.01;
 	vec3 incoming = vec3(0.0);
-	float dist = distance(light.Origin, origin);
+	float dist = distance(light.RelativeOrigin, origin);
 	if (dist > minDistance && dist < light.Radius)
 	{
-		vec3 dir = normalize(light.Origin - origin);
+		vec3 dir = normalize(light.RelativeOrigin - origin);
 
 		float distAttenuation = max(1.0 - (dist / light.Radius), 0.0);
 		float angleAttenuation = 1.0f;
@@ -139,12 +142,13 @@ vec3 TraceLight(vec3 origin, vec3 normal, LightInfo light)
 		float attenuation = distAttenuation * angleAttenuation * spotAttenuation;
 		if (attenuation > 0.0)
 		{
-			if (!TraceAnyHit(origin, minDistance, dir, dist))
+			if(TracePoint(origin, light.Origin, minDistance, dir, dist))
 			{
 				incoming.rgb += light.Color * (attenuation * light.Intensity);
 			}
 		}
 	}
+
 	return incoming;
 }
 
@@ -236,6 +240,7 @@ int TraceFirstHitTriangleNoPortal(vec3 origin, float tmin, vec3 dir, float tmax,
 	}
 	else
 	{
+		t = tmax;
 		return -1;
 	}
 }
@@ -466,6 +471,8 @@ int TraceFirstHitTriangleNoPortal(vec3 origin, float tmin, vec3 dir, float tmax,
 			return hit.triangle;
 		}
 	}
+
+	tparam = tracedist;
 	return -1;
 }
 
@@ -510,6 +517,50 @@ int TraceFirstHitTriangle(vec3 origin, float tmin, vec3 dir, float tmax)
 bool TraceAnyHit(vec3 origin, float tmin, vec3 dir, float tmax)
 {
 	return TraceFirstHitTriangle(origin, tmin, dir, tmax) >= 0;
+}
+
+bool TracePoint(vec3 origin, vec3 target, float tmin, vec3 dir, float tmax)
+{
+	int primitiveID;
+	float t;
+	while(true)
+	{
+		t = tmax;
+		primitiveID = TraceFirstHitTriangleNoPortal(origin, tmin, dir, tmax, t);
+
+		origin += dir * t;
+		tmax -= t;
+
+		if(primitiveID < 0)
+		{
+			// We didn't hit anything
+			break;
+		}
+
+		SurfaceInfo surface = surfaces[surfaceIndices[primitiveID]];
+
+		if(surface.PortalIndex == 0)
+		{
+			break;
+		}
+
+		if(dot(surface.Normal, dir) >= 0.0)
+		{
+			continue;
+		}
+
+		mat4 transformationMatrix = portals[surface.PortalIndex].Transformation;
+		origin = (transformationMatrix * vec4(origin, 1.0)).xyz;
+		dir = (transformationMatrix * vec4(dir, 0.0)).xyz;
+
+#if defined(USE_RAYQUERY)
+#else
+		origin += dir * tmin;
+		tmax -= tmin;
+#endif
+	}
+
+	return distance(origin, target) <= 1.0;
 }
 
 )glsl";
