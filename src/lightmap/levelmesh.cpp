@@ -577,7 +577,7 @@ int LevelMesh::CreatePlanePortal(FLevel& doomMap, const IntLineDef& srcLine, con
 		}
 
 		const vec3 vecSrcA = vec3(vec2(srcV1.x, srcV1.y), srcAZ);
-		const vec3 vecSrcB = vec3(vec2(srcV2.x, srcV2.y), srcAZ);
+		const vec3 vecSrcB = vec3(vec2(srcV2.x, srcV2.y), srcBZ);
 		const vec3 vecDstA = vec3(vec2(dstV1.x, dstV1.y), dstAZ);
 		const vec3 vecDstB = vec3(vec2(dstV2.x, dstV2.y), dstBZ);
 
