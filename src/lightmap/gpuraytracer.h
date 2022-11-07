@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include "vulkandevice.h"
-#include "vulkanobjects.h"
+#include <zvulkan/vulkandevice.h>
+#include <zvulkan/vulkanobjects.h>
 
 class LevelMesh;
 

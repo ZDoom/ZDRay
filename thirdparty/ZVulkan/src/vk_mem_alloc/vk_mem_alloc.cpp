@@ -5,4 +5,4 @@
 #define VMA_NULLABLE
 #define VMA_NOT_NULL
 
-#include "vk_mem_alloc.h"
+#include "vk_mem_alloc/vk_mem_alloc.h"

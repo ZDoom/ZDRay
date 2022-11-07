@@ -1,5 +1,7 @@
 
 #include "vulkanbuilders.h"
+#include "glslang/glslang/Public/ShaderLang.h"
+#include "glslang/spirv/GlslangToSpv.h"
 
 static const TBuiltInResource DefaultTBuiltInResource = {
 	/* .MaxLights = */ 32,

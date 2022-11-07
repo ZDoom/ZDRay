@@ -6,8 +6,8 @@
 #include "framework/binfile.h"
 #include "framework/templates.h"
 #include "framework/halffloat.h"
-#include "vulkanbuilders.h"
-#include "vulkancompatibledevice.h"
+#include <zvulkan/vulkanbuilders.h>
+#include <zvulkan/vulkancompatibledevice.h>
 #include "renderdoc_app.h"
 #include "stacktrace.h"
 #include <map>

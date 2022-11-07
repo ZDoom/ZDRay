@@ -1,10 +1,9 @@
-cmake_minimum_required( VERSION 2.4 )
-if( COMMAND cmake_policy )
-	cmake_policy( SET CMP0003 NEW )
-endif( COMMAND cmake_policy )
+cmake_minimum_required(VERSION 3.11)
 
 include( CheckFunctionExists )
 include( CheckCXXCompilerFlag )
+
+add_subdirectory( thirdparty/ZVulkan )
 
 project( ZDRay )
 
@@ -175,17 +174,6 @@ set( SOURCES
 	src/lightmap/collision.h
 	src/lightmap/delauneytriangulator.cpp
 	src/lightmap/delauneytriangulator.h
-	src/lightmap/vulkandevice.cpp
-	src/lightmap/vulkandevice.h
-	src/lightmap/vulkanobjects.h
-	src/lightmap/vulkanbuilders.cpp
-	src/lightmap/vulkanbuilders.h
-	src/lightmap/vulkancompatibledevice.cpp
-	src/lightmap/vulkancompatibledevice.h
-	src/lightmap/vulkaninstance.cpp
-	src/lightmap/vulkaninstance.h
-	src/lightmap/vulkansurface.cpp
-	src/lightmap/vulkansurface.h
 	src/lightmap/stacktrace.cpp
 	src/lightmap/stacktrace.h
 	src/lightmap/surfaceclip.cpp
@@ -225,131 +213,6 @@ set(THIRDPARTY_SOURCES
 	${CMAKE_SOURCE_DIR}/thirdparty/dp_rect_pack/dp_rect_pack.h
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.h
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.c
-	${CMAKE_SOURCE_DIR}/thirdparty/vk_mem_alloc/vk_mem_alloc.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vk_mem_alloc/vk_mem_alloc.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/volk/volk.c
-	${CMAKE_SOURCE_DIR}/thirdparty/volk/volk.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/SymbolTable.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/propagateNoContraction.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/PoolAlloc.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Intermediate.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/gl_types.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/parseVersions.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/attribute.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Scan.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/iomapper.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/ParseHelper.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/glslang_tab.cpp.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/SymbolTable.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/RemoveTree.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Versions.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/reflection.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/LiveTraverser.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/iomapper.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/intermOut.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Versions.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Initialize.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/linkValidate.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/InfoSink.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Constant.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/IntermTraverse.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/propagateNoContraction.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/glslang_tab.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/ShaderLang.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/Pp.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/PpTokens.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/PpAtom.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/PpContext.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/PpTokens.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/PpScanner.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/preprocessor/PpContext.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/attribute.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/localintermediate.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/parseConst.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Initialize.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/limits.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/ParseContextBase.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/RemoveTree.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/ParseHelper.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/Scan.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/reflection.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/ScanContext.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/pch.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/MachineIndependent/SpirvIntrinsics.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/OSDependent/osinclude.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/GenericCodeGen/Link.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/GenericCodeGen/CodeGen.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Public/ShaderLang.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/ConstantUnion.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/InitializeGlobals.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/Common.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/PoolAlloc.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/arrays.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/ShHandle.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/InfoSink.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/ResourceLimits.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/Types.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/BaseTypes.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/intermediate.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/Include/SpirvIntrinsics.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/Logger.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GlslangToSpv.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SPVRemapper.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GLSL.ext.EXT.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/hex_float.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/doc.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/disassemble.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SpvPostProcess.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/bitutils.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/InReadableOrder.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GLSL.ext.AMD.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GLSL.ext.NV.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SPVRemapper.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SpvBuilder.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GLSL.ext.KHR.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/disassemble.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SpvBuilder.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GlslangToSpv.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/doc.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SpvTools.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/spvIR.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/Logger.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/SpvTools.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/spirv/GLSL.std.450.h
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/OGLCompilersDLL/InitializeDll.cpp
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/OGLCompilersDLL/InitializeDll.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vk_sdk_platform.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_fuchsia.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_win32.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_ios.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vk_icd.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vk_layer.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_xcb.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_macos.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vk_layer_dispatch_table.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_ggp.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_core.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_wayland.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_metal.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_android.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_vi.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vk_platform.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_mir.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_xlib_xrandr.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_xlib.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vk_enum_string_helper.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_beta.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_directfb.h
-	${CMAKE_SOURCE_DIR}/thirdparty/vulkan/vulkan_screen.h
-)
-
-set(THIRDPARTY_WIN32_SOURCES
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/OSDependent/Windows/ossource.cpp
-)
-
-set(THIRDPARTY_UNIX_SOURCES
-	${CMAKE_SOURCE_DIR}/thirdparty/ShaderCompiler/glslang/OSDependent/Unix/ossource.cpp
 )
 
 if( SSE_MATTERS )
@@ -385,10 +248,6 @@ if( WIN32 )
 	else( CMAKE_COMPILER_IS_GNUCXX )
 		set( SOURCES ${SOURCES} src/platform/windows/resource.rc )
 	endif( CMAKE_COMPILER_IS_GNUCXX )
-
-	set(THIRDPARTY_SOURCES ${THIRDPARTY_SOURCES} ${THIRDPARTY_WIN32_SOURCES})
-else()
-	set(THIRDPARTY_SOURCES ${THIRDPARTY_SOURCES} ${THIRDPARTY_UNIX_SOURCES})
 endif( WIN32 )
 
 if(MSVC)
@@ -425,8 +284,8 @@ set( CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${REL_C_F
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
 
 add_executable( zdray ${SOURCES} ${THIRDPARTY_SOURCES} )
-target_link_libraries( zdray ${ZDRAY_LIBS} ${PROF_LIB} ${PLATFORM_LIB} )
-include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
+target_link_libraries( zdray zvulkan ${ZDRAY_LIBS} ${PROF_LIB} ${PLATFORM_LIB} )
+include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ZVulkan/include" "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
 
 source_group("Sources" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/.+")
 source_group("Sources\\BlockmapBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/blockmapbuilder/.+")
@@ -444,8 +303,4 @@ source_group("Sources\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/
 
 source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")
 source_group("thirdparty\\dp_rect_pack" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dp_rect_pack/.+")
-source_group("thirdparty\\ShaderCompiler" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ShaderCompiler/.+")
-source_group("thirdparty\\vk_mem_alloc" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vk_mem_alloc/.+")
-source_group("thirdparty\\volk" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/volk/.+")
-source_group("thirdparty\\vulkan" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vulkan/.+")
 source_group("thirdparty\\miniz" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/miniz/.+")
