@@ -157,7 +157,7 @@ IntSector *FLevel::GetSectorFromSubSector(const MapSubsectorEx *sub)
 	for (int i = 0; i < (int)sub->numlines; i++)
 	{
 		MapSegGLEx *seg = &GLSegs[sub->firstline + i];
-		if (seg->side != NO_SIDE_INDEX)
+		if ((int16_t)seg->side != NO_SIDE_INDEX)
 		{
 			IntLineDef *line = &Lines[seg->linedef];
 			return GetFrontSector(&Sides[line->sidenum[seg->side]]);
