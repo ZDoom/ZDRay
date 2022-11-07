@@ -33,7 +33,7 @@ RENDERDOC_API_1_4_2* rdoc_api;
 void LoadRenderDoc()
 {
 #ifdef _WIN32
-	if (auto mod = GetModuleHandle("renderdoc.dll"))
+	if (auto mod = GetModuleHandleA("renderdoc.dll"))
 	{
 		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
 		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.15)
 project(zvulkan)
 
 set(ZVULKAN_SOURCES
@@ -196,3 +196,7 @@ endif()
 add_library(zvulkan STATIC ${ZVULKAN_SOURCES} ${ZVULKAN_INCLUDES} ${VULKAN_INCLUDES})
 target_link_libraries(zvulkan ${ZVULKAN_LIBS})
 set_target_properties(zvulkan PROPERTIES CXX_STANDARD 17)
+
+if(MSVC)
+	set_property(TARGET zvulkan PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()

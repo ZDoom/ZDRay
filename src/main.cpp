@@ -594,13 +594,13 @@ static bool CheckInOutNames()
 #else
 	HANDLE inFile, outFile;
 
-	outFile = CreateFile(OutName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+	outFile = CreateFileA(OutName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
 		nullptr, OPEN_EXISTING, 0, nullptr);
 	if (outFile == INVALID_HANDLE_VALUE)
 	{
 		return false;
 	}
-	inFile = CreateFile(InName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+	inFile = CreateFileA(InName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
 		nullptr, OPEN_EXISTING, 0, nullptr);
 	if (inFile == INVALID_HANDLE_VALUE)
 	{

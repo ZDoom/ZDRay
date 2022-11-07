@@ -1,133 +1,12 @@
-cmake_minimum_required(VERSION 3.11)
-
-include( CheckFunctionExists )
-include( CheckCXXCompilerFlag )
+cmake_minimum_required(VERSION 3.15)
 
 add_subdirectory( thirdparty/ZVulkan )
 
-project( ZDRay )
+project(zdray)
 
-SET( CMAKE_CXX_STANDARD 17 )
+include(CheckFunctionExists)
 
-IF( NOT CMAKE_BUILD_TYPE )
-	SET( CMAKE_BUILD_TYPE Debug CACHE STRING
-		"Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
-		FORCE )
-ENDIF( NOT CMAKE_BUILD_TYPE )
-
-list( APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}" )
-include( TargetArch )
-
-target_architecture(TARGET_ARCHITECTURE)
-if( NOT ${TARGET_ARCHITECTURE} MATCHES "x86_64" )
-	add_definitions( -DNO_SSE )
-endif()
-
-set( SSE_MATTERS NO )
-
-# SSE only matters on 32-bit targets. We check compiler flags to know if we can do it.
-if( CMAKE_SIZEOF_VOID_P MATCHES "4" )
-	CHECK_CXX_COMPILER_FLAG( "-msse2 -mfpmath=sse" CAN_DO_MFPMATH )
-	CHECK_CXX_COMPILER_FLAG( -arch:SSE2 CAN_DO_ARCHSSE2 )
-	if( CAN_DO_MFPMATH )
-		set( SSE1_ENABLE "-msse -mfpmath=sse" )
-		set( SSE2_ENABLE "-msse2 -mfpmath=sse" )
-		set( SSE_MATTERS YES )
-	elseif( CAN_DO_ARCHSSE2 )
-		set( SSE1_ENABLE -arch:SSE )
-		set( SSE2_ENABLE -arch:SSE2 )
-		set( SSE_MATTERS YES )
-	endif( CAN_DO_MFPMATH )
-endif( CMAKE_SIZEOF_VOID_P MATCHES "4" )
-
-if( SSE_MATTERS )
-	if( WIN32 )
-		set( BACKPATCH 1 CACHE BOOL "Enable backpatching." )
-	else( WIN32 )
-		CHECK_FUNCTION_EXISTS(mprotect HAVE_MPROTECT)
-		if( HAVE_MPROTECT )
-			set( BACKPATCH 1 CACHE BOOL "Enable backpatching." )
-		else( HAVE_MPROTECT )
-			set( BACKPATCH 0 )
-		endif( HAVE_MPROTECT )
-	endif( WIN32 )
-	set( FULL_SSE2 0 CACHE BOOL "Use SSE2 math everywhere." )
-	set( SSE 1 CACHE BOOL "Build SSE and SSE2 versions of key code." )
-else( SSE_MATTERS )
-	set( BACKPATCH 0 )
-endif( SSE_MATTERS )
-
-if( CMAKE_COMPILER_IS_GNUCXX )
-	set( GPROF 0 CACHE BOOL "Enable profiling with gprof for Debug and RelWithDebInfo build types." )
-	set( PROFILE 0 CACHE INT "1=Generate profile coverage info, 2=Use it" )
-endif( CMAKE_COMPILER_IS_GNUCXX )
-
-if( MSVC )
-	# Eliminate unreferenced functions and data
-	# Perform identical COMDAT folding
-	set( REL_LINKER_FLAGS "/opt:ref /opt:icf /nodefaultlib:msvcrt" )
-
-	# String pooling
-	# Function-level linking
-	# Disable run-time type information
-	# Enable C++ conformance mode
-	set( ALL_C_FLAGS "/GF /Gy /GR- /permissive-" )
-	
-	# Avoid CRT DLL dependancies in release builds
-	set( REL_C_FLAGS "/MT" )
-
-	# Disable warnings for unsecure CRT functions from VC8+
-	if( MSVC_VERSION GREATER 1399 )
-		set( ALL_C_FLAGS "${ALL_C_FLAGS} /wd4996" )
-	endif( MSVC_VERSION GREATER 1399 )
-	
-	# The CMake configurations set /GR and /MD by default, which conflict with our settings.
-	string(REPLACE "/MD " " " CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE} )
-	string(REPLACE "/MD " " " CMAKE_CXX_FLAGS_MINSIZEREL ${CMAKE_CXX_FLAGS_MINSIZEREL} )
-	string(REPLACE "/MD " " " CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO} )
-	string(REPLACE "/MD " " " CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE} )
-	string(REPLACE "/MD " " " CMAKE_C_FLAGS_MINSIZEREL ${CMAKE_C_FLAGS_MINSIZEREL} )
-	string(REPLACE "/MD " " " CMAKE_C_FLAGS_RELWITHDEBINFO ${CMAKE_C_FLAGS_RELWITHDEBINFO} )
-	string(REPLACE " /GR" " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} )
-endif( MSVC )
-
-if( CMAKE_COMPILER_IS_GNUCXX )
-	set( ALL_C_FLAGS "${ALL_C_FLAGS} -ffast-math -pipe -pthread" )
-	if( GPROF )
-		set( ALL_C_FLAGS "${ALL_C_FLAGS} -pg -g" )
-	else( GPROF )
-		set( REL_C_FLAGS "${REL_C_FLAGS} -fomit-frame-pointer" )
-	endif( GPROF )
-	if( PROFILE EQUAL 1 )
-		message( STATUS "Generating profile coverage information" )
-		set( ALL_C_FLAGS "${ALL_C_FLAGS} -fprofile-generate" )
-		set( PROF_LIB "gcov" )
-	elseif( PROFILE EQUAL 2 )
-		message( STATUS "Using profile coverage information" )
-		set( ALL_C_FLAGS "${ALL_C_FLAGS} -fprofile-use" )
-	endif( PROFILE EQUAL 1 )
-endif( CMAKE_COMPILER_IS_GNUCXX )
-
-#if( WIN32 AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-#	set( ALL_C_FLAGS "${ALL_C_FLAGS} -Wno-deprecated-declarations -Wno-format" )
-#endif( WIN32 AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-
-if( BACKPATCH )
-	add_definitions( -DBACKPATCH )
-endif( BACKPATCH )
-
-CHECK_FUNCTION_EXISTS( stricmp STRICMP_EXISTS )
-if( NOT STRICMP_EXISTS )
-	add_definitions( -Dstricmp=strcasecmp )
-endif( NOT STRICMP_EXISTS )
-
-CHECK_FUNCTION_EXISTS( strnicmp STRNICMP_EXISTS )
-if( NOT STRNICMP_EXISTS )
-	add_definitions( -Dstrnicmp=strncasecmp )
-endif( NOT STRNICMP_EXISTS )
-
-set( ZDRAY_LIBS "" )
-set( SOURCES
+set(ZDRAY_SOURCES
 	src/main.cpp
 	src/commandline/getopt.c
 	src/commandline/getopt1.c
@@ -215,92 +94,76 @@ set(THIRDPARTY_SOURCES
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.c
 )
 
-if( SSE_MATTERS )
-	if( FULL_SSE2 )
-		message( STATUS "Using SSE2 math everywhere." )
-		# Building everything with SSE2 is much like disabling it, in that we
-		# need not check for its existance while running.
-		set( ALL_C_FLAGS "${ALL_C_FLAGS} -DDISABLE_SSE ${SSE2_ENABLE}" )
-	else( FULL_SSE2 )
-	if( SSE )
-		message( STATUS "Using SSE math for ClassifyLine only." )
-		set( SOURCES ${SOURCES} src/nodebuilder/nodebuild_classify_sse1.cpp src/nodebuilder/nodebuild_classify_sse2.cpp )
-		set_source_files_properties( src/nodebuilder/nodebuild_classify_sse1.cpp PROPERTIES COMPILE_FLAGS "${SSE1_ENABLE}" )
-		set_source_files_properties( src/nodebuilder/nodebuild_classify_sse2.cpp PROPERTIES COMPILE_FLAGS "${SSE2_ENABLE}" )
-	else( SSE )
-		message( STATUS "SSE math is completely disabled." )
-		set( ALL_C_FLAGS "${ALL_C_FLAGS} -DDISABLE_SSE" )
-	endif( SSE )
-	endif( FULL_SSE2 )
-else( SSE_MATTERS )
-	set( ALL_C_FLAGS "${ALL_C_FLAGS} -DDISABLE_SSE" )
-endif( SSE_MATTERS )
+set(ZDRAY_LIBS
+	zvulkan
+)
 
-if( WIN32 )
-	set( ZDRAY_LIBS ${ZDRAY_LIBS} user32 gdi32 )
+source_group("src" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/.+")
+source_group("src\\BlockmapBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/blockmapbuilder/.+")
+source_group("src\\Commandline" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/commandline/.+")
+source_group("src\\Framework" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/framework/.+")
+source_group("src\\Level" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/level/.+")
+source_group("src\\NodeBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/nodebuilder/.+")
+source_group("src\\Parse" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/parse/.+")
+source_group("src\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/.+")
+source_group("src\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
+source_group("src\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
+source_group("src\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
+source_group("src\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
+source_group("src\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/models/.+")
 
-	if( CMAKE_COMPILER_IS_GNUCXX )
-		# CMake is not set up to compile and link rc files with GCC. :(
-		add_custom_command( OUTPUT zdray-rc.o
-			COMMAND windres -o zdray-rc.o -i ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/resource.rc
-			DEPENDS resource.rc )
-		set( SOURCES ${SOURCES} zdray-rc.o )
-	else( CMAKE_COMPILER_IS_GNUCXX )
-		set( SOURCES ${SOURCES} src/platform/windows/resource.rc )
-	endif( CMAKE_COMPILER_IS_GNUCXX )
-endif( WIN32 )
+source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")
+source_group("thirdparty\\dp_rect_pack" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dp_rect_pack/.+")
+source_group("thirdparty\\miniz" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/miniz/.+")
+
+include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ZVulkan/include" "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}")
+include(TargetArch)
+target_architecture(TARGET_ARCHITECTURE)
+if(${TARGET_ARCHITECTURE} MATCHES "x86_64")
+	set(ZDRAY_SOURCES ${ZDRAY_SOURCES}
+		src/nodebuilder/nodebuild_classify_sse1.cpp
+		src/nodebuilder/nodebuild_classify_sse2.cpp
+	)
+	set_source_files_properties(src/nodebuilder/nodebuild_classify_sse1.cpp PROPERTIES COMPILE_FLAGS "${SSE1_ENABLE}")
+	set_source_files_properties(src/nodebuilder/nodebuild_classify_sse2.cpp PROPERTIES COMPILE_FLAGS "${SSE2_ENABLE}")
+else()
+	add_definitions(-DNO_SSE)
+endif()
+
+CHECK_FUNCTION_EXISTS(stricmp STRICMP_EXISTS)
+if(NOT STRICMP_EXISTS)
+	add_definitions(-Dstricmp=strcasecmp)
+endif()
+
+CHECK_FUNCTION_EXISTS( strnicmp STRNICMP_EXISTS )
+if(NOT STRNICMP_EXISTS)
+	add_definitions(-Dstrnicmp=strncasecmp)
+endif()
+
+if(WIN32)
+	add_definitions(-DUNICODE -D_UNICODE)
+else()
+	add_definitions(-DUNIX -D_UNIX)
+	add_link_options(-pthread)
+endif()
 
 if(MSVC)
 	# Use all cores for compilation
 	set(CMAKE_CXX_FLAGS "/MP ${CMAKE_CXX_FLAGS}")
 
+	# zdbsp source code is using some ancient C code that really should be updated
+	set_source_files_properties(${ZDRAY_SOURCES} PROPERTIES COMPILE_FLAGS "/wd4996 -D_CRT_SECURE_NO_WARNINGS")
+
 	# Ignore warnings in third party code
-	set_source_files_properties(${THIRDPARTY_SOURCES} PROPERTIES COMPILE_FLAGS "/wd4244 /wd4267 /wd4005 /wd4018 -D_CRT_SECURE_NO_WARNINGS")
+	#set_source_files_properties(${THIRDPARTY_SOURCES} PROPERTIES COMPILE_FLAGS "/wd4244 /wd4267 /wd4005 /wd4018 -D_CRT_SECURE_NO_WARNINGS")
 endif()
 
-if (WIN32)
-else()
-set(PLATFORM_LIB "-ldl -lpthread")
+add_executable(zdray ${ZDRAY_SOURCES} ${THIRDPARTY_SOURCES})
+target_link_libraries(zdray ${ZDRAY_LIBS})
+set_target_properties(zdray PROPERTIES CXX_STANDARD 17)
+
+if(MSVC)
+	set_property(TARGET zdray PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
-
-if( CMAKE_COMPILER_IS_GNUCXX )
-	set( ZDRAY_LIBS pthread )
-endif( CMAKE_COMPILER_IS_GNUCXX )
-
-set( CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${REL_LINKER_FLAGS}" )
-set( CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL} ${REL_LINKER_FLAGS}" )
-set( CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} ${REL_LINKER_FLAGS}" )
-
-set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALL_C_FLAGS}" )
-set( CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${REL_C_FLAGS}" )
-set( CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} ${REL_C_FLAGS}" )
-set( CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${REL_C_FLAGS}" )
-set( CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
-
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALL_C_FLAGS}" )
-set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${REL_C_FLAGS}" )
-set( CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} ${REL_C_FLAGS}" )
-set( CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${REL_C_FLAGS}" )
-set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
-
-add_executable( zdray ${SOURCES} ${THIRDPARTY_SOURCES} )
-target_link_libraries( zdray zvulkan ${ZDRAY_LIBS} ${PROF_LIB} ${PLATFORM_LIB} )
-include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ZVulkan/include" "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
-
-source_group("Sources" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/.+")
-source_group("Sources\\BlockmapBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/blockmapbuilder/.+")
-source_group("Sources\\Commandline" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/commandline/.+")
-source_group("Sources\\Framework" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/framework/.+")
-source_group("Sources\\Level" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/level/.+")
-source_group("Sources\\NodeBuilder" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/nodebuilder/.+")
-source_group("Sources\\Parse" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/parse/.+")
-source_group("Sources\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/.+")
-source_group("Sources\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
-source_group("Sources\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
-source_group("Sources\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
-source_group("Sources\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
-source_group("Sources\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/models/.+")
-
-source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")
-source_group("thirdparty\\dp_rect_pack" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dp_rect_pack/.+")
-source_group("thirdparty\\miniz" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/miniz/.+")
