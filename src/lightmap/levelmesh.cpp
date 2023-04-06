@@ -1176,7 +1176,7 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 		}
 	}
 
-	int version = 0;
+	int version = 1;
 	int headerSize = 5 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
 	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
 	int texCoordsSize = numTexCoords * 2 * sizeof(float);
@@ -1194,8 +1194,13 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	lumpFile.Write16(textures.size());
 	lumpFile.Write32(numSurfaces);
 	lumpFile.Write32(numTexCoords);
-	lumpFile.Write32(0); // old light probes list
 	lumpFile.Write32(map->NumGLSubsectors);
+	lumpFile.WriteFloat(map->GetSunDirection().x);
+	lumpFile.WriteFloat(map->GetSunDirection().y);
+	lumpFile.WriteFloat(map->GetSunDirection().z);
+	lumpFile.WriteFloat(map->GetSunColor().r);
+	lumpFile.WriteFloat(map->GetSunColor().g);
+	lumpFile.WriteFloat(map->GetSunColor().b);
 
 	// Write surfaces
 	int coordOffsets = 0;
