@@ -2,6 +2,117 @@
 
 #include "vulkanobjects.h"
 #include <cassert>
+#include <set>
+
+class VulkanCompatibleDevice;
+
+class VulkanInstanceBuilder
+{
+public:
+	VulkanInstanceBuilder();
+
+	VulkanInstanceBuilder& ApiVersionsToTry(const std::vector<uint32_t>& versions);
+	VulkanInstanceBuilder& RequireExtension(const std::string& extensionName);
+	VulkanInstanceBuilder& RequireSurfaceExtensions(bool enable = true);
+	VulkanInstanceBuilder& OptionalExtension(const std::string& extensionName);
+	VulkanInstanceBuilder& DebugLayer(bool enable = true);
+
+	std::shared_ptr<VulkanInstance> Create();
+
+private:
+	std::vector<uint32_t> apiVersionsToTry;
+	std::set<std::string> requiredExtensions;
+	std::set<std::string> optionalExtensions;
+	bool debugLayer = false;
+};
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+
+class VulkanSurfaceBuilder
+{
+public:
+	VulkanSurfaceBuilder();
+
+	VulkanSurfaceBuilder& Win32Window(HWND handle);
+
+	std::shared_ptr<VulkanSurface> Create(std::shared_ptr<VulkanInstance> instance);
+
+private:
+	HWND hwnd = {};
+};
+
+#endif
+
+class VulkanDeviceBuilder
+{
+public:
+	VulkanDeviceBuilder();
+
+	VulkanDeviceBuilder& RequireExtension(const std::string& extensionName);
+	VulkanDeviceBuilder& OptionalExtension(const std::string& extensionName);
+	VulkanDeviceBuilder& OptionalRayQuery();
+	VulkanDeviceBuilder& OptionalDescriptorIndexing();
+	VulkanDeviceBuilder& Surface(std::shared_ptr<VulkanSurface> surface);
+	VulkanDeviceBuilder& SelectDevice(int index);
+
+	std::vector<VulkanCompatibleDevice> FindDevices(const std::shared_ptr<VulkanInstance>& instance);
+	std::shared_ptr<VulkanDevice> Create(std::shared_ptr<VulkanInstance> instance);
+
+private:
+	std::set<std::string> requiredDeviceExtensions;
+	std::set<std::string> optionalDeviceExtensions;
+	std::shared_ptr<VulkanSurface> surface;
+	int deviceIndex = 0;
+};
+
+class VulkanSwapChainBuilder
+{
+public:
+	VulkanSwapChainBuilder();
+
+	std::shared_ptr<VulkanSwapChain> Create(VulkanDevice* device);
+};
+
+class CommandPoolBuilder
+{
+public:
+	CommandPoolBuilder();
+
+	CommandPoolBuilder& QueueFamily(int index);
+	CommandPoolBuilder& DebugName(const char* name) { debugName = name; return *this; }
+
+	std::unique_ptr<VulkanCommandPool> Create(VulkanDevice* device);
+
+private:
+	const char* debugName = nullptr;
+	int queueFamilyIndex = -1;
+};
+
+class SemaphoreBuilder
+{
+public:
+	SemaphoreBuilder();
+
+	SemaphoreBuilder& DebugName(const char* name) { debugName = name; return *this; }
+
+	std::unique_ptr<VulkanSemaphore> Create(VulkanDevice* device);
+
+private:
+	const char* debugName = nullptr;
+};
+
+class FenceBuilder
+{
+public:
+	FenceBuilder();
+
+	FenceBuilder& DebugName(const char* name) { debugName = name; return *this; }
+
+	std::unique_ptr<VulkanFence> Create(VulkanDevice* device);
+
+private:
+	const char* debugName = nullptr;
+};
 
 class ImageBuilder
 {
@@ -73,6 +184,7 @@ public:
 	BufferBuilder& Size(size_t size);
 	BufferBuilder& Usage(VkBufferUsageFlags bufferUsage, VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY, VmaAllocationCreateFlags allocFlags = 0);
 	BufferBuilder& MemoryType(VkMemoryPropertyFlags requiredFlags, VkMemoryPropertyFlags preferredFlags, uint32_t memoryTypeBits = 0);
+	BufferBuilder& MinAlignment(VkDeviceSize memoryAlignment);
 	BufferBuilder& DebugName(const char* name) { debugName = name; return *this; }
 
 	std::unique_ptr<VulkanBuffer> Create(VulkanDevice *device);
@@ -81,6 +193,27 @@ private:
 	VkBufferCreateInfo bufferInfo = {};
 	VmaAllocationCreateInfo allocInfo = {};
 	const char* debugName = nullptr;
+	VkDeviceSize minAlignment = 0;
+};
+
+enum class ShaderType
+{
+	Vertex,
+	TessControl,
+	TessEvaluation,
+	Geometry,
+	Fragment,
+	Compute
+};
+
+class ShaderIncludeResult
+{
+public:
+	ShaderIncludeResult(std::string name, std::string text) : name(std::move(name)), text(std::move(text)) { }
+	ShaderIncludeResult(std::string error) : text(std::move(error)) { }
+
+	std::string name; // fully resolved name of the included header file
+	std::string text; // the file contents - or include error message if name is empty
 };
 
 class ShaderBuilder
@@ -91,16 +224,23 @@ public:
 	static void Init();
 	static void Deinit();
 
-	ShaderBuilder& VertexShader(const std::string &code);
-	ShaderBuilder& FragmentShader(const std::string&code);
+	ShaderBuilder& Type(ShaderType type);
+	ShaderBuilder& AddSource(const std::string& name, const std::string& code);
+
+	ShaderBuilder& OnIncludeSystem(std::function<ShaderIncludeResult(std::string headerName, std::string includerName, size_t inclusionDepth)> onIncludeSystem);
+	ShaderBuilder& OnIncludeLocal(std::function<ShaderIncludeResult(std::string headerName, std::string includerName, size_t inclusionDepth)> onIncludeLocal);
+
 	ShaderBuilder& DebugName(const char* name) { debugName = name; return *this; }
 
 	std::unique_ptr<VulkanShader> Create(const char *shadername, VulkanDevice *device);
 
 private:
-	std::string code;
+	std::vector<std::pair<std::string, std::string>> sources;
+	std::function<ShaderIncludeResult(std::string headerName, std::string includerName, size_t inclusionDepth)> onIncludeSystem;
+	std::function<ShaderIncludeResult(std::string headerName, std::string includerName, size_t inclusionDepth)> onIncludeLocal;
 	int stage = 0;
 	const char* debugName = nullptr;
+	friend class ShaderBuilderIncluderImpl;
 };
 
 class AccelerationStructureBuilder
@@ -125,6 +265,7 @@ class ComputePipelineBuilder
 public:
 	ComputePipelineBuilder();
 
+	ComputePipelineBuilder& Cache(VulkanPipelineCache* cache);
 	ComputePipelineBuilder& Layout(VulkanPipelineLayout *layout);
 	ComputePipelineBuilder& ComputeShader(VulkanShader *shader);
 	ComputePipelineBuilder& DebugName(const char* name) { debugName = name; return *this; }
@@ -134,6 +275,7 @@ public:
 private:
 	VkComputePipelineCreateInfo pipelineInfo = {};
 	VkPipelineShaderStageCreateInfo stageInfo = {};
+	VulkanPipelineCache* cache = nullptr;
 	const char* debugName = nullptr;
 };
 
@@ -213,6 +355,7 @@ class GraphicsPipelineBuilder
 public:
 	GraphicsPipelineBuilder();
 
+	GraphicsPipelineBuilder& Cache(VulkanPipelineCache* cache);
 	GraphicsPipelineBuilder& Subpass(int subpass);
 	GraphicsPipelineBuilder& Layout(VulkanPipelineLayout *layout);
 	GraphicsPipelineBuilder& RenderPass(VulkanRenderPass *renderPass);
@@ -266,6 +409,7 @@ private:
 	std::vector<VkVertexInputAttributeDescription> vertexInputAttributes;
 	std::vector<VkDynamicState> dynamicStates;
 
+	VulkanPipelineCache* cache = nullptr;
 	const char* debugName = nullptr;
 };
 
@@ -285,6 +429,24 @@ private:
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	std::vector<VkDescriptorSetLayout> setLayouts;
 	std::vector<VkPushConstantRange> pushConstantRanges;
+	const char* debugName = nullptr;
+};
+
+class PipelineCacheBuilder
+{
+public:
+	PipelineCacheBuilder();
+
+	PipelineCacheBuilder& InitialData(const void* data, size_t size);
+	PipelineCacheBuilder& Flags(VkPipelineCacheCreateFlags flags);
+
+	PipelineCacheBuilder& DebugName(const char* name) { debugName = name; return *this; }
+
+	std::unique_ptr<VulkanPipelineCache> Create(VulkanDevice* device);
+
+private:
+	VkPipelineCacheCreateInfo pipelineCacheInfo = {};
+	std::vector<uint8_t> initData;
 	const char* debugName = nullptr;
 };
 

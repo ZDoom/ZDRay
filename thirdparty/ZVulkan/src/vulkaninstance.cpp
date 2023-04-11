@@ -6,7 +6,8 @@
 #include <string>
 #include <cstring>
 
-VulkanInstance::VulkanInstance(bool wantDebugLayer) : WantDebugLayer(wantDebugLayer)
+VulkanInstance::VulkanInstance(std::vector<uint32_t> apiVersionsToTry, std::set<std::string> requiredExtensions, std::set<std::string> optionalExtensions, bool wantDebugLayer)
+	: ApiVersionsToTry(std::move(apiVersionsToTry)), RequiredExtensions(std::move(requiredExtensions)), OptionalExtensions(std::move(optionalExtensions)), WantDebugLayer(wantDebugLayer)
 {
 	try
 	{
@@ -64,8 +65,8 @@ void VulkanInstance::CreateInstance()
 		{
 			if (layer.layerName == debugLayer)
 			{
-				EnabledValidationLayers.push_back(layer.layerName);
-				EnabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+				EnabledValidationLayers.insert(layer.layerName);
+				EnabledExtensions.insert(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 				debugLayerFound = true;
 				break;
 			}
@@ -75,14 +76,19 @@ void VulkanInstance::CreateInstance()
 	// Enable optional instance extensions we are interested in
 	for (const auto& ext : AvailableExtensions)
 	{
-		for (const auto& opt : OptionalExtensions)
+		if (OptionalExtensions.find(ext.extensionName) != OptionalExtensions.end())
 		{
-			if (strcmp(ext.extensionName, opt) == 0)
-			{
-				EnabledExtensions.push_back(opt);
-			}
+			EnabledExtensions.insert(ext.extensionName);
 		}
 	}
+
+	std::vector<const char*> enabledValidationLayersCStr;
+	for (const std::string& layer : EnabledValidationLayers)
+		enabledValidationLayersCStr.push_back(layer.c_str());
+
+	std::vector<const char*> enabledExtensionsCStr;
+	for (const std::string& ext : EnabledExtensions)
+		enabledExtensionsCStr.push_back(ext.c_str());
 
 	// Try get the highest vulkan version we can get
 	VkResult result = VK_ERROR_INITIALIZATION_FAILED;
@@ -100,9 +106,9 @@ void VulkanInstance::CreateInstance()
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
 		createInfo.enabledExtensionCount = (uint32_t)EnabledExtensions.size();
-		createInfo.enabledLayerCount = (uint32_t)EnabledValidationLayers.size();
-		createInfo.ppEnabledLayerNames = EnabledValidationLayers.data();
-		createInfo.ppEnabledExtensionNames = EnabledExtensions.data();
+		createInfo.enabledLayerCount = (uint32_t)enabledValidationLayersCStr.size();
+		createInfo.ppEnabledLayerNames = enabledValidationLayersCStr.data();
+		createInfo.ppEnabledExtensionNames = enabledExtensionsCStr.data();
 
 		result = vkCreateInstance(&createInfo, nullptr, &Instance);
 		if (result >= VK_SUCCESS)
@@ -157,9 +163,6 @@ std::vector<VulkanPhysicalDevice> VulkanInstance::GetPhysicalDevices(VkInstance 
 		auto& dev = devinfo[i];
 		dev.Device = devices[i];
 
-		vkGetPhysicalDeviceMemoryProperties(dev.Device, &dev.MemoryProperties);
-		vkGetPhysicalDeviceProperties(dev.Device, &dev.Properties);
-
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(dev.Device, &queueFamilyCount, nullptr);
 		dev.QueueFamilies.resize(queueFamilyCount);
@@ -180,11 +183,32 @@ std::vector<VulkanPhysicalDevice> VulkanInstance::GetPhysicalDevices(VkInstance 
 			return false;
 		};
 
+		vkGetPhysicalDeviceMemoryProperties(dev.Device, &dev.Properties.Memory);
+
 		if (apiVersion != VK_API_VERSION_1_0)
 		{
+			VkPhysicalDeviceProperties2 deviceProperties2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+
+			void** next = const_cast<void**>(&deviceProperties2.pNext);
+			if (checkForExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
+			{
+				*next = &dev.Properties.AccelerationStructure;
+				next = &dev.Properties.AccelerationStructure.pNext;
+			}
+			if (checkForExtension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
+			{
+				*next = &dev.Properties.DescriptorIndexing;
+				next = &dev.Properties.DescriptorIndexing.pNext;
+			}
+
+			vkGetPhysicalDeviceProperties2(dev.Device, &deviceProperties2);
+			dev.Properties.Properties = deviceProperties2.properties;
+			dev.Properties.AccelerationStructure.pNext = nullptr;
+			dev.Properties.DescriptorIndexing.pNext = nullptr;
+
 			VkPhysicalDeviceFeatures2 deviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
-			void** next = const_cast<void**>(&deviceFeatures2.pNext);
+			next = const_cast<void**>(&deviceFeatures2.pNext);
 			if (checkForExtension(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
 			{
 				*next = &dev.Features.BufferDeviceAddress;
@@ -215,6 +239,7 @@ std::vector<VulkanPhysicalDevice> VulkanInstance::GetPhysicalDevices(VkInstance 
 		}
 		else
 		{
+			vkGetPhysicalDeviceProperties(dev.Device, &dev.Properties.Properties);
 			vkGetPhysicalDeviceFeatures(dev.Device, &dev.Features.Features);
 		}
 	}

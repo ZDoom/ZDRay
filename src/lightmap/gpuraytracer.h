@@ -154,7 +154,7 @@ private:
 	int uniformStructs = 256;
 	VkDeviceSize uniformStructStride = sizeof(Uniforms);
 
-	std::unique_ptr<VulkanDevice> device;
+	std::shared_ptr<VulkanDevice> device;
 
 	bool useRayQuery = true;
 

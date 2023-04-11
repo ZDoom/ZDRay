@@ -80,9 +80,16 @@ GPURaytracer::GPURaytracer()
 	if(!rdoc_api)
 		LoadRenderDoc();
 
-	auto instance = std::make_shared<VulkanInstance>(VKDebug);
-	device = std::make_unique<VulkanDevice>(instance, nullptr, VulkanCompatibleDevice::SelectDevice(instance, nullptr, 0));
+	auto instance = VulkanInstanceBuilder()
+		.DebugLayer(VKDebug)
+		.Create();
+
+	device = VulkanDeviceBuilder()
+		.OptionalRayQuery()
+		.Create(instance);
+
 	useRayQuery = !NoRtx && device->PhysicalDevice.Features.RayQuery.rayQuery;
+
 	PrintVulkanInfo();
 }
 
@@ -609,6 +616,7 @@ void GPURaytracer::CreateBottomLevelAccelerationStructure()
 	blScratchBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		.Size(sizeInfo.buildScratchSize)
+		.MinAlignment(device->PhysicalDevice.Properties.AccelerationStructure.minAccelerationStructureScratchOffsetAlignment)
 		.DebugName("blScratchBuffer")
 		.Create(device.get());
 
@@ -691,6 +699,7 @@ void GPURaytracer::CreateTopLevelAccelerationStructure()
 	tlScratchBuffer = BufferBuilder()
 		.Usage(VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		.Size(sizeInfo.buildScratchSize)
+		.MinAlignment(device->PhysicalDevice.Properties.AccelerationStructure.minAccelerationStructureScratchOffsetAlignment)
 		.DebugName("tlScratchBuffer")
 		.Create(device.get());
 
@@ -717,17 +726,20 @@ void GPURaytracer::CreateShaders()
 	traceprefix += "#line 1\r\n";
 
 	vertShader = ShaderBuilder()
-		.VertexShader(prefix + glsl_vert)
+		.Type(ShaderType::Vertex)
+		.AddSource("vert.glsl", prefix + glsl_vert)
 		.DebugName("vertShader")
 		.Create("vertShader", device.get());
 
 	fragShader = ShaderBuilder()
-		.FragmentShader(traceprefix + glsl_frag)
+		.Type(ShaderType::Fragment)
+		.AddSource("frag.glsl", traceprefix + glsl_frag)
 		.DebugName("fragShader")
 		.Create("fragShader", device.get());
 
 	fragResolveShader = ShaderBuilder()
-		.FragmentShader(prefix + glsl_frag_resolve)
+		.Type(ShaderType::Fragment)
+		.AddSource("frag_resolve.glsl", prefix + glsl_frag_resolve)
 		.DebugName("fragResolveShader")
 		.Create("fragResolveShader", device.get());
 }
@@ -964,7 +976,7 @@ LightmapImage GPURaytracer::CreateImage(int width, int height)
 
 void GPURaytracer::CreateUniformBuffer()
 {
-	VkDeviceSize align = device->PhysicalDevice.Properties.limits.minUniformBufferOffsetAlignment;
+	VkDeviceSize align = device->PhysicalDevice.Properties.Properties.limits.minUniformBufferOffsetAlignment;
 	uniformStructStride = (sizeof(Uniforms) + align - 1) / align * align;
 
 	uniformBuffer = BufferBuilder()
@@ -1047,7 +1059,7 @@ std::vector<CollisionNode> GPURaytracer::CreateCollisionNodes()
 
 void GPURaytracer::PrintVulkanInfo()
 {
-	const auto& props = device->PhysicalDevice.Properties;
+	const auto& props = device->PhysicalDevice.Properties.Properties;
 
 	std::string deviceType;
 	switch (props.deviceType)

@@ -1,50 +1,61 @@
 #pragma once
 
 #include "vulkandevice.h"
+#include "vulkanobjects.h"
 
 class VulkanSemaphore;
 class VulkanFence;
 
+class VulkanSurfaceCapabilities
+{
+public:
+	VkSurfaceCapabilitiesKHR Capabilites = { };
+#ifdef WIN32
+	VkSurfaceCapabilitiesFullScreenExclusiveEXT FullScreenExclusive = { VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_FULL_SCREEN_EXCLUSIVE_EXT };
+#else
+	struct { void* pNext = nullptr; VkBool32 fullScreenExclusiveSupported = 0; } FullScreenExclusive;
+#endif
+	std::vector<VkPresentModeKHR> PresentModes;
+	std::vector<VkSurfaceFormatKHR> Formats;
+};
+
 class VulkanSwapChain
 {
 public:
-	VulkanSwapChain(VulkanDevice *device, bool vsync);
+	VulkanSwapChain(VulkanDevice* device);
 	~VulkanSwapChain();
 
-	uint32_t acquireImage(int width, int height, bool exclusivefullscreen, VulkanSemaphore *semaphore = nullptr, VulkanFence *fence = nullptr);
-	void queuePresent(uint32_t imageIndex, VulkanSemaphore *semaphore = nullptr);
+	void Create(int width, int height, int imageCount, bool vsync, bool hdr, bool exclusivefullscreen);
+	bool Lost() const { return lost; }
 
-	bool vsync;
-	VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-	VkSurfaceFormatKHR swapChainFormat;
-	VkPresentModeKHR swapChainPresentMode;
+	int Width() const { return actualExtent.width; }
+	int Height() const { return actualExtent.height; }
+	VkSurfaceFormatKHR Format() const { return format; }
 
-	std::vector<VkImage> swapChainImages;
-	std::vector<VkImageView> swapChainImageViews;
+	int ImageCount() const { return (int)images.size(); }
+	VulkanImage* GetImage(int index) { return images[index].get(); }
+	VulkanImageView* GetImageView(int index) { return views[index].get(); }
 
-	VkExtent2D actualExtent;
-
-	bool newSwapChain = true;
+	int AcquireImage(VulkanSemaphore* semaphore = nullptr, VulkanFence* fence = nullptr);
+	void QueuePresent(int imageIndex, VulkanSemaphore* semaphore = nullptr);
 
 private:
-	void selectFormat();
-	void selectPresentMode(bool fullscreen);
-	bool createSwapChain(int width, int height, bool fullscreen, VkSwapchainKHR oldSwapChain = VK_NULL_HANDLE);
-	void createViews();
-	void getImages();
-	void releaseResources();
-	void releaseViews();
-	void recreate(int width, int height, bool fullscreen);
+	void SelectFormat(const VulkanSurfaceCapabilities& caps, bool hdr);
 
-	std::vector<VkSurfaceFormatKHR> getSurfaceFormats();
-	std::vector<VkPresentModeKHR> getPresentModes(bool exclusivefullscreen);
+	bool CreateSwapchain(int width, int height, int imageCount, bool vsync, bool hdr, bool exclusivefullscreen);
 
-	VulkanDevice *device = nullptr;
+	VulkanSurfaceCapabilities GetSurfaceCapabilities(bool exclusivefullscreen);
 
-	int lastSwapWidth = 0;
-	int lastSwapHeight = 0;
-	bool lastFullscreen = false;
+	VulkanDevice* device = nullptr;
+	bool lost = true;
 
-	VulkanSwapChain(const VulkanSwapChain &) = delete;
-	VulkanSwapChain &operator=(const VulkanSwapChain &) = delete;
+	VkExtent2D actualExtent = {};
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+	VkSurfaceFormatKHR format = {};
+	VkPresentModeKHR presentMode;
+	std::vector<std::unique_ptr<VulkanImage>> images;
+	std::vector<std::unique_ptr<VulkanImageView>> views;
+
+	VulkanSwapChain(const VulkanSwapChain&) = delete;
+	VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 };

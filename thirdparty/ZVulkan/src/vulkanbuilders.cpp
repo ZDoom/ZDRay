@@ -1,5 +1,8 @@
 
 #include "vulkanbuilders.h"
+#include "vulkansurface.h"
+#include "vulkancompatibledevice.h"
+#include "vulkanswapchain.h"
 #include "glslang/glslang/Public/ShaderLang.h"
 #include "glslang/spirv/GlslangToSpv.h"
 
@@ -125,29 +128,143 @@ ShaderBuilder::ShaderBuilder()
 {
 }
 
-ShaderBuilder& ShaderBuilder::VertexShader(const std::string& c)
+ShaderBuilder& ShaderBuilder::Type(ShaderType type)
 {
-	code = c;
-	stage = EShLanguage::EShLangVertex;
+	switch (type)
+	{
+	case ShaderType::Vertex: stage = EShLanguage::EShLangVertex; break;
+	case ShaderType::TessControl: stage = EShLanguage::EShLangTessControl; break;
+	case ShaderType::TessEvaluation: stage = EShLanguage::EShLangTessEvaluation; break;
+	case ShaderType::Geometry: stage = EShLanguage::EShLangGeometry; break;
+	case ShaderType::Fragment: stage = EShLanguage::EShLangFragment; break;
+	case ShaderType::Compute: stage = EShLanguage::EShLangCompute; break;
+	}
 	return *this;
 }
 
-ShaderBuilder& ShaderBuilder::FragmentShader(const std::string& c)
+ShaderBuilder& ShaderBuilder::AddSource(const std::string& name, const std::string& code)
 {
-	code = c;
-	stage = EShLanguage::EShLangFragment;
+	sources.push_back({ name, code });
 	return *this;
 }
+
+ShaderBuilder& ShaderBuilder::OnIncludeSystem(std::function<ShaderIncludeResult(std::string headerName, std::string includerName, size_t inclusionDepth)> onIncludeSystem)
+{
+	this->onIncludeSystem = std::move(onIncludeSystem);
+	return *this;
+}
+
+ShaderBuilder& ShaderBuilder::OnIncludeLocal(std::function<ShaderIncludeResult(std::string headerName, std::string includerName, size_t inclusionDepth)> onIncludeLocal)
+{
+	this->onIncludeLocal = std::move(onIncludeLocal);
+	return *this;
+}
+
+class ShaderBuilderIncluderImpl : public glslang::TShader::Includer
+{
+public:
+	ShaderBuilderIncluderImpl(ShaderBuilder* shaderBuilder) : shaderBuilder(shaderBuilder)
+	{
+	}
+
+	IncludeResult* includeSystem(const char* headerName, const char* includerName, size_t inclusionDepth) override
+	{
+		if (!shaderBuilder->onIncludeSystem)
+		{
+			return nullptr;
+		}
+
+		try
+		{
+			std::unique_ptr<ShaderIncludeResult> result;
+			try
+			{
+				result = std::make_unique<ShaderIncludeResult>(shaderBuilder->onIncludeSystem(headerName, includerName, inclusionDepth));
+			}
+			catch (const std::exception& e)
+			{
+				result = std::make_unique<ShaderIncludeResult>(e.what());
+			}
+
+			if (!result || (result->name.empty() && result->text.empty()))
+			{
+				return nullptr;
+			}
+
+			IncludeResult* outer = new IncludeResult(result->name, result->text.data(), result->text.size(), result.get());
+			result.release();
+			return outer;
+		}
+		catch (...)
+		{
+			return nullptr;
+		}
+	}
+
+	IncludeResult* includeLocal(const char* headerName, const char* includerName, size_t inclusionDepth) override
+	{
+		if (!shaderBuilder->onIncludeLocal)
+		{
+			return nullptr;
+		}
+
+		try
+		{
+			std::unique_ptr<ShaderIncludeResult> result;
+			try
+			{
+				result = std::make_unique<ShaderIncludeResult>(shaderBuilder->onIncludeLocal(headerName, includerName, inclusionDepth));
+			}
+			catch (const std::exception& e)
+			{
+				result = std::make_unique<ShaderIncludeResult>(e.what());
+			}
+
+			if (!result || (result->name.empty() && result->text.empty()))
+			{
+				return nullptr;
+			}
+
+			IncludeResult* outer = new IncludeResult(result->name, result->text.data(), result->text.size(), result.get());
+			result.release();
+			return outer;
+		}
+		catch (...)
+		{
+			return nullptr;
+		}
+	}
+
+	void releaseInclude(IncludeResult* result) override
+	{
+		if (result)
+		{
+			delete (ShaderIncludeResult*)result->userData;
+			delete result;
+		}
+	}
+
+private:
+	ShaderBuilder* shaderBuilder = nullptr;
+};
 
 std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, VulkanDevice *device)
 {
 	EShLanguage stage = (EShLanguage)this->stage;
-	const char *sources[] = { code.c_str() };
+
+	std::vector<const char*> namesC, sourcesC;
+	std::vector<int> lengthsC;
+	for (const auto& s : sources)
+	{
+		namesC.push_back(s.first.c_str());
+		sourcesC.push_back(s.second.c_str());
+		lengthsC.push_back((int)s.second.size());
+	}
 
 	TBuiltInResource resources = DefaultTBuiltInResource;
 
 	glslang::TShader shader(stage);
-	shader.setStrings(sources, 1);
+	shader.setStringsWithLengthsAndNames(sourcesC.data(), lengthsC.data(), namesC.data(), (int)sources.size());
 	shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 100);
     if (device->Instance->ApiVersion >= VK_API_VERSION_1_2)
     {
@@ -159,7 +276,9 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
         shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
     }
-	bool compileSuccess = shader.parse(&resources, 110, false, EShMsgVulkanRules);
+
+	ShaderBuilderIncluderImpl includer(this);
+	bool compileSuccess = shader.parse(&resources, 110, false, EShMsgVulkanRules, includer);
 	if (!compileSuccess)
 	{
 		throw std::runtime_error(std::string("Shader compile failed: ") + shader.getInfoLog());
@@ -199,6 +318,54 @@ std::unique_ptr<VulkanShader> ShaderBuilder::Create(const char *shadername, Vulk
 		throw std::runtime_error("Could not create vulkan shader module");
 
 	auto obj = std::make_unique<VulkanShader>(device, shaderModule);
+	if (debugName)
+		obj->SetDebugName(debugName);
+	return obj;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+CommandPoolBuilder::CommandPoolBuilder()
+{
+}
+
+CommandPoolBuilder& CommandPoolBuilder::QueueFamily(int index)
+{
+	queueFamilyIndex = index;
+	return *this;
+}
+
+std::unique_ptr<VulkanCommandPool> CommandPoolBuilder::Create(VulkanDevice* device)
+{
+	auto obj = std::make_unique<VulkanCommandPool>(device, queueFamilyIndex != -1 ? queueFamilyIndex : device->GraphicsFamily);
+	if (debugName)
+		obj->SetDebugName(debugName);
+	return obj;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+SemaphoreBuilder::SemaphoreBuilder()
+{
+}
+
+std::unique_ptr<VulkanSemaphore> SemaphoreBuilder::Create(VulkanDevice* device)
+{
+	auto obj = std::make_unique<VulkanSemaphore>(device);
+	if (debugName)
+		obj->SetDebugName(debugName);
+	return obj;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+FenceBuilder::FenceBuilder()
+{
+}
+
+std::unique_ptr<VulkanFence> FenceBuilder::Create(VulkanDevice* device)
+{
+	auto obj = std::make_unique<VulkanFence>(device);
 	if (debugName)
 		obj->SetDebugName(debugName);
 	return obj;
@@ -476,13 +643,27 @@ BufferBuilder& BufferBuilder::MemoryType(VkMemoryPropertyFlags requiredFlags, Vk
 	return *this;
 }
 
+BufferBuilder& BufferBuilder::MinAlignment(VkDeviceSize memoryAlignment)
+{
+	minAlignment = memoryAlignment;
+	return *this;
+}
+
 std::unique_ptr<VulkanBuffer> BufferBuilder::Create(VulkanDevice* device)
 {
 	VkBuffer buffer;
 	VmaAllocation allocation;
 
-	VkResult result = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-	CheckVulkanError(result, "Could not allocate memory for vulkan buffer");
+	if (minAlignment == 0)
+	{
+		VkResult result = vmaCreateBuffer(device->allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
+		CheckVulkanError(result, "Could not allocate memory for vulkan buffer");
+	}
+	else
+	{
+		VkResult result = vmaCreateBufferWithAlignment(device->allocator, &bufferInfo, &allocInfo, minAlignment, &buffer, &allocation, nullptr);
+		CheckVulkanError(result, "Could not allocate memory for vulkan buffer");
+	}
 
 	auto obj = std::make_unique<VulkanBuffer>(device, buffer, allocation, bufferInfo.size);
 	if (debugName)
@@ -538,6 +719,12 @@ ComputePipelineBuilder::ComputePipelineBuilder()
 	stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 }
 
+ComputePipelineBuilder& ComputePipelineBuilder::Cache(VulkanPipelineCache* cache)
+{
+	this->cache = cache;
+	return *this;
+}
+
 ComputePipelineBuilder& ComputePipelineBuilder::Layout(VulkanPipelineLayout* layout)
 {
 	pipelineInfo.layout = layout->layout;
@@ -557,7 +744,7 @@ ComputePipelineBuilder& ComputePipelineBuilder::ComputeShader(VulkanShader* shad
 std::unique_ptr<VulkanPipeline> ComputePipelineBuilder::Create(VulkanDevice* device)
 {
 	VkPipeline pipeline;
-	vkCreateComputePipelines(device->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+	vkCreateComputePipelines(device->device, cache ? cache->cache : VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 	auto obj = std::make_unique<VulkanPipeline>(device, pipeline);
 	if (debugName)
 		obj->SetDebugName(debugName);
@@ -758,6 +945,10 @@ GraphicsPipelineBuilder::GraphicsPipelineBuilder()
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = &viewport;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = &scissor;
 
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -816,6 +1007,12 @@ GraphicsPipelineBuilder& GraphicsPipelineBuilder::RasterizationSamples(VkSampleC
 	return *this;
 }
 
+GraphicsPipelineBuilder& GraphicsPipelineBuilder::Cache(VulkanPipelineCache* cache)
+{
+	this->cache = cache;
+	return *this;
+}
+
 GraphicsPipelineBuilder& GraphicsPipelineBuilder::Subpass(int subpass)
 {
 	pipelineInfo.subpass = subpass;
@@ -848,9 +1045,6 @@ GraphicsPipelineBuilder& GraphicsPipelineBuilder::Viewport(float x, float y, flo
 	viewport.height = height;
 	viewport.minDepth = minDepth;
 	viewport.maxDepth = maxDepth;
-
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &viewport;
 	return *this;
 }
 
@@ -860,9 +1054,6 @@ GraphicsPipelineBuilder& GraphicsPipelineBuilder::Scissor(int x, int y, int widt
 	scissor.offset.y = y;
 	scissor.extent.width = width;
 	scissor.extent.height = height;
-
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &scissor;
 	return *this;
 }
 
@@ -1038,7 +1229,7 @@ GraphicsPipelineBuilder& GraphicsPipelineBuilder::AddDynamicState(VkDynamicState
 std::unique_ptr<VulkanPipeline> GraphicsPipelineBuilder::Create(VulkanDevice* device)
 {
 	VkPipeline pipeline = 0;
-	VkResult result = vkCreateGraphicsPipelines(device->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+	VkResult result = vkCreateGraphicsPipelines(device->device, cache ? cache->cache : VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 	CheckVulkanError(result, "Could not create graphics pipeline");
 	auto obj = std::make_unique<VulkanPipeline>(device, pipeline);
 	if (debugName)
@@ -1079,6 +1270,54 @@ std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::Create(VulkanDevice
 	VkResult result = vkCreatePipelineLayout(device->device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
 	CheckVulkanError(result, "Could not create pipeline layout");
 	auto obj = std::make_unique<VulkanPipelineLayout>(device, pipelineLayout);
+	if (debugName)
+		obj->SetDebugName(debugName);
+	return obj;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+PipelineCacheBuilder::PipelineCacheBuilder()
+{
+	pipelineCacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+}
+
+PipelineCacheBuilder& PipelineCacheBuilder::InitialData(const void* data, size_t size)
+{
+	initData.resize(size);
+	memcpy(initData.data(), data, size);
+	return *this;
+}
+
+PipelineCacheBuilder& PipelineCacheBuilder::Flags(VkPipelineCacheCreateFlags flags)
+{
+	pipelineCacheInfo.flags = flags;
+	return *this;
+}
+
+std::unique_ptr<VulkanPipelineCache> PipelineCacheBuilder::Create(VulkanDevice* device)
+{
+	pipelineCacheInfo.pInitialData = nullptr;
+	pipelineCacheInfo.initialDataSize = 0;
+
+	// Check if the saved cache data is compatible with our device:
+	if (initData.size() >= sizeof(VkPipelineCacheHeaderVersionOne))
+	{
+		VkPipelineCacheHeaderVersionOne* header = (VkPipelineCacheHeaderVersionOne*)initData.data();
+		if (header->headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+			header->vendorID == device->PhysicalDevice.Properties.Properties.vendorID &&
+			header->deviceID == device->PhysicalDevice.Properties.Properties.deviceID &&
+			memcmp(header->pipelineCacheUUID, device->PhysicalDevice.Properties.Properties.pipelineCacheUUID, VK_UUID_SIZE) == 0)
+		{
+			pipelineCacheInfo.pInitialData = initData.data();
+			pipelineCacheInfo.initialDataSize = initData.size();
+		}
+	}
+
+	VkPipelineCache pipelineCache;
+	VkResult result = vkCreatePipelineCache(device->device, &pipelineCacheInfo, nullptr, &pipelineCache);
+	CheckVulkanError(result, "Could not create pipeline cache");
+	auto obj = std::make_unique<VulkanPipelineCache>(device, pipelineCache);
 	if (debugName)
 		obj->SetDebugName(debugName);
 	return obj;
@@ -1432,4 +1671,268 @@ void WriteDescriptors::Execute(VulkanDevice* device)
 {
 	if (!writes.empty())
 		vkUpdateDescriptorSets(device->device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+VulkanInstanceBuilder::VulkanInstanceBuilder()
+{
+	apiVersionsToTry = { VK_API_VERSION_1_2, VK_API_VERSION_1_1, VK_API_VERSION_1_0 };
+
+	OptionalExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+	OptionalExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+}
+
+VulkanInstanceBuilder& VulkanInstanceBuilder::ApiVersionsToTry(const std::vector<uint32_t>& versions)
+{
+	apiVersionsToTry = versions;
+	return *this;
+}
+
+VulkanInstanceBuilder& VulkanInstanceBuilder::RequireExtension(const std::string& extensionName)
+{
+	requiredExtensions.insert(extensionName);
+	return *this;
+}
+
+VulkanInstanceBuilder& VulkanInstanceBuilder::RequireSurfaceExtensions(bool enable)
+{
+	if (enable)
+	{
+		RequireExtension(VK_KHR_SURFACE_EXTENSION_NAME);
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+		RequireExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+		RequireExtension(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+		RequireExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+#endif
+
+		OptionalExtension(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME); // For HDR support
+	}
+	return *this;
+}
+
+VulkanInstanceBuilder& VulkanInstanceBuilder::OptionalExtension(const std::string& extensionName)
+{
+	optionalExtensions.insert(extensionName);
+	return *this;
+}
+
+VulkanInstanceBuilder& VulkanInstanceBuilder::DebugLayer(bool enable)
+{
+	debugLayer = enable;
+	return *this;
+}
+
+std::shared_ptr<VulkanInstance> VulkanInstanceBuilder::Create()
+{
+	return std::make_shared<VulkanInstance>(apiVersionsToTry, requiredExtensions, optionalExtensions, debugLayer);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+
+VulkanSurfaceBuilder::VulkanSurfaceBuilder()
+{
+}
+
+VulkanSurfaceBuilder& VulkanSurfaceBuilder::Win32Window(HWND hwnd)
+{
+	this->hwnd = hwnd;
+	return *this;
+}
+
+std::shared_ptr<VulkanSurface> VulkanSurfaceBuilder::Create(std::shared_ptr<VulkanInstance> instance)
+{
+	return std::make_shared<VulkanSurface>(std::move(instance), hwnd);
+}
+
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+
+VulkanDeviceBuilder::VulkanDeviceBuilder()
+{
+	OptionalExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+	OptionalExtension(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+}
+
+VulkanDeviceBuilder& VulkanDeviceBuilder::RequireExtension(const std::string& extensionName)
+{
+	requiredDeviceExtensions.insert(extensionName);
+	return *this;
+}
+
+VulkanDeviceBuilder& VulkanDeviceBuilder::OptionalExtension(const std::string& extensionName)
+{
+	optionalDeviceExtensions.insert(extensionName);
+	return *this;
+}
+
+VulkanDeviceBuilder& VulkanDeviceBuilder::OptionalRayQuery()
+{
+	OptionalExtension(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+	OptionalExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+	OptionalExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+	OptionalExtension(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+	return *this;
+}
+
+VulkanDeviceBuilder& VulkanDeviceBuilder::OptionalDescriptorIndexing()
+{
+	OptionalExtension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+	return *this;
+}
+
+VulkanDeviceBuilder& VulkanDeviceBuilder::Surface(std::shared_ptr<VulkanSurface> surface)
+{
+	if (surface)
+	{
+		RequireExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+		OptionalExtension(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME);
+#endif
+	}
+	this->surface = std::move(surface);
+	return *this;
+}
+
+VulkanDeviceBuilder& VulkanDeviceBuilder::SelectDevice(int index)
+{
+	deviceIndex = index;
+	return *this;
+}
+
+std::vector<VulkanCompatibleDevice> VulkanDeviceBuilder::FindDevices(const std::shared_ptr<VulkanInstance>& instance)
+{
+	std::vector<VulkanCompatibleDevice> supportedDevices;
+
+	for (size_t idx = 0; idx < instance->PhysicalDevices.size(); idx++)
+	{
+		const auto& info = instance->PhysicalDevices[idx];
+
+		// Check if all required extensions are there
+		std::set<std::string> requiredExtensionSearch = requiredDeviceExtensions;
+		for (const auto& ext : info.Extensions)
+			requiredExtensionSearch.erase(ext.extensionName);
+		if (!requiredExtensionSearch.empty())
+			continue;
+
+		// Check if all required features are there
+		if (info.Features.Features.samplerAnisotropy != VK_TRUE ||
+			info.Features.Features.fragmentStoresAndAtomics != VK_TRUE)
+			continue;
+
+		VulkanCompatibleDevice dev;
+		dev.Device = &instance->PhysicalDevices[idx];
+		dev.EnabledDeviceExtensions = requiredDeviceExtensions;
+
+		// Enable optional extensions we are interested in, if they are available on this device
+		for (const auto& ext : dev.Device->Extensions)
+		{
+			if (optionalDeviceExtensions.find(ext.extensionName) != optionalDeviceExtensions.end())
+			{
+				dev.EnabledDeviceExtensions.insert(ext.extensionName);
+			}
+		}
+
+		// Enable optional features we are interested in, if they are available on this device
+		auto& enabledFeatures = dev.EnabledFeatures;
+		auto& deviceFeatures = dev.Device->Features;
+		enabledFeatures.Features.samplerAnisotropy = deviceFeatures.Features.samplerAnisotropy;
+		enabledFeatures.Features.fragmentStoresAndAtomics = deviceFeatures.Features.fragmentStoresAndAtomics;
+		enabledFeatures.Features.depthClamp = deviceFeatures.Features.depthClamp;
+		enabledFeatures.Features.shaderClipDistance = deviceFeatures.Features.shaderClipDistance;
+		enabledFeatures.BufferDeviceAddress.bufferDeviceAddress = deviceFeatures.BufferDeviceAddress.bufferDeviceAddress;
+		enabledFeatures.AccelerationStructure.accelerationStructure = deviceFeatures.AccelerationStructure.accelerationStructure;
+		enabledFeatures.RayQuery.rayQuery = deviceFeatures.RayQuery.rayQuery;
+		enabledFeatures.DescriptorIndexing.runtimeDescriptorArray = deviceFeatures.DescriptorIndexing.runtimeDescriptorArray;
+		enabledFeatures.DescriptorIndexing.descriptorBindingPartiallyBound = deviceFeatures.DescriptorIndexing.descriptorBindingPartiallyBound;
+		enabledFeatures.DescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind = deviceFeatures.DescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind;
+		enabledFeatures.DescriptorIndexing.descriptorBindingVariableDescriptorCount = deviceFeatures.DescriptorIndexing.descriptorBindingVariableDescriptorCount;
+
+		// Figure out which queue can present
+		if (surface)
+		{
+			for (int i = 0; i < (int)info.QueueFamilies.size(); i++)
+			{
+				VkBool32 presentSupport = false;
+				VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(info.Device, i, surface->Surface, &presentSupport);
+				if (result == VK_SUCCESS && info.QueueFamilies[i].queueCount > 0 && presentSupport)
+				{
+					dev.PresentFamily = i;
+					break;
+				}
+			}
+		}
+
+		// The vulkan spec states that graphics and compute queues can always do transfer.
+		// Furthermore the spec states that graphics queues always can do compute.
+		// Last, the spec makes it OPTIONAL whether the VK_QUEUE_TRANSFER_BIT is set for such queues, but they MUST support transfer.
+		//
+		// In short: pick the first graphics queue family for everything.
+		for (int i = 0; i < (int)info.QueueFamilies.size(); i++)
+		{
+			const auto& queueFamily = info.QueueFamilies[i];
+			if (queueFamily.queueCount > 0 && (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+			{
+				dev.GraphicsFamily = i;
+				dev.GraphicsTimeQueries = queueFamily.timestampValidBits != 0;
+				break;
+			}
+		}
+
+		// Only use device if we found the required graphics and present queues
+		if (dev.GraphicsFamily != -1 && (!surface || dev.PresentFamily != -1))
+		{
+			supportedDevices.push_back(dev);
+		}
+	}
+
+	// The device order returned by Vulkan can be anything. Prefer discrete > integrated > virtual gpu > cpu > other
+	auto sortFunc = [&](const auto& a, const auto b)
+	{
+		// Sort by GPU type first. This will ensure the "best" device is most likely to map to vk_device 0
+		static const int typeSort[] = { 4, 1, 0, 2, 3 };
+		int sortA = a.Device->Properties.Properties.deviceType < 5 ? typeSort[a.Device->Properties.Properties.deviceType] : (int)a.Device->Properties.Properties.deviceType;
+		int sortB = b.Device->Properties.Properties.deviceType < 5 ? typeSort[b.Device->Properties.Properties.deviceType] : (int)b.Device->Properties.Properties.deviceType;
+		if (sortA != sortB)
+			return sortA < sortB;
+
+		// Then sort by the device's unique ID so that vk_device uses a consistent order
+		int sortUUID = memcmp(a.Device->Properties.Properties.pipelineCacheUUID, b.Device->Properties.Properties.pipelineCacheUUID, VK_UUID_SIZE);
+		return sortUUID < 0;
+	};
+	std::stable_sort(supportedDevices.begin(), supportedDevices.end(), sortFunc);
+
+	return supportedDevices;
+}
+
+std::shared_ptr<VulkanDevice> VulkanDeviceBuilder::Create(std::shared_ptr<VulkanInstance> instance)
+{
+	if (instance->PhysicalDevices.empty())
+		VulkanError("No Vulkan devices found. The graphics card may have no vulkan support or the driver may be too old.");
+
+	std::vector<VulkanCompatibleDevice> supportedDevices = FindDevices(instance);
+	if (supportedDevices.empty())
+		VulkanError("No Vulkan device found supports the minimum requirements of this application");
+
+	size_t selected = deviceIndex;
+	if (selected >= supportedDevices.size())
+		selected = 0;
+	return std::make_shared<VulkanDevice>(instance, surface, supportedDevices[selected]);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+VulkanSwapChainBuilder::VulkanSwapChainBuilder()
+{
+}
+
+std::shared_ptr<VulkanSwapChain> VulkanSwapChainBuilder::Create(VulkanDevice* device)
+{
+	return std::make_shared<VulkanSwapChain>(device);
 }

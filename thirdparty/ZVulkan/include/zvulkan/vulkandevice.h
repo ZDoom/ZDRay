@@ -21,7 +21,7 @@ public:
 	VulkanDevice(std::shared_ptr<VulkanInstance> instance, std::shared_ptr<VulkanSurface> surface, const VulkanCompatibleDevice& selectedDevice);
 	~VulkanDevice();
 
-	std::vector<std::string> EnabledDeviceExtensions;
+	std::set<std::string> EnabledDeviceExtensions;
 	VulkanDeviceFeatures EnabledFeatures;
 
 	VulkanPhysicalDevice PhysicalDevice;
@@ -39,7 +39,7 @@ public:
 	int PresentFamily = -1;
 	bool GraphicsTimeQueries = false;
 
-	bool SupportsDeviceExtension(const char* ext) const;
+	bool SupportsExtension(const char* ext) const;
 
 	void SetObjectName(const char* name, uint64_t handle, VkObjectType type);
 

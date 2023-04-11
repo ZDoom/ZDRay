@@ -3,7 +3,6 @@ project(zvulkan)
 
 set(ZVULKAN_SOURCES
 	src/vulkanbuilders.cpp
-	src/vulkancompatibledevice.cpp
 	src/vulkandevice.cpp
 	src/vulkaninstance.cpp
 	src/vulkansurface.cpp
@@ -170,8 +169,6 @@ source_group("src\\volk" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/src/vol
 source_group("include" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/include/zvulkan/.+")
 source_group("include\\vk_mem_alloc" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/include/zvulkan/vk_mem_alloc/.+")
 source_group("include\\volk" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/include/zvulkan/volk/.+")
-
-source_group("example" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/example/.+")
 
 include_directories(include include/zvulkan src)
 

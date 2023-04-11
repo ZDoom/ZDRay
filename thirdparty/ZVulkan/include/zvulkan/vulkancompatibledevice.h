@@ -14,9 +14,6 @@ public:
 
 	bool GraphicsTimeQueries = false;
 
-	std::vector<std::string> EnabledDeviceExtensions;
+	std::set<std::string> EnabledDeviceExtensions;
 	VulkanDeviceFeatures EnabledFeatures;
-
-	static std::vector<VulkanCompatibleDevice> FindDevices(const std::shared_ptr<VulkanInstance>& instance, const std::shared_ptr<VulkanSurface>& surface);
-	static VulkanCompatibleDevice SelectDevice(const std::shared_ptr<VulkanInstance>& instance, const std::shared_ptr<VulkanSurface>& surface, int vk_device);
 };
