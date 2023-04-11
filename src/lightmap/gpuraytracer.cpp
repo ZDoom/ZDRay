@@ -814,7 +814,7 @@ void GPURaytracer::CreateRaytracePipeline()
 
 	raytrace.descriptorPool0 = DescriptorPoolBuilder()
 		.AddPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3)
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4)
 		.MaxSets(1)
 		.DebugName("raytrace.descriptorPool0")
 		.Create(device.get());
