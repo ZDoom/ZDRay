@@ -205,13 +205,8 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	return &GLSubsectors[nodenum & ~NFX_SUBSECTOR];
 }
 
-FloatVertex FLevel::GetSegVertex(int index)
+FloatVertex FLevel::GetSegVertex(unsigned int index)
 {
-	if (index & 0x8000)
-	{
-		index = (index & 0x7FFF) + NumGLVertices;
-	}
-
 	FloatVertex v;
 	v.x = F(GLVertices[index].x);
 	v.y = F(GLVertices[index].y);

@@ -487,7 +487,7 @@ struct FLevel
 	IntSector *GetBackSector(const IntSideDef *side);
 	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
-	FloatVertex GetSegVertex(int index);
+	FloatVertex GetSegVertex(unsigned int index);
 
 	int FindFirstSectorFromTag(int tag);
 	unsigned FindFirstLineId(int lineId);
