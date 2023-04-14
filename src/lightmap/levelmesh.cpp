@@ -46,19 +46,17 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	textureWidth = textureSize;
 	textureHeight = textureSize;
 
-	printf("\n------------- Building side surfaces -------------\n");
-
 	for (unsigned int i = 0; i < doomMap.Sides.Size(); i++)
 	{
 		CreateSideSurfaces(doomMap, &doomMap.Sides[i]);
-		printf("Sides: %i / %i\r", i + 1, doomMap.Sides.Size());
+		printf("   Sides: %i / %i\r", i + 1, doomMap.Sides.Size());
 	}
 
-	printf("\nSide surfaces: %i\n", (int)surfaces.size());
+	printf("\n   Side surfaces: %i\n", (int)surfaces.size());
 
 	CreateSubsectorSurfaces(doomMap);
 
-	printf("Surfaces total: %i\n\n", (int)surfaces.size());
+	printf("   Surfaces total: %i\n", (int)surfaces.size());
 
 	// Update sector group of the surfacesaa
 	for (auto& surface : surfaces)
@@ -67,7 +65,7 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 			doomMap.GetSectorFromSubSector(&doomMap.GLSubsectors[surface->typeIndex])->group : (doomMap.Sides[surface->typeIndex].GetSectorGroup());
 	}
 
-	printf("Building level mesh...\n\n");
+	printf("   Building level mesh...\n");
 
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
@@ -118,9 +116,9 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 		BuildSurfaceParams(surfaces[i].get());
 	}
 
-	printf("Finding smoothing groups...\n\n");
+	printf("   Finding smoothing groups...\n");
 	BuildSmoothingGroups(doomMap);
-	printf("Building collision data...\n\n");
+	printf("   Building collision data...\n");
 
 	Collision = std::make_unique<TriangleMeshShape>(MeshVertices.Data(), MeshVertices.Size(), MeshElements.Data(), MeshElements.Size());
 
@@ -130,15 +128,20 @@ LevelMesh::LevelMesh(FLevel &doomMap, int sampleDistance, int textureSize)
 	for (auto& surface : surfaces)
 		lightStats[surface->LightList.size()]++;
 	for (auto& it : lightStats)
-		printf("%d lights: %d surfaces\n", it.first, it.second);
+		printf("   %d lights: %d surfaces\n", it.first, it.second);
 	printf("\n");
 	*/
 }
 
 void LevelMesh::BuildSmoothingGroups(FLevel& doomMap)
 {
+	size_t lastPercentage = 0;
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
+		size_t percentage = i * 100 / surfaces.size();
+		if (lastPercentage != percentage)
+			printf("   Surfaces: %i%%\r", (int)percentage);
+
 		// Is this surface in the same plane as an existing smoothing group?
 		int smoothingGroupIndex = -1;
 
@@ -172,10 +175,11 @@ void LevelMesh::BuildSmoothingGroups(FLevel& doomMap)
 			smoothingGroups.push_back(group);
 		}
 
+		smoothingGroups[smoothingGroupIndex].surfaces.push_back(surface);
 		surface->smoothingGroupIndex = smoothingGroupIndex;
 	}
 
-	printf("Created %d smoothing groups for %d surfaces\n\n", (int)smoothingGroups.size(), (int)surfaces.size());
+	printf("   Created %d smoothing groups for %d surfaces\n", (int)smoothingGroups.size(), (int)surfaces.size());
 }
 
 void LevelMesh::PropagateLight(FLevel& doomMap, ThingLight *light)
@@ -241,11 +245,11 @@ void LevelMesh::BuildLightLists(FLevel& doomMap)
 {
 	for (unsigned i = 0; i < map->ThingLights.Size(); ++i)
 	{
-		printf("Building light lists: %u / %u\r", i, map->ThingLights.Size());
+		printf("   Building light lists: %u / %u\r", i, map->ThingLights.Size());
 		PropagateLight(doomMap, &map->ThingLights[i]);
 	}
 
-	printf("Building light lists: %u / %u\n", map->ThingLights.Size(), map->ThingLights.Size());
+	printf("   Building light lists: %u / %u\n", map->ThingLights.Size(), map->ThingLights.Size());
 }
 
 // Determines a lightmap block in which to map to the lightmap texture.
@@ -567,7 +571,7 @@ int LevelMesh::CreateLinePortal(FLevel& doomMap, const IntLineDef& srcLine, cons
 		// Rotation
 		// TODO :(
 
-		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
+		// printf("   Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
 
 		portal->transformation = mat4::translate(translation);
 		portal->sourceSectorGroup = srcLine.GetSectorGroup();
@@ -662,7 +666,7 @@ int LevelMesh::CreatePlanePortal(FLevel& doomMap, const IntLineDef& srcLine, con
 
 		vec3 translation = originDst - originSrc;
 
-		// printf("Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
+		// printf("   Portal translation: %.3f %.3f %.3f\n", translation.x, translation.y, translation.z);
 
 		portal->transformation = mat4::translate(translation);
 		portal->sourceSectorGroup = srcLine.GetSectorGroup();
@@ -1116,11 +1120,9 @@ void LevelMesh::CreateCeilingSurface(FLevel &doomMap, MapSubsectorEx *sub, IntSe
 
 void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 {
-	printf("\n------------- Building subsector surfaces -------------\n");
-
 	for (int i = 0; i < doomMap.NumGLSubsectors; i++)
 	{
-		printf("Subsectors: %i / %i\r", i + 1, doomMap.NumGLSubsectors);
+		printf("   Subsectors: %i / %i\r", i + 1, doomMap.NumGLSubsectors);
 
 		MapSubsectorEx *sub = &doomMap.GLSubsectors[i];
 
@@ -1143,7 +1145,7 @@ void LevelMesh::CreateSubsectorSurfaces(FLevel &doomMap)
 		}
 	}
 
-	printf("\nLeaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
+	printf("\n   Leaf surfaces: %i\n", (int)surfaces.size() - doomMap.NumGLSubsectors);
 }
 
 bool LevelMesh::IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2)
@@ -1277,7 +1279,7 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 
 void LevelMesh::Export(std::string filename)
 {
-	printf("Exporting mesh \"%s\"\n", filename.c_str());
+	printf("   Exporting mesh \"%s\"\n", filename.c_str());
 
 	// This is so ugly! I had nothing to do with it! ;)
 	std::string mtlfilename = filename;
@@ -1460,5 +1462,5 @@ void LevelMesh::Export(std::string filename)
 #endif
 	}
 
-	printf("Export complete\n");
+	printf("   Export complete\n");
 }

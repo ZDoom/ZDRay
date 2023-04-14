@@ -62,7 +62,7 @@ void FLevel::SetupLights()
 			sundir.y = -sdy;
 			sundir.z = -sdz;
 
-			printf("Sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
+			printf("   Sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
 
 			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 			{
@@ -71,7 +71,7 @@ void FLevel::SetupLights()
 				if (!stricmp(key.key, "lm_suncolor"))
 				{
 					lightcolor = atoi(key.value);
-					printf("Sun color: %d (%X)\n", lightcolor, lightcolor);
+					printf("   Sun color: %d (%X)\n", lightcolor, lightcolor);
 				}
 				else if (!stricmp(key.key, "lm_sampledistance"))
 				{
@@ -291,7 +291,7 @@ void FLevel::CreateLights()
 		}
 	}
 
-	printf("Thing lights: %i\n", (int)ThingLights.Size());
+	printf("   Thing lights: %i\n", (int)ThingLights.Size());
 
 	// add surface lights (temporarily disabled)
 	for (unsigned int i = 0; i < Sides.Size(); i++)
@@ -412,5 +412,5 @@ void FLevel::CreateLights()
 		*/
 	}
 
-	//printf("Surface lights: %i\n", (int)SurfaceLights.Size());
+	//printf("   Surface lights: %i\n", (int)SurfaceLights.Size());
 }

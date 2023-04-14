@@ -122,6 +122,7 @@ struct SmoothingGroup
 {
 	Plane plane = Plane(0, 0, 1, 0);
 	int sectorGroup = 0;
+	std::vector<Surface*> surfaces;
 };
 
 class LevelMesh

@@ -139,6 +139,7 @@ private:
 	void BeginCommands();
 	void FinishCommands();
 
+	void LoadRenderDoc();
 	void PrintVulkanInfo();
 
 	std::vector<SurfaceInfo> CreateSurfaceInfo();

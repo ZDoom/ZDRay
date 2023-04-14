@@ -28,52 +28,7 @@ extern bool NoRtx;
 #include <dlfcn.h>
 #endif
 
-RENDERDOC_API_1_4_2* rdoc_api;
-
-void LoadRenderDoc()
-{
-#ifdef _WIN32
-	if (auto mod = GetModuleHandleA("renderdoc.dll"))
-	{
-		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);
-		assert(ret == 1);
-
-		if (ret != 1)
-		{
-			printf("RENDERDOC_GetAPI returned %d\n", ret);
-		}
-	}
-#else
-	if (void* mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
-	{
-		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
-		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);
-		assert(ret == 1);
-
-		if (ret != 1)
-		{
-			printf("RENDERDOC_GetAPI returned %d\n", ret);
-		}
-	}
-#endif
-
-	if (rdoc_api)
-	{
-		printf("RenderDoc enabled\n");
-	}
-}
-
-void VulkanPrintLog(const char* typestr, const std::string& msg)
-{
-	printf("[%s] %s\n", typestr, msg.c_str());
-	printf("%s\n", CaptureStackTraceText(2).c_str());
-}
-
-void VulkanError(const char* text)
-{
-	throw std::runtime_error(text);
-}
+static RENDERDOC_API_1_4_2* rdoc_api;
 
 GPURaytracer::GPURaytracer()
 {
@@ -103,47 +58,57 @@ void GPURaytracer::Raytrace(LevelMesh* level)
 
 	mesh = level;
 
-	printf("Building Vulkan acceleration structures\n");
+	printf("   Building Vulkan acceleration structures\n");
 
 	CreateVulkanObjects();
 
-	printf("Ray tracing in progress...\n");
-
-	CreateAtlasImages();
-
-	BeginCommands();
-	UploadUniforms();
-
-	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
+	try
 	{
-		RenderAtlasImage(pageIndex);
-	}
+		printf("   Ray tracing in progress\n");
+		printf("   [");
 
-	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
-	{
-		ResolveAtlasImage(pageIndex);
-	}
+		CreateAtlasImages();
 
 #ifdef WIN32
-	LARGE_INTEGER s;
-	QueryPerformanceCounter(&s);
+		LARGE_INTEGER s;
+		QueryPerformanceCounter(&s);
 #endif
 
-	FinishCommands();
+		BeginCommands();
+		UploadUniforms();
+
+		for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
+		{
+			RenderAtlasImage(pageIndex);
+		}
+
+		for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
+		{
+			ResolveAtlasImage(pageIndex);
+		}
+
+		FinishCommands();
 
 #ifdef WIN32
-	LARGE_INTEGER e, f;
-	QueryPerformanceCounter(&e);
-	QueryPerformanceFrequency(&f);
-	printf("GPU ray tracing time was %.3f seconds.\n", double(e.QuadPart - s.QuadPart) / double(f.QuadPart));
+		LARGE_INTEGER e, f;
+		QueryPerformanceCounter(&e);
+		QueryPerformanceFrequency(&f);
+		printf("]\n");
+		printf("   GPU ray tracing time was %.3f seconds.\n", double(e.QuadPart - s.QuadPart) / double(f.QuadPart));
 #endif
 
-	for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
-	{
-		DownloadAtlasImage(pageIndex);
-	}
+		for (size_t pageIndex = 0; pageIndex < atlasImages.size(); pageIndex++)
+		{
+			DownloadAtlasImage(pageIndex);
+		}
 
-	printf("Ray trace complete\n");
+		printf("   Ray trace complete\n");
+	}
+	catch (...)
+	{
+		printf("]\n");
+		throw;
+	}
 
 	if (rdoc_api) rdoc_api->EndFrameCapture(nullptr, nullptr);
 }
@@ -182,14 +147,11 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 		cmdbuffer->setViewport(0, 1, &viewport);
 
 		// Paint all surfaces part of the smoothing group into the surface
-		for (const auto& surface : mesh->surfaces)
+		for (Surface* surface : mesh->smoothingGroups[targetSurface->smoothingGroupIndex].surfaces)
 		{
-			if (surface->smoothingGroupIndex != targetSurface->smoothingGroupIndex)
-				continue;
-
 			vec2 minUV = ToUV(surface->bounds.min, targetSurface);
 			vec2 maxUV = ToUV(surface->bounds.max, targetSurface);
-			if (surface.get() != targetSurface && (maxUV.x < 0.0f || maxUV.y < 0.0f || minUV.x > 1.0f || minUV.y > 1.0f))
+			if (surface != targetSurface && (maxUV.x < 0.0f || maxUV.y < 0.0f || minUV.x > 1.0f || minUV.y > 1.0f))
 				continue; // Bounding box not visible
 
 			int firstLight = sceneLightPos;
@@ -198,6 +160,8 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 			int vertexCount = (int)surface->verts.size();
 			if (sceneLightPos + lightCount > SceneLightBufferSize || sceneVertexPos + vertexCount > SceneVertexBufferSize)
 			{
+				printf(".");
+
 				// Flush scene buffers
 				FinishCommands();
 				sceneLightPos = 0;
@@ -206,6 +170,8 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 				firstVertex = 0;
 				BeginCommands();
 				beginPass();
+
+				printf(".");
 
 				if (sceneLightPos + lightCount > SceneLightBufferSize)
 				{
@@ -1075,9 +1041,54 @@ void GPURaytracer::PrintVulkanInfo()
 	std::string apiVersion = std::to_string(VK_VERSION_MAJOR(props.apiVersion)) + "." + std::to_string(VK_VERSION_MINOR(props.apiVersion)) + "." + std::to_string(VK_VERSION_PATCH(props.apiVersion));
 	std::string driverVersion = std::to_string(VK_VERSION_MAJOR(props.driverVersion)) + "." + std::to_string(VK_VERSION_MINOR(props.driverVersion)) + "." + std::to_string(VK_VERSION_PATCH(props.driverVersion));
 
-	printf("Vulkan device: %s\n", props.deviceName);
-	printf("Vulkan device type: %s\n", deviceType.c_str());
-	printf("Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
+	printf("   Vulkan device: %s\n", props.deviceName);
+	printf("   Vulkan device type: %s\n", deviceType.c_str());
+	printf("   Vulkan version: %s (api) %s (driver)\n", apiVersion.c_str(), driverVersion.c_str());
+}
+
+void GPURaytracer::LoadRenderDoc()
+{
+#ifdef _WIN32
+	if (auto mod = GetModuleHandleA("renderdoc.dll"))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);
+		assert(ret == 1);
+
+		if (ret != 1)
+		{
+			printf("   RENDERDOC_GetAPI returned %d\n", ret);
+		}
+	}
+#else
+	if (void* mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**)&rdoc_api);
+		assert(ret == 1);
+
+		if (ret != 1)
+		{
+			printf("   RENDERDOC_GetAPI returned %d\n", ret);
+		}
+	}
+#endif
+
+	if (rdoc_api)
+	{
+		printf("   RenderDoc enabled\n");
+	}
+}
+
+void VulkanPrintLog(const char* typestr, const std::string& msg)
+{
+	printf("   [%s] %s\n", typestr, msg.c_str());
+	printf("   %s\n", CaptureStackTraceText(2).c_str());
+}
+
+void VulkanError(const char* text)
+{
+	throw std::runtime_error(text);
 }
 
 /////////////////////////////////////////////////////////////////////////////
