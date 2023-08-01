@@ -241,6 +241,11 @@ void FProcessor::ParseThing(IntThing *th)
 
 void FProcessor::ParseLinedef(IntLineDef *ld)
 {
+	ld->sampling.SetGeneralSampleDistance(0);
+	ld->sampling.SetSampleDistance(WallPart::TOP, 0);
+	ld->sampling.SetSampleDistance(WallPart::MIDDLE, 0);
+	ld->sampling.SetSampleDistance(WallPart::BOTTOM, 0);
+
 	std::vector<int> moreids;
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
@@ -320,6 +325,22 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 			ld->ids.Clear();
 			if (id != -1) ld->ids.Push(id);
 		}
+		else if (stricmp(key, "lm_sampledist_line") == 0)
+		{
+			ld->sampling.SetGeneralSampleDistance(CheckInt(key));
+		}
+		else if (stricmp(key, "lm_sampledist_top") == 0)
+		{
+			ld->sampling.SetSampleDistance(WallPart::TOP, CheckInt(key));
+		}
+		else if (stricmp(key, "lm_sampledist_mid") == 0)
+		{
+			ld->sampling.SetSampleDistance(WallPart::MIDDLE, CheckInt(key));
+		}
+		else if (stricmp(key, "lm_sampledist_bot") == 0)
+		{
+			ld->sampling.SetSampleDistance(WallPart::BOTTOM, CheckInt(key));
+		}
 
 		if (!stricmp(key, "sidefront"))
 		{
@@ -359,10 +380,10 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 	sd->midtexture[1] = 0;
 	sd->bottomtexture[0] = '-';
 	sd->bottomtexture[1] = 0;
-	sd->sampleDistance = 0;
-	sd->sampleDistanceTop = 0;
-	sd->sampleDistanceMiddle = 0;
-	sd->sampleDistanceBottom = 0;
+	sd->sampling.SetGeneralSampleDistance(0);
+	sd->sampling.SetSampleDistance(WallPart::TOP, 0);
+	sd->sampling.SetSampleDistance(WallPart::MIDDLE, 0);
+	sd->sampling.SetSampleDistance(WallPart::BOTTOM, 0);
 	while (!SC_CheckString("}"))
 	{
 		const char *value;
@@ -396,19 +417,19 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 		}
 		else if (stricmp(key, "lm_sampledist_line") == 0)
 		{
-			sd->sampleDistance = CheckInt(key);
+			sd->sampling.SetGeneralSampleDistance(CheckInt(key));
 		}
 		else if (stricmp(key, "lm_sampledist_top") == 0)
 		{
-			sd->sampleDistanceTop = CheckInt(key);
+			sd->sampling.SetSampleDistance(WallPart::TOP, CheckInt(key));
 		}
 		else if (stricmp(key, "lm_sampledist_mid") == 0)
 		{
-			sd->sampleDistanceMiddle = CheckInt(key);
+			sd->sampling.SetSampleDistance(WallPart::MIDDLE, CheckInt(key));
 		}
 		else if (stricmp(key, "lm_sampledist_bot") == 0)
 		{
-			sd->sampleDistanceBottom = CheckInt(key);
+			sd->sampling.SetSampleDistance(WallPart::BOTTOM, CheckInt(key));
 		}
 
 		// now store the key in its unprocessed form
