@@ -686,6 +686,12 @@ int LevelMesh::CreatePlanePortal(FLevel& doomMap, const IntLineDef& srcLine, con
 	return it->second;
 }
 
+int LevelMesh::GetSampleDistance(const IntSideDef& sidedef, WallPart part) const
+{
+	auto sampleDistance = sidedef.GetSampleDistance(part);
+	return sampleDistance ? sampleDistance : defaultSamples;
+}
+
 void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 {
 	IntSector *front;
@@ -744,7 +750,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			surf->type = ST_MIDDLESIDE;
 			surf->typeIndex = typeIndex;
 			surf->controlSector = nullptr;
-			surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
+			surf->sampleDimension = GetSampleDistance(*side, WallPart::MIDDLE);
 
 			float texZ = surf->verts[0].z;
 
@@ -796,7 +802,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = typeIndex;
 		surf->controlSector = nullptr;
-		surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
+		surf->sampleDimension = GetSampleDistance(*side, WallPart::MIDDLE);
 
 		float texZ = surf->verts[0].z;
 
@@ -843,7 +849,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 			surf->type = ST_MIDDLESIDE;
 			surf->typeIndex = typeIndex;
 			surf->controlSector = xfloor;
-			surf->sampleDimension = (surf->sampleDimension = otherSide->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
+			surf->sampleDimension = GetSampleDistance(*side, WallPart::MIDDLE);
 			surf->verts.resize(4);
 			surf->verts[0].x = surf->verts[2].x = v2.x;
 			surf->verts[0].y = surf->verts[2].y = v2.y;
@@ -918,7 +924,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->typeIndex = typeIndex;
 				surf->bSky = bSky;
 				surf->controlSector = nullptr;
-				surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceBottom()) ? surf->sampleDimension : defaultSamples;
+				surf->sampleDimension = GetSampleDistance(*side, WallPart::BOTTOM);
 
 				float texZ = surf->verts[0].z;
 
@@ -976,7 +982,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 				surf->typeIndex = typeIndex;
 				surf->bSky = bSky;
 				surf->controlSector = nullptr;
-				surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceTop()) ? surf->sampleDimension : defaultSamples;
+				surf->sampleDimension = GetSampleDistance(*side, WallPart::TOP);
 
 				float texZ = surf->verts[0].z;
 
@@ -1022,7 +1028,7 @@ void LevelMesh::CreateSideSurfaces(FLevel &doomMap, IntSideDef *side)
 		surf->type = ST_MIDDLESIDE;
 		surf->typeIndex = typeIndex;
 		surf->controlSector = nullptr;
-		surf->sampleDimension = (surf->sampleDimension = side->GetSampleDistanceMiddle()) ? surf->sampleDimension : defaultSamples;
+		surf->sampleDimension = GetSampleDistance(*side, WallPart::MIDDLE);
 
 		float texZ = surf->verts[0].z;
 

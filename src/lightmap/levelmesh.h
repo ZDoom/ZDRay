@@ -53,6 +53,8 @@ struct FLevel;
 struct ThingLight;
 class FWadWriter;
 
+enum class WallPart;
+
 enum SurfaceType
 {
 	ST_UNKNOWN,
@@ -186,4 +188,6 @@ private:
 
 	int CreateLinePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
 	int CreatePlanePortal(FLevel &doomMap, const IntLineDef& srcLine, const IntLineDef& dstLine);
+
+	int GetSampleDistance(const IntSideDef& sidedef, WallPart part) const;
 };

@@ -45,6 +45,33 @@ struct MapSideDef
 	uint16_t	sector;
 };
 
+enum class WallPart
+{
+	TOP,
+	MIDDLE,
+	BOTTOM,
+};
+
+struct SurfaceSampleProps
+{
+	int sampleDistance = 0;
+};
+
+struct SideDefSampleProps
+{
+	SurfaceSampleProps line;
+	SurfaceSampleProps lineSegments[3];
+
+	inline int GetSampleDistance(WallPart part) const
+	{
+		auto sampleDistance = lineSegments[static_cast<int>(part)].sampleDistance;
+		return sampleDistance ? sampleDistance : line.sampleDistance;
+	}
+
+	inline void SetSampleDistance(WallPart part, int dist) { lineSegments[int(part)].sampleDistance = dist; }
+	inline void SetGeneralSampleDistance(int dist) { line.sampleDistance = dist; }
+};
+
 struct IntLineDef;
 
 struct IntSideDef
@@ -61,17 +88,10 @@ struct IntSideDef
 
 	IntLineDef *line;
 
-	int sampleDistance;
-	int sampleDistanceTop;
-	int sampleDistanceMiddle;
-	int sampleDistanceBottom;
-
-	inline int GetSampleDistanceTop() const { return sampleDistanceTop ? sampleDistanceTop : sampleDistance; }
-	inline int GetSampleDistanceMiddle() const { return sampleDistanceMiddle ? sampleDistanceMiddle : sampleDistance; }
-	inline int GetSampleDistanceBottom() const { return sampleDistanceBottom ? sampleDistanceBottom : sampleDistance; }
-
+	SideDefSampleProps sampling;
 	TArray<UDMFKey> props;
 
+	inline int GetSampleDistance(WallPart part) const;
 	inline int GetSectorGroup() const;
 };
 
@@ -110,6 +130,8 @@ struct IntLineDef
 	TArray<int> ids;
 
 	IntSector *frontsector = nullptr, *backsector = nullptr;
+
+	SideDefSampleProps sampling;
 
 	inline int GetSectorGroup() const;
 };
@@ -183,6 +205,12 @@ struct IntSector
 inline int IntLineDef::GetSectorGroup() const
 {
 	return frontsector ? frontsector->group : (backsector ? backsector->group : 0);
+}
+
+inline int IntSideDef::GetSampleDistance(WallPart part) const
+{
+	auto sampleDistance = sampling.GetSampleDistance(part);
+	return sampleDistance ? sampleDistance : line->sampling.GetSampleDistance(part);
 }
 
 inline int IntSideDef::GetSectorGroup() const
