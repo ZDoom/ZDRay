@@ -117,13 +117,11 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 {
 	LightmapImage& img = atlasImages[pageIndex];
 
-	// Begin with clear
-	{
+	const auto beginPass = [&]() {
 		RenderPassBegin()
-			.RenderPass(raytrace.renderPassBegin.get())
+			.RenderPass(raytrace.renderPass.get())
 			.RenderArea(0, 0, atlasImageSize, atlasImageSize)
 			.Framebuffer(img.raytrace.Framebuffer.get())
-			.AddClearColor(0.0f, 0.0f, 0.0f, 0.0f)
 			.Execute(cmdbuffer.get());
 
 		VkDeviceSize offset = 0;
@@ -131,7 +129,8 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 		cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipeline.get());
 		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet0.get());
 		cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 1, raytrace.descriptorSet1.get());
-	}
+	};
+	beginPass();
 
 	for (size_t i = 0; i < mesh->surfaces.size(); i++)
 	{
@@ -170,19 +169,7 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 				firstLight = 0;
 				firstVertex = 0;
 				BeginCommands();
-
-				// Begin without clear
-				RenderPassBegin()
-					.RenderPass(raytrace.renderPassBegin.get())
-					.RenderArea(0, 0, atlasImageSize, atlasImageSize)
-					.Framebuffer(img.raytrace.Framebuffer.get())
-					.Execute(cmdbuffer.get());
-
-				VkDeviceSize offset = 0;
-				cmdbuffer->bindVertexBuffers(0, 1, &sceneVertexBuffer->buffer, &offset);
-				cmdbuffer->bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipeline.get());
-				cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 0, raytrace.descriptorSet0.get());
-				cmdbuffer->bindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, raytrace.pipelineLayout.get(), 1, raytrace.descriptorSet1.get());
+				beginPass();
 
 				printf(".");
 
@@ -758,11 +745,11 @@ void GPURaytracer::CreateRaytracePipeline()
 		.DebugName("raytrace.pipelineLayout")
 		.Create(device.get());
 
-	raytrace.renderPassBegin = RenderPassBuilder()
+	raytrace.renderPass = RenderPassBuilder()
 		.AddAttachment(
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			VK_SAMPLE_COUNT_4_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_STORE,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -773,30 +760,12 @@ void GPURaytracer::CreateRaytracePipeline()
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
-		.DebugName("raytrace.renderpassBegin")
-		.Create(device.get());
-
-	raytrace.renderPassContinue = RenderPassBuilder()
-		.AddAttachment(
-			VK_FORMAT_R16G16B16A16_SFLOAT,
-			VK_SAMPLE_COUNT_4_BIT,
-			VK_ATTACHMENT_LOAD_OP_LOAD,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		.AddSubpass()
-		.AddSubpassColorAttachmentRef(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		.AddExternalSubpassDependency(
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
-		.DebugName("raytrace.renderpassContinue")
+		.DebugName("raytrace.renderpass")
 		.Create(device.get());
 
 	raytrace.pipeline = GraphicsPipelineBuilder()
 		.Layout(raytrace.pipelineLayout.get())
-		.RenderPass(raytrace.renderPassBegin.get())
+		.RenderPass(raytrace.renderPass.get())
 		.AddVertexShader(vertShader.get())
 		.AddFragmentShader(fragShader.get())
 		.AddVertexBufferBinding(0, sizeof(SceneVertex))
@@ -937,7 +906,7 @@ LightmapImage GPURaytracer::CreateImage(int width, int height)
 		.Create(device.get());
 
 	img.raytrace.Framebuffer = FramebufferBuilder()
-		.RenderPass(raytrace.renderPassBegin.get())
+		.RenderPass(raytrace.renderPass.get())
 		.Size(width, height)
 		.AddAttachment(img.raytrace.View.get())
 		.DebugName("LightmapImage.raytrace.Framebuffer")
