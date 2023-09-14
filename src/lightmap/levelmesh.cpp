@@ -429,12 +429,14 @@ void LevelMesh::CreateTextures()
 
 	std::sort(sortedSurfaces.begin(), sortedSurfaces.end(), [](Surface* a, Surface* b) { return a->texHeight != b->texHeight ? a->texHeight > b->texHeight : a->texWidth > b->texWidth; });
 
+#if 0 // LIGHTMAP V2 avoids this
 	RectPacker packer(textureWidth, textureHeight, RectPacker::Spacing(0));
 
 	for (Surface* surf : sortedSurfaces)
 	{
 		FinishSurface(packer, surf);
 	}
+#endif
 }
 
 void LevelMesh::BlurSurfaces()
@@ -1172,24 +1174,65 @@ bool LevelMesh::IsDegenerate(const vec3 &v0, const vec3 &v1, const vec3 &v2)
 
 void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 {
+/*
+// LIGHTMAP V2 pseudo-C specification:
+
+struct LightmapHeader
+{
+	int version = 2;
+	uint32_t surfaceCount;
+	uint32_t pixelCount;
+	uint32_t uvCount;
+	SurfaceEntry surfaces[surfaceCount];
+	uint16_t pixels[pixelCount * 3];
+	float uvs[uvCount * 2];
+};
+
+struct SurfaceEntry
+{
+	uint32_t type, typeIndex;
+	uint32_t controlSector; // 0xFFFFFFFF is none
+	uint16_t width, height; // in pixels
+	uint32_t pixelsOffset; // offset in pixels array
+	uint32_t uvCount, uvOffset;
+};
+*/
 	// Calculate size of lump
-	int numTexCoords = 0;
-	int numSurfaces = 0;
+	uint32_t surfaceCount = 0;
+	uint32_t pixelCount = 0;
+	uint32_t uvCount = 0;
+
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
 		if (surfaces[i]->atlasPageIndex != -1)
 		{
-			numTexCoords += surfaces[i]->verts.size();
-			numSurfaces++;
+			surfaceCount++;
+			pixelCount += surfaces[i]->Area();
+			uvCount += surfaces[i]->verts.size();
+			
+			if (surfaces[i]->Area() != surfaces[i]->texPixels.size())
+			{
+				printf("Error: Surface area does not match the pixel count.\n");
+			}
 		}
 	}
 
-	int version = 1;
-	int headerSize = 5 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
-	int surfacesSize = surfaces.size() * 5 * sizeof(uint32_t);
-	int texCoordsSize = numTexCoords * 2 * sizeof(float);
-	int texDataSize = textures.size() * textureWidth * textureHeight * 3 * 2;
-	int lumpSize = headerSize + surfacesSize + texCoordsSize + texDataSize;
+	int version = 2;
+
+	const uint32_t headerSize = sizeof(int) + 3 * sizeof(uint32_t);
+	const uint32_t bytesPerSurfaceEntry = sizeof(uint32_t) * 6 + sizeof(uint16_t) * 2;
+	const uint32_t bytesPerPixel = sizeof(uint16_t) * 3; // F16 RGB
+	const uint32_t bytesPerUV = sizeof(float) * 2; // FVector2
+
+	uint32_t lumpSize = headerSize + surfaceCount * bytesPerSurfaceEntry + pixelCount * bytesPerPixel + uvCount * bytesPerUV;
+
+	bool debug = false;
+
+	if (debug)
+	{
+		printf("Lump size %u bytes\n", lumpSize);
+		printf("Surfaces: %u\nPixels: %u\nUVs: %u\n", surfaceCount, pixelCount, uvCount);
+	}
 
 	// Setup buffer
 	std::vector<uint8_t> buffer(lumpSize);
@@ -1198,82 +1241,110 @@ void LevelMesh::AddLightmapLump(FWadWriter& wadFile)
 
 	// Write header
 	lumpFile.Write32(version);
-	lumpFile.Write16(textureWidth);
-	lumpFile.Write16(textures.size());
-	lumpFile.Write32(numSurfaces);
-	lumpFile.Write32(numTexCoords);
-	lumpFile.Write32(map->NumGLSubsectors);
-	lumpFile.WriteFloat(map->GetSunDirection().x);
-	lumpFile.WriteFloat(map->GetSunDirection().y);
-	lumpFile.WriteFloat(map->GetSunDirection().z);
-	lumpFile.WriteFloat(map->GetSunColor().r);
-	lumpFile.WriteFloat(map->GetSunColor().g);
-	lumpFile.WriteFloat(map->GetSunColor().b);
+	lumpFile.Write32(surfaceCount);
+	lumpFile.Write32(pixelCount);
+	lumpFile.Write32(uvCount);
 
-	// Write surfaces
-	int coordOffsets = 0;
-	for (size_t i = 0; i < surfaces.size(); i++)
+	if (debug)
 	{
-		if (surfaces[i]->atlasPageIndex == -1)
-			continue;
-
-		lumpFile.Write32(surfaces[i]->type);
-		lumpFile.Write32(surfaces[i]->typeIndex);
-		lumpFile.Write32(surfaces[i]->controlSector ? (uint32_t)(surfaces[i]->controlSector - &map->Sectors[0]) : 0xffffffff);
-		lumpFile.Write32(surfaces[i]->atlasPageIndex);
-		lumpFile.Write32(coordOffsets);
-		coordOffsets += surfaces[i]->verts.size();
+		printf("--- Saving surfaces ---\n");
 	}
 
-	// Write texture coordinates
+	// Write surfaces
+	uint32_t pixelsOffset = 0;
+	uint32_t uvOffset = 0;
+
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
-		if (surfaces[i]->atlasPageIndex == -1)
+		const auto* surface = surfaces[i].get();
+
+		if (surface->atlasPageIndex == -1)
 			continue;
 
-		int count = surfaces[i]->verts.size();
-		if (surfaces[i]->type == ST_FLOOR)
+		lumpFile.Write32(surface->type);
+		lumpFile.Write32(surface->typeIndex);
+		lumpFile.Write32(surface->controlSector ? uint32_t(surface->controlSector - &map->Sectors[0]) : 0xffffffff);
+
+		lumpFile.Write16(uint16_t(surface->texWidth));
+		lumpFile.Write16(uint16_t(surface->texHeight));
+
+		lumpFile.Write32(pixelsOffset * 3);
+
+		lumpFile.Write32(surface->lightUV.size());
+		lumpFile.Write32(uvOffset);
+
+		pixelsOffset += surface->Area();
+		uvOffset += surface->lightUV.size();
+	}
+
+	if (debug)
+	{
+		printf("--- Saving pixels ---\n");
+	}
+
+	// Write surface pixels
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		const auto* surface = surfaces[i].get();
+
+		if (surface->atlasPageIndex == -1)
+			continue;
+
+		if (debug)
 		{
-			for (int j = count - 1; j >= 0; j--)
-			{
-				lumpFile.WriteFloat(surfaces[i]->lightUV[j].x);
-				lumpFile.WriteFloat(surfaces[i]->lightUV[j].y);
-			}
+			printf("Surface %llu contains %llu pixels\n", i, surface->texPixels.size());
 		}
-		else if (surfaces[i]->type == ST_CEILING)
+
+		for (const auto& pixel : surface->texPixels)
+		{
+			lumpFile.Write16(floatToHalf(pixel.r));
+			lumpFile.Write16(floatToHalf(pixel.g));
+			lumpFile.Write16(floatToHalf(pixel.b));
+		}
+	}
+
+	if (debug)
+	{
+		printf("--- Saving UVs ---\n");
+	}
+
+	// Write normalized texture coordinates
+	for (size_t i = 0; i < surfaces.size(); i++)
+	{
+		const auto* surface = surfaces[i].get();
+
+		if (surface->atlasPageIndex == -1)
+			continue;
+
+		if (debug)
+		{
+			printf("Surface %llu contains %llu UVs\n", i, surface->verts.size());
+		}
+
+		// as of V2 LIGHTMAP version: internal lightmapper uses ZDRay order triangle strips in its internal representation. It will convert from triangle strips to triangle fan on its own.
+
+		int count = surface->verts.size();
+		if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
 		{
 			for (int j = 0; j < count; j++)
 			{
-				lumpFile.WriteFloat(surfaces[i]->lightUV[j].x);
-				lumpFile.WriteFloat(surfaces[i]->lightUV[j].y);
+				lumpFile.WriteFloat(surface->lightUV[j].x);
+				lumpFile.WriteFloat(surface->lightUV[j].y);
 			}
 		}
 		else
 		{
-			// zdray uses triangle strip internally, lump/gzd uses triangle fan
+			lumpFile.WriteFloat(surface->lightUV[0].x);
+			lumpFile.WriteFloat(surface->lightUV[0].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightUV[0].x);
-			lumpFile.WriteFloat(surfaces[i]->lightUV[0].y);
+			lumpFile.WriteFloat(surface->lightUV[1].x);
+			lumpFile.WriteFloat(surface->lightUV[1].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightUV[2].x);
-			lumpFile.WriteFloat(surfaces[i]->lightUV[2].y);
+			lumpFile.WriteFloat(surface->lightUV[2].x);
+			lumpFile.WriteFloat(surface->lightUV[2].y);
 
-			lumpFile.WriteFloat(surfaces[i]->lightUV[3].x);
-			lumpFile.WriteFloat(surfaces[i]->lightUV[3].y);
-
-			lumpFile.WriteFloat(surfaces[i]->lightUV[1].x);
-			lumpFile.WriteFloat(surfaces[i]->lightUV[1].y);
-		}
-	}
-
-	// Write lightmap textures
-	for (size_t i = 0; i < textures.size(); i++)
-	{
-		unsigned int count = (textureWidth * textureHeight) * 3;
-		uint16_t* pixels = textures[i]->Pixels();
-		for (unsigned int j = 0; j < count; j++)
-		{
-			lumpFile.Write16(pixels[j]);
+			lumpFile.WriteFloat(surface->lightUV[3].x);
+			lumpFile.WriteFloat(surface->lightUV[3].y);
 		}
 	}
 

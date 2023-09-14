@@ -108,6 +108,8 @@ struct Surface
 	int texHeight = 0;
 	std::vector<vec3> texPixels;
 
+	inline uint32_t Area() const { return uint32_t(texWidth * texHeight); }
+
 	// UV coordinates for the vertices
 	std::vector<vec2> lightUV;
 
