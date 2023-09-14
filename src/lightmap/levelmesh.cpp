@@ -420,6 +420,7 @@ void LevelMesh::CreateTextures()
 		if (bShouldLookupTexture)
 		{
 			sortedSurfaces.push_back(surface.get());
+			surface->atlasPageIndex = 0;
 		}
 		else
 		{
@@ -1217,7 +1218,9 @@ struct SurfaceEntry
 		}
 	}
 
-	int version = 2;
+	printf("   Writing %u surfaces out of %llu\n", surfaceCount, surfaces.size());
+
+	const int version = 2;
 
 	const uint32_t headerSize = sizeof(int) + 3 * sizeof(uint32_t);
 	const uint32_t bytesPerSurfaceEntry = sizeof(uint32_t) * 6 + sizeof(uint16_t) * 2;
@@ -1297,9 +1300,9 @@ struct SurfaceEntry
 
 		for (const auto& pixel : surface->texPixels)
 		{
-			lumpFile.Write16(floatToHalf(pixel.r));
-			lumpFile.Write16(floatToHalf(pixel.g));
-			lumpFile.Write16(floatToHalf(pixel.b));
+			lumpFile.Write16(floatToHalf(clamp(pixel.r, 0.0f, 65000.0f)));
+			lumpFile.Write16(floatToHalf(clamp(pixel.g, 0.0f, 65000.0f)));
+			lumpFile.Write16(floatToHalf(clamp(pixel.b, 0.0f, 65000.0f)));
 		}
 	}
 
