@@ -173,7 +173,7 @@ void GPURaytracer::RenderAtlasImage(size_t pageIndex)
 
 				// Begin without clear
 				RenderPassBegin()
-					.RenderPass(raytrace.renderPassBegin.get())
+					.RenderPass(raytrace.renderPassContinue.get())
 					.RenderArea(0, 0, atlasImageSize, atlasImageSize)
 					.Framebuffer(img.raytrace.Framebuffer.get())
 					.Execute(cmdbuffer.get());
