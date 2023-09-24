@@ -221,7 +221,7 @@ void FLevel::CreateLights()
 		IntThing *thing = &Things[i];
 
 		// skip things that aren't actually static point lights or static spotlights
-		if (thing->type != THING_POINTLIGHT_STATIC && thing->type != THING_SPOTLIGHT_STATIC)
+		if (thing->type != THING_POINTLIGHT_LM && thing->type != THING_SPOTLIGHT_LM)
 			continue;
 
 		vec3 lightColor(0, 0, 0);
@@ -232,14 +232,14 @@ void FLevel::CreateLights()
 
 		// need to process point lights and spot lights differently due to their
 		// inconsistent arg usage...
-		if (thing->type == THING_POINTLIGHT_STATIC)
+		if (thing->type == THING_POINTLIGHT_LM)
 		{
 			int r = thing->args[0];
 			int g = thing->args[1];
 			int b = thing->args[2];
 			lightColor = vec3(r / 255.0, g / 255.0, b / 255.0);
 		}
-		else if (thing->type == THING_SPOTLIGHT_STATIC)
+		else if (thing->type == THING_SPOTLIGHT_LM)
 		{
 			auto rgb = (uint32_t)thing->args[0];
 
@@ -264,7 +264,7 @@ void FLevel::CreateLights()
 		// this is known as "intensity" on dynamic lights (and in UDB)
 		lightDistance = thing->args[3];
 
-		// static light intensity (not to be confused with dynamic lights' intensity, which is actually static light distance
+		// lightmap light intensity (not to be confused with dynamic lights' intensity, which is actually lightmap light distance
 		lightIntensity = thing->alpha;
 
 		if (lightDistance > 0.0f && lightIntensity > 0.0f && lightColor != vec3(0, 0, 0))

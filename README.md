@@ -2,7 +2,7 @@
 # ZDRay baking utility for GZDoom
 
 ZDRay is a node and lightmap generator for GZDoom. ZDRay is intended as a drop-in replacement for zdbsp, with the additional feature
-that it can also bake lights. Once ZDRay has processed the level WAD it is ready to be used by GZDoom.
+that it can also bake lightmap lights. Once ZDRay has processed the level WAD it is ready to be used by GZDoom.
 
 ZDRay is based on zdbsp for the node generation and originally used dlight for the lightmap generation. Special thanks to Randi Heit,
 Samuel Villarreal, Christoph Oelckers and anyone else involved in creating or maintaining those tools.
@@ -55,12 +55,12 @@ thing // ZDRayInfo (ZDRay properties for the map)
 	lm_sampledistance = &lt;int&gt; (default: 16, map units each lightmap texel covers, must be in powers of two)
 }
 
-thing // Static point light (Light color and distance properties use the same args as dynamic lights)
+thing // Lightmap point light (Light color and distance properties use the same args as dynamic lights)
 {
 	type = 9876;
 }
 
-thing // Static spotlight (Light color, distance and angle properties use the same args as dynamic lights)
+thing // Lightmap spotlight (Light color, distance and angle properties use the same args as dynamic lights)
 {
 	type = 9881;
 }
