@@ -325,7 +325,7 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 			ld->ids.Clear();
 			if (id != -1) ld->ids.Push(id);
 		}
-		else if (stricmp(key, "lm_sampledist_line") == 0)
+		else if (stricmp(key, "lm_sampledist") == 0)
 		{
 			ld->sampling.SetGeneralSampleDistance(CheckInt(key));
 		}
@@ -415,7 +415,7 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 		{
 			sd->rowoffset = CheckInt(key);
 		}
-		else if (stricmp(key, "lm_sampledist_line") == 0)
+		else if (stricmp(key, "lm_sampledist") == 0)
 		{
 			sd->sampling.SetGeneralSampleDistance(CheckInt(key));
 		}

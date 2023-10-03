@@ -48,8 +48,8 @@ Usage: zdray [options] sourcefile.wad
 thing // ZDRayInfo (ZDRay properties for the map)
 {
 	type = 9890;
-	lm_suncolor = &lt;string&gt; (default: "FFFFFF", hex color value of the sun)
-	lm_sampledistance = &lt;int&gt; (default: 16, map units each lightmap texel covers, must be in powers of two)
+	lm_suncolor = &lt;int&gt; (default: 16777215, color value of the sun)
+	lm_sampledist = &lt;int&gt; (default: 16, map units each lightmap texel covers, must be in powers of two)
 }
 
 thing // Lightmap point light (Light color and distance properties use the same args as dynamic lights)
@@ -65,7 +65,7 @@ thing // Lightmap spotlight (Light color, distance and angle properties use the 
 linedef
 {
 	// Customizable sampling distance per line surface. Will use the value from the ZDRayInfo actor by default.
-	lm_sampledist_line = &lt;int&gt; (default: 0)
+	lm_sampledist = &lt;int&gt; (default: 0)
 	lm_sampledist_top = &lt;int&gt; (default: 0)
 	lm_sampledist_mid = &lt;int&gt; (default: 0)
 	lm_sampledist_bot = &lt;int&gt; (default: 0)
@@ -74,7 +74,7 @@ linedef
 sidedef
 {
 	// Customizable sampling distance per sidedef. Will use the value from the ZDRayInfo actor by default.
-	lm_sampledist_line = &lt;int&gt; (default: 0)
+	lm_sampledist = &lt;int&gt; (default: 0)
 	lm_sampledist_top = &lt;int&gt; (default: 0)
 	lm_sampledist_mid = &lt;int&gt; (default: 0)
 	lm_sampledist_bot = &lt;int&gt; (default: 0)

@@ -73,7 +73,7 @@ void FLevel::SetupLights()
 					lightcolor = atoi(key.value);
 					printf("   Sun color: %d (%X)\n", lightcolor, lightcolor);
 				}
-				else if (!stricmp(key.key, "lm_sampledistance"))
+				else if (!stricmp(key.key, "lm_sampledist"))
 				{
 					DefaultSamples = atoi(key.value);
 					if (DefaultSamples < 8) DefaultSamples = 8;
