@@ -19,8 +19,7 @@
 */
 
 #include "level/level.h"
-#include "lightmap/gpuraytracer.h"
-#include "math/vec.h"
+#include "lightmapper/gpuraytracer.h"
 //#include "rejectbuilder.h"
 #include <memory>
 
@@ -834,19 +833,17 @@ void FProcessor::BuildLightmaps()
 
 	Level.SetupLights();
 
-	LightmapMesh = std::make_unique<LevelMesh>(Level, Level.DefaultSamples, LMDims);
+	LightmapMesh = std::make_unique<DoomLevelMesh>(Level, Level.DefaultSamples, LMDims);
 
 	std::unique_ptr<GPURaytracer> gpuraytracer = std::make_unique<GPURaytracer>();
 	gpuraytracer->Raytrace(LightmapMesh.get());
-
-	LightmapMesh->CreateTextures();
 }
 
 void FProcessor::DumpMesh()
 {
 	if (LightmapMesh)
 	{
-		LightmapMesh->Export("levelmesh.obj");
+		LightmapMesh->DumpMesh("levelmesh.obj", "levelmesh.mtl");
 	}
 	else
 	{

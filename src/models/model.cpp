@@ -26,7 +26,6 @@
 **
 **/
 
-#include "model_ue1.h"
 #include "model_obj.h"
 #include "model_md2.h"
 #include "model_md3.h"
@@ -148,31 +147,13 @@ std::unique_ptr<FModel> LoadModel(const char * path, const char * modelfile)
 	FileData lumpd = fileSystem.ReadFile(lump);
 	char * buffer = (char*)lumpd.GetMem();
 
-	if ( (size_t)fullname.LastIndexOf("_d.3d") == fullname.Len()-5 )
-	{
-		FString anivfile = fullname.GetChars();
-		anivfile.Substitute("_d.3d","_a.3d");
-		if ( fileSystem.CheckNumForFullName(anivfile) > 0 )
-		{
-			model.reset(new FUE1Model);
-		}
-	}
-	else if ( (size_t)fullname.LastIndexOf("_a.3d") == fullname.Len()-5 )
-	{
-		FString datafile = fullname.GetChars();
-		datafile.Substitute("_a.3d","_d.3d");
-		if ( fileSystem.CheckNumForFullName(datafile) > 0 )
-		{
-			model.reset(new FUE1Model);
-		}
-	}
 #if 0
-	else if ( (size_t)fullname.LastIndexOf(".obj") == fullname.Len() - 4 )
+	if ( (size_t)fullname.LastIndexOf(".obj") == fullname.Len() - 4 )
 	{
 		model.reset(new FOBJModel);
 	}
 #endif
-	else if (!memcmp(buffer, "DMDM", 4))
+	if (!memcmp(buffer, "DMDM", 4))
 	{
 		model.reset(new FDMDModel);
 	}

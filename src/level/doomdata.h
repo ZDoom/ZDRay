@@ -4,7 +4,7 @@
 #include "framework/tarray.h"
 #include "framework/templates.h"
 #include "framework/zstring.h"
-#include "math/mathlib.h"
+#include "framework/vectors.h"
 #include <memory>
 #include <cmath>
 #include <optional>
@@ -363,8 +363,8 @@ struct FloatVertex
 struct ThingLight
 {
 	IntThing        *mapThing;
-	vec2            origin;
-	vec3            rgb;
+	FVector2            origin;
+	FVector3            rgb;
 	float           intensity;
 	float           innerAngleCos;
 	float           outerAngleCos;
@@ -375,11 +375,11 @@ struct ThingLight
 	MapSubsectorEx  *ssect;
 
 	// Portal related functionality
-	std::optional<vec3> relativePosition;
+	std::optional<FVector3> relativePosition;
 	int sectorGroup = 0;
 
 	// Portal aware position
-	vec3 LightRelativeOrigin() const
+	FVector3 LightRelativeOrigin() const
 	{
 		if (relativePosition)
 		{
@@ -389,14 +389,14 @@ struct ThingLight
 	}
 
 	// Absolute X, Y, Z position of the light
-	vec3 LightOrigin() const
+	FVector3 LightOrigin() const
 	{
 		float originZ;
 		if (!bCeiling)
-			originZ = sector->floorplane.zAt(origin.x, origin.y) + height;
+			originZ = sector->floorplane.zAt(origin.X, origin.Y) + height;
 		else
-			originZ = sector->ceilingplane.zAt(origin.x, origin.y) - height;
-		return vec3(origin.x, origin.y, originZ);
+			originZ = sector->ceilingplane.zAt(origin.X, origin.Y) - height;
+		return FVector3(origin.X, origin.Y, originZ);
 	}
 
 	float LightRadius() const
@@ -404,39 +404,39 @@ struct ThingLight
 		return radius + radius; // 2.0 because gzdoom's dynlights do this and we want them to match
 	}
 
-	float SpotAttenuation(const vec3& dir) const
+	float SpotAttenuation(const FVector3& dir) const
 	{
 		float spotAttenuation = 1.0f;
 		if (outerAngleCos > -1.0f)
 		{
 			float negPitch = -radians(mapThing->pitch);
 			float xyLen = std::cos(negPitch);
-			vec3 spotDir;
-			spotDir.x = -std::cos(radians(mapThing->angle)) * xyLen;
-			spotDir.y = -std::sin(radians(mapThing->angle)) * xyLen;
-			spotDir.z = -std::sin(negPitch);
-			float cosDir = dot(dir, spotDir);
+			FVector3 spotDir;
+			spotDir.X = -std::cos(radians(mapThing->angle)) * xyLen;
+			spotDir.Y = -std::sin(radians(mapThing->angle)) * xyLen;
+			spotDir.Z = -std::sin(negPitch);
+			float cosDir = (dir | spotDir);
 			spotAttenuation = smoothstep(outerAngleCos, innerAngleCos, cosDir);
 			spotAttenuation = std::max(spotAttenuation, 0.0f);
 		}
 		return spotAttenuation;
 	}
 
-	vec3 SpotDir() const
+	FVector3 SpotDir() const
 	{
 		if (outerAngleCos > -1.0f)
 		{
 			float negPitch = -radians(mapThing->pitch);
 			float xyLen = std::cos(negPitch);
-			vec3 spotDir;
-			spotDir.x = -std::cos(radians(mapThing->angle)) * xyLen;
-			spotDir.y = -std::sin(radians(mapThing->angle)) * xyLen;
-			spotDir.z = -std::sin(negPitch);
+			FVector3 spotDir;
+			spotDir.X = -std::cos(radians(mapThing->angle)) * xyLen;
+			spotDir.Y = -std::sin(radians(mapThing->angle)) * xyLen;
+			spotDir.Z = -std::sin(negPitch);
 			return spotDir;
 		}
 		else
 		{
-			return vec3(0.0f);
+			return FVector3(0.0f, 0.0f, 0.0f);
 		}
 	}
 
@@ -491,8 +491,8 @@ struct FLevel
 
 	TArray<ThingLight> ThingLights;
 
-	vec3 defaultSunColor;
-	vec3 defaultSunDirection;
+	FVector3 defaultSunColor;
+	FVector3 defaultSunDirection;
 	int DefaultSamples;
 
 	void FindMapBounds ();
@@ -509,8 +509,8 @@ struct FLevel
 	int NumSectors() const { return Sectors.Size(); }
 	int NumThings() const { return Things.Size(); }
 
-	const vec3 &GetSunColor() const;
-	const vec3 &GetSunDirection() const;
+	const FVector3 &GetSunColor() const;
+	const FVector3 &GetSunDirection() const;
 	IntSector *GetFrontSector(const IntSideDef *side);
 	IntSector *GetBackSector(const IntSideDef *side);
 	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
@@ -520,7 +520,7 @@ struct FLevel
 	int FindFirstSectorFromTag(int tag);
 	unsigned FindFirstLineId(int lineId);
 
-	inline IntSector* PointInSector(const dvec2& pos) { return GetSectorFromSubSector(PointInSubSector(int(pos.x), int(pos.y))); }
+	inline IntSector* PointInSector(const DVector2& pos) { return GetSectorFromSubSector(PointInSubSector(int(pos.X), int(pos.Y))); }
 private:
 	void CheckSkySectors();
 	void CreateLights();

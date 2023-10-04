@@ -23,9 +23,6 @@
 #include "level/level.h"
 #include "parse/sc_man.h"
 
-typedef double real64;
-typedef unsigned int uint32;
-typedef signed int int32;
 #include "framework/xs_Float.h"
 
 #ifdef _MSC_VER
@@ -574,7 +571,7 @@ void FProcessor::ParseSector(IntSector *sec)
 	}
 	else
 	{
-		float scale = 1.0f / length(sec->ceilingplane.Normal());
+		float scale = 1.0f / sec->ceilingplane.Normal().Length();
 		sec->ceilingplane.a *= scale;
 		sec->ceilingplane.b *= scale;
 		sec->ceilingplane.c *= scale;
@@ -591,7 +588,7 @@ void FProcessor::ParseSector(IntSector *sec)
 	}
 	else
 	{
-		float scale = 1.0f / length(sec->floorplane.Normal());
+		float scale = 1.0f / sec->floorplane.Normal().Length();
 		sec->floorplane.a *= scale;
 		sec->floorplane.b *= scale;
 		sec->floorplane.c *= scale;

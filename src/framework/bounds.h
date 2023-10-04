@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Note: this is a modified version of dlight. It is not the original software.
+// Note: this is from ZDRay
 //-----------------------------------------------------------------------------
 //
 // Copyright (c) 2013-2014 Samuel Villarreal
@@ -27,35 +27,39 @@
 
 #pragma once
 
-#include "math/mathlib.h"
-#include <string>
+#include "vectors.h"
 
-class BinFile
+class BBox
 {
 public:
-	uint8_t Read8();
-	short Read16();
-	int Read32();
-	float ReadFloat();
-	vec3 ReadVector();
-	std::string ReadString();
+	BBox();
+	BBox(const FVector3& vMin, const FVector3& vMax);
 
-	void Write8(const uint8_t val);
-	void Write16(const short val);
-	void Write32(const int val);
-	void WriteFloat(const float val);
-	void WriteVector(const vec3 &val);
-	void WriteString(const std::string &val);
+	void Clear();
+	FVector3 Center() const;
+	FVector3 Extents() const;
+	float Radius() const;
+	void AddPoint(const FVector3& vec);
+	bool PointInside(const FVector3& vec) const;
+	bool IntersectingBox(const BBox& box) const;
+	bool IntersectingBox2D(const BBox& box) const;
+	float DistanceToPlane(Plane& plane);
+	bool LineIntersect(const FVector3& start, const FVector3& end);
+	void ToPoints(float* points) const;
+	void ToVectors(FVector3* vectors) const;
 
-	int GetOffsetValue(int id);
-	uint8_t *GetOffset(int id, uint8_t *subdata = nullptr, int *count = nullptr);
+	BBox operator+(const float radius) const;
+	BBox& operator+=(const float radius);
+	BBox operator+(const FVector3& vec) const;
+	BBox operator-(const float radius) const;
+	BBox operator-(const FVector3& vec) const;
+	BBox& operator-=(const float radius);
+	BBox operator*(const FVector3& vec) const;
+	BBox& operator*=(const FVector3& vec);
+	BBox& operator=(const BBox& bbox);
+	FVector3 operator[](int index) const;
+	FVector3& operator[](int index);
 
-	uint8_t *Buffer() const { return buffer; }
-	void SetBuffer(uint8_t *ptr) { buffer = ptr; }
-	uint8_t *BufferAt() const { return &buffer[bufferOffset]; }
-	void SetOffset(const int offset) { bufferOffset = offset; }
-
-private:
-	uint8_t *buffer = nullptr;
-	unsigned int bufferOffset = 0;
+	FVector3 min;
+	FVector3 max;
 };

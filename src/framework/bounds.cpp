@@ -26,15 +26,18 @@
 //
 
 #include <math.h>
-#include "mathlib.h"
 #include <assert.h>
+
+#include "bounds.h"
+
+#define M_INFINITY 1e30f
 
 BBox::BBox()
 {
 	Clear();
 }
 
-BBox::BBox(const vec3 &vMin, const vec3 &vMax)
+BBox::BBox(const FVector3 &vMin, const FVector3 &vMax)
 {
 	this->min = vMin;
 	this->max = vMax;
@@ -42,28 +45,28 @@ BBox::BBox(const vec3 &vMin, const vec3 &vMax)
 
 void BBox::Clear()
 {
-	min = vec3(M_INFINITY, M_INFINITY, M_INFINITY);
-	max = vec3(-M_INFINITY, -M_INFINITY, -M_INFINITY);
+	min = FVector3(M_INFINITY, M_INFINITY, M_INFINITY);
+	max = FVector3(-M_INFINITY, -M_INFINITY, -M_INFINITY);
 }
 
-void BBox::AddPoint(const vec3 &vec)
+void BBox::AddPoint(const FVector3 &vec)
 {
-	float lowx = min.x;
-	float lowy = min.y;
-	float lowz = min.z;
-	float hix = max.x;
-	float hiy = max.y;
-	float hiz = max.z;
+	float lowx = min.X;
+	float lowy = min.Y;
+	float lowz = min.Z;
+	float hix = max.X;
+	float hiy = max.Y;
+	float hiz = max.Z;
 
-	if (vec.x < lowx) { lowx = vec.x; }
-	if (vec.y < lowy) { lowy = vec.y; }
-	if (vec.z < lowz) { lowz = vec.z; }
-	if (vec.x > hix) { hix = vec.x; }
-	if (vec.y > hiy) { hiy = vec.y; }
-	if (vec.z > hiz) { hiz = vec.z; }
+	if (vec.X < lowx) { lowx = vec.X; }
+	if (vec.Y < lowy) { lowy = vec.Y; }
+	if (vec.Z < lowz) { lowz = vec.Z; }
+	if (vec.X > hix) { hix = vec.X; }
+	if (vec.Y > hiy) { hiy = vec.Y; }
+	if (vec.Z > hiz) { hiz = vec.Z; }
 
-	min = vec3(lowx, lowy, lowz);
-	max = vec3(hix, hiy, hiz);
+	min = FVector3(lowx, lowy, lowz);
+	max = FVector3(hix, hiy, hiz);
 }
 
 float BBox::Radius() const
@@ -75,8 +78,8 @@ float BBox::Radius() const
 
 	for (i = 0; i < 3; i++)
 	{
-		r1 = Math::Fabs(min[i]);
-		r2 = Math::Fabs(max[i]);
+		r1 = fabsf(min[i]);
+		r2 = fabsf(max[i]);
 
 		if (r1 > r2)
 		{
@@ -88,10 +91,10 @@ float BBox::Radius() const
 		}
 	}
 
-	return Math::Sqrt(r);
+	return sqrtf(r);
 }
 
-bool BBox::PointInside(const vec3 &vec) const
+bool BBox::PointInside(const FVector3 &vec) const
 {
 	return !(vec[0] < min[0] || vec[1] < min[1] || vec[2] < min[2] ||
 		vec[0] > max[0] || vec[1] > max[1] || vec[2] > max[2]);
@@ -111,7 +114,9 @@ bool BBox::IntersectingBox2D(const BBox &box) const
 
 float BBox::DistanceToPlane(Plane &plane)
 {
-	vec3 c;
+	throw "unimplemented";
+	return 0;
+	/*FVector3 c;
 	float distStart;
 	float distEnd;
 	float dist = 0;
@@ -119,9 +124,9 @@ float BBox::DistanceToPlane(Plane &plane)
 	c = Center();
 
 	distStart = plane.Distance(c);
-	distEnd = Math::Fabs((max.x - c.x) * plane.a) +
-		Math::Fabs((max.y - c.y) * plane.b) +
-		Math::Fabs((max.z - c.z) * plane.c);
+	distEnd = fabs((max.X - c.X) * plane.a) +
+		fabs((max.Y - c.Y) * plane.b) +
+		fabs((max.Z - c.Z) * plane.c);
 
 	dist = distStart - distEnd;
 
@@ -139,117 +144,117 @@ float BBox::DistanceToPlane(Plane &plane)
 		return dist;
 	}
 
-	return 0;
+	return 0;*/
 }
 
 BBox BBox::operator+(const float radius) const
 {
-	vec3 vmin = min;
-	vec3 vmax = max;
+	FVector3 vmin = min;
+	FVector3 vmax = max;
 
-	vmin.x -= radius;
-	vmin.y -= radius;
-	vmin.z -= radius;
+	vmin.X -= radius;
+	vmin.Y -= radius;
+	vmin.Z -= radius;
 
-	vmax.x += radius;
-	vmax.y += radius;
-	vmax.z += radius;
+	vmax.X += radius;
+	vmax.Y += radius;
+	vmax.Z += radius;
 
 	return BBox(vmin, vmax);
 }
 
 BBox &BBox::operator+=(const float radius)
 {
-	min.x -= radius;
-	min.y -= radius;
-	min.z -= radius;
-	max.x += radius;
-	max.y += radius;
-	max.z += radius;
+	min.X -= radius;
+	min.Y -= radius;
+	min.Z -= radius;
+	max.X += radius;
+	max.Y += radius;
+	max.Z += radius;
 	return *this;
 }
 
-BBox BBox::operator+(const vec3 &vec) const
+BBox BBox::operator+(const FVector3 &vec) const
 {
-	vec3 vmin = min;
-	vec3 vmax = max;
+	FVector3 vmin = min;
+	FVector3 vmax = max;
 
-	vmin.x += vec.x;
-	vmin.y += vec.y;
-	vmin.z += vec.z;
+	vmin.X += vec.X;
+	vmin.Y += vec.Y;
+	vmin.Z += vec.Z;
 
-	vmax.x += vec.x;
-	vmax.y += vec.y;
-	vmax.z += vec.z;
+	vmax.X += vec.X;
+	vmax.Y += vec.Y;
+	vmax.Z += vec.Z;
 
 	return BBox(vmin, vmax);
 }
 
 BBox BBox::operator-(const float radius) const
 {
-	vec3 vmin = min;
-	vec3 vmax = max;
+	FVector3 vmin = min;
+	FVector3 vmax = max;
 
-	vmin.x += radius;
-	vmin.y += radius;
-	vmin.z += radius;
+	vmin.X += radius;
+	vmin.Y += radius;
+	vmin.Z += radius;
 
-	vmax.x -= radius;
-	vmax.y -= radius;
-	vmax.z -= radius;
+	vmax.X -= radius;
+	vmax.Y -= radius;
+	vmax.Z -= radius;
 
 	return BBox(vmin, vmax);
 }
 
-BBox BBox::operator-(const vec3 &vec) const
+BBox BBox::operator-(const FVector3 &vec) const
 {
-	vec3 vmin = min;
-	vec3 vmax = max;
+	FVector3 vmin = min;
+	FVector3 vmax = max;
 
-	vmin.x -= vec.x;
-	vmin.y -= vec.y;
-	vmin.z -= vec.z;
+	vmin.X -= vec.X;
+	vmin.Y -= vec.Y;
+	vmin.Z -= vec.Z;
 
-	vmax.x -= vec.x;
-	vmax.y -= vec.y;
-	vmax.z -= vec.z;
+	vmax.X -= vec.X;
+	vmax.Y -= vec.Y;
+	vmax.Z -= vec.Z;
 
 	return BBox(vmin, vmax);
 }
 
 BBox &BBox::operator-=(const float radius)
 {
-	min.x += radius;
-	min.y += radius;
-	min.z += radius;
-	max.x -= radius;
-	max.y -= radius;
-	max.z -= radius;
+	min.X += radius;
+	min.Y += radius;
+	min.Z += radius;
+	max.X -= radius;
+	max.Y -= radius;
+	max.Z -= radius;
 	return *this;
 }
 
-BBox BBox::operator*(const vec3 &vec) const
+BBox BBox::operator*(const FVector3 &vec) const
 {
 	BBox box = *this;
 
-	if (vec.x < 0) { box.min.x += (vec.x - 1); }
-	else { box.max.x += (vec.x + 1); }
-	if (vec.y < 0) { box.min.y += (vec.y - 1); }
-	else { box.max.y += (vec.y + 1); }
-	if (vec.z < 0) { box.min.z += (vec.z - 1); }
-	else { box.max.z += (vec.z + 1); }
+	if (vec.X < 0) { box.min.X += (vec.X - 1); }
+	else { box.max.X += (vec.X + 1); }
+	if (vec.Y < 0) { box.min.Y += (vec.Y - 1); }
+	else { box.max.Y += (vec.Y + 1); }
+	if (vec.Z < 0) { box.min.Z += (vec.Z - 1); }
+	else { box.max.Z += (vec.Z + 1); }
 
 	return box;
 }
 
-BBox &BBox::operator*=(const vec3 &vec)
+BBox &BBox::operator*=(const FVector3 &vec)
 {
-	if (vec.x < 0) { min.x += (vec.x - 1); }
-	else { max.x += (vec.x + 1); }
-	if (vec.y < 0) { min.y += (vec.y - 1); }
-	else { max.y += (vec.y + 1); }
-	if (vec.z < 0) { min.z += (vec.z - 1); }
-	else { max.z += (vec.z + 1); }
+	if (vec.X < 0) { min.X += (vec.X - 1); }
+	else { max.X += (vec.X + 1); }
+	if (vec.Y < 0) { min.Y += (vec.Y - 1); }
+	else { max.Y += (vec.Y + 1); }
+	if (vec.Z < 0) { min.Z += (vec.Z - 1); }
+	else { max.Z += (vec.Z + 1); }
 
 	return *this;
 }
@@ -262,39 +267,39 @@ BBox &BBox::operator=(const BBox &bbox)
 	return *this;
 }
 
-vec3 BBox::operator[](int index) const
+FVector3 BBox::operator[](int index) const
 {
 	assert(index >= 0 && index < 2);
 	return index == 0 ? min : max;
 }
 
-vec3 &BBox::operator[](int index)
+FVector3 &BBox::operator[](int index)
 {
 	assert(index >= 0 && index < 2);
 	return index == 0 ? min : max;
 }
 
-bool BBox::LineIntersect(const vec3 &start, const vec3 &end)
+bool BBox::LineIntersect(const FVector3 &start, const FVector3 &end)
 {
 	float ld[3];
-	vec3 center = Center();
-	vec3 extents = max - center;
-	vec3 lineDir = (end - start) * 0.5f;
-	vec3 lineCenter = lineDir + start;
-	vec3 dir = lineCenter - center;
+	FVector3 center = Center();
+	FVector3 extents = max - center;
+	FVector3 lineDir = (end - start) * 0.5f;
+	FVector3 lineCenter = lineDir + start;
+	FVector3 dir = lineCenter - center;
 
-	ld[0] = Math::Fabs(lineDir.x);
-	if (Math::Fabs(dir.x) > extents.x + ld[0]) { return false; }
-	ld[1] = Math::Fabs(lineDir.y);
-	if (Math::Fabs(dir.y) > extents.y + ld[1]) { return false; }
-	ld[2] = Math::Fabs(lineDir.z);
-	if (Math::Fabs(dir.z) > extents.z + ld[2]) { return false; }
+	ld[0] = (float)fabs(lineDir.X);
+	if ((float)fabs(dir.X) > extents.X + ld[0]) { return false; }
+	ld[1] = (float)fabs(lineDir.Y);
+	if ((float)fabs(dir.Y) > extents.Y + ld[1]) { return false; }
+	ld[2] = (float)fabs(lineDir.Z);
+	if ((float)fabs(dir.Z) > extents.Z + ld[2]) { return false; }
 
-	vec3 crossprod = cross(lineDir, dir);
+	FVector3 crossprod = lineDir ^ dir;
 
-	if (Math::Fabs(crossprod.x) > extents.y * ld[2] + extents.z * ld[1]) { return false; }
-	if (Math::Fabs(crossprod.y) > extents.x * ld[2] + extents.z * ld[0]) { return false; }
-	if (Math::Fabs(crossprod.z) > extents.x * ld[1] + extents.y * ld[0]) { return false; }
+	if (fabs(crossprod.X) > extents.Y * ld[2] + extents.Z * ld[1]) { return false; }
+	if (fabs(crossprod.Y) > extents.X * ld[2] + extents.Z * ld[0]) { return false; }
+	if (fabs(crossprod.Z) > extents.X * ld[1] + extents.Y * ld[0]) { return false; }
 
 	return true;
 }
@@ -329,7 +334,7 @@ void BBox::ToPoints(float *points) const
 }
 
 // Assumes vectors is an array of 8
-void BBox::ToVectors(vec3 *vectors) const
+void BBox::ToVectors(FVector3 *vectors) const
 {
 	vectors[0][0] = max[0];
 	vectors[0][1] = min[1];
@@ -355,4 +360,20 @@ void BBox::ToVectors(vec3 *vectors) const
 	vectors[7][0] = min[0];
 	vectors[7][1] = max[1];
 	vectors[7][2] = min[2];
+}
+
+inline FVector3 BBox::Center() const
+{
+	return FVector3(
+		(max.X + min.X) * 0.5f,
+		(max.Y + min.Y) * 0.5f,
+		(max.Z + min.Z) * 0.5f);
+}
+
+inline FVector3 BBox::Extents() const
+{
+	return FVector3(
+		(max.X - min.X) * 0.5f,
+		(max.Y - min.Y) * 0.5f,
+		(max.Z - min.Z) * 0.5f);
 }

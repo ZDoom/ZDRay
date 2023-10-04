@@ -3,7 +3,7 @@
 #include "framework/tarray.h"
 #include "framework/templates.h"
 #include "framework/zstring.h"
-#include "math/mathlib.h"
+#include "framework/vectors.h"
 #include <stdint.h>
 #include <string>
 #include <memory>

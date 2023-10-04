@@ -41,14 +41,14 @@
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
 
-inline int P_PointOnLineSidePrecise(const vec2& p, const vec2& v1, const vec2& v2)
+inline int P_PointOnLineSidePrecise(const FVector2& p, const FVector2& v1, const FVector2& v2)
 {
-	return (p.y - v1.y) * (v2.x - v1.x) + (v1.x - p.x) * (v2.y - v1.y) > EQUAL_EPSILON;
+	return (p.Y - v1.Y) * (v2.X - v1.X) + (v1.X - p.X) * (v2.Y - v1.Y) > EQUAL_EPSILON;
 }
 
-inline int P_PointOnLineSidePrecise(const vec2& p, const FloatVertex& v1, const FloatVertex& v2)
+inline int P_PointOnLineSidePrecise(const FVector2& p, const FloatVertex& v1, const FloatVertex& v2)
 {
-	return P_PointOnLineSidePrecise(p, vec2(v1.x, v1.y), vec2(v2.x, v2.y));
+	return P_PointOnLineSidePrecise(p, FVector2(v1.x, v1.y), FVector2(v2.x, v2.y));
 }
 
 enum
@@ -122,8 +122,8 @@ void FProcessor::SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt,
 		{
 			if (sec.lines.Size() != 3) continue;	// only works with triangular sectors
 
-			dvec3 vt1, vt2, vt3;
-			dvec3 vec1, vec2;
+			DVector3 vt1, vt2, vt3;
+			DVector3 vec1, vec2;
 			int vi1, vi2, vi3;
 
 			vi1 = sec.lines[0]->v1;
@@ -135,9 +135,9 @@ void FProcessor::SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt,
 			const auto sv2 = Level.GetSegVertex(vi2);
 			const auto sv3 = Level.GetSegVertex(vi3);
 
-			vt1 = dvec3(sv1.x, sv1.y, 0);
-			vt2 = dvec3(sv2.x, sv2.y, 0);
-			vt3 = dvec3(sv3.x, sv3.y, 0);
+			vt1 = DVector3(sv1.x, sv1.y, 0);
+			vt2 = DVector3(sv2.x, sv2.y, 0);
+			vt3 = DVector3(sv3.x, sv3.y, 0);
 
 			for (int j = 0; j < 2; j++)
 			{
@@ -147,11 +147,11 @@ void FProcessor::SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt,
 
 				if (h1 == NULL && h2 == NULL && h3 == NULL) continue;
 
-				vt1.z = h1 ? *h1 : j == 0 ? sec.data.floorheight : sec.data.ceilingheight;
-				vt2.z = h2 ? *h2 : j == 0 ? sec.data.floorheight : sec.data.ceilingheight;
-				vt3.z = h3 ? *h3 : j == 0 ? sec.data.floorheight : sec.data.ceilingheight;
+				vt1.Z = h1 ? *h1 : j == 0 ? sec.data.floorheight : sec.data.ceilingheight;
+				vt2.Z = h2 ? *h2 : j == 0 ? sec.data.floorheight : sec.data.ceilingheight;
+				vt3.Z = h3 ? *h3 : j == 0 ? sec.data.floorheight : sec.data.ceilingheight;
 
-				if (P_PointOnLineSidePrecise(::vec2(vt3.xy()), Level.GetSegVertex(sec.lines[0]->v1), Level.GetSegVertex(sec.lines[0]->v2)) == 0)
+				if (P_PointOnLineSidePrecise(FVector2(vt3.XY()), Level.GetSegVertex(sec.lines[0]->v1), Level.GetSegVertex(sec.lines[0]->v2)) == 0)
 				{
 					vec1 = vt2 - vt3;
 					vec2 = vt1 - vt3;
@@ -162,9 +162,9 @@ void FProcessor::SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt,
 					vec2 = vt2 - vt3;
 				}
 
-				dvec3 cross = ::cross(vec1, vec2);
+				DVector3 cross = (vec1 ^ vec2);
 
-				double len = length(cross);
+				double len = cross.Length();
 				if (len == 0)
 				{
 					// Only happens when all vertices in this sector are on the same line.
@@ -174,14 +174,14 @@ void FProcessor::SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt,
 				cross /= len;
 
 				// Fix backward normals
-				if ((cross.z < 0 && j == 0) || (cross.z > 0 && j == 1))
+				if ((cross.Z < 0 && j == 0) || (cross.Z > 0 && j == 1))
 				{
 					cross = -cross;
 				}
 
 				Plane* plane = j == 0 ? &sec.floorplane : &sec.ceilingplane;
 
-				double dist = -cross[0] * vt3.x - cross[1] * vt3.y - cross[2] * vt3.z;
+				double dist = -cross[0] * vt3.X - cross[1] * vt3.Y - cross[2] * vt3.Z;
 				plane->Set(float(cross[0]), float(cross[1]), float(cross[2]), float(-dist));
 			}
 		}
@@ -196,12 +196,12 @@ void FProcessor::SpawnSlopeMakers(IntThing* firstmt, IntThing* lastmt, const int
 	{
 		if (mt->type >= SMT_SlopeFloorPointLine && mt->type <= SMT_VavoomCeiling)
 		{
-			dvec3 pos = dvec3(F(mt->x), F(mt->y), F(mt->z));
+			DVector3 pos = DVector3(F(mt->x), F(mt->y), F(mt->z));
 			Plane* refplane;
 			IntSector* sec;
 			bool ceiling;
 
-			sec = Level.PointInSector(pos.xy());
+			sec = Level.PointInSector(pos.XY());
 			if (mt->type == SMT_SlopeCeilingPointLine || mt->type == SMT_VavoomCeiling || mt->type == SMT_SetCeilingSlope)
 			{
 				refplane = &sec->ceilingplane;
@@ -213,7 +213,7 @@ void FProcessor::SpawnSlopeMakers(IntThing* firstmt, IntThing* lastmt, const int
 				ceiling = false;
 			}
 
-			pos.z = double(refplane->zAt(float(pos.x), float(pos.y))) + pos.z;
+			pos.Z = double(refplane->zAt(float(pos.X), float(pos.Y))) + pos.Z;
 
 			/*if (mt->type <= SMT_SlopeCeilingPointLine)
 			{ // SlopeFloorPointLine and SlopCeilingPointLine
@@ -236,7 +236,7 @@ void FProcessor::SpawnSlopeMakers(IntThing* firstmt, IntThing* lastmt, const int
 	{
 		if (mt->type == SMT_CopyFloorPlane || mt->type == SMT_CopyCeilingPlane)
 		{
-			CopyPlane(mt->args[0], dvec2(F(mt->x), F(mt->y)), mt->type == SMT_CopyCeilingPlane);
+			CopyPlane(mt->args[0], DVector2(F(mt->x), F(mt->y)), mt->type == SMT_CopyCeilingPlane);
 			mt->type = 0;
 		}
 	}
@@ -280,7 +280,7 @@ void FProcessor::AlignPlane(IntSector* sec, IntLineDef* line, int which)
 
 	refsec = line->frontsector == sec ? line->backsector : line->frontsector;
 
-	dvec3 p, v1, v2, cross;
+	DVector3 p, v1, v2, cross;
 
 	Plane* srcplane;
 	double srcheight, destheight;
@@ -299,10 +299,10 @@ void FProcessor::AlignPlane(IntSector* sec, IntLineDef* line, int which)
 	v2[1] = double(refvert.y) - double(lv1.y);
 	v2[2] = srcheight - destheight;
 
-	cross = normalize(::cross(v1, v2));
+	cross = (v1 ^ v2).Unit();
 
 	// Fix backward normals
-	if ((cross.z < 0 && which == 0) || (cross.z > 0 && which == 1))
+	if ((cross.Z < 0 && which == 0) || (cross.Z > 0 && which == 1))
 	{
 		cross = -cross;
 	}
@@ -408,7 +408,7 @@ void FProcessor::CopyPlane(int tag, IntSector* dest, bool copyCeil)
 	}
 }
 
-void FProcessor::CopyPlane(int tag, const dvec2& pos, bool copyCeil)
+void FProcessor::CopyPlane(int tag, const DVector2& pos, bool copyCeil)
 {
 	CopyPlane(tag, Level.PointInSector(pos), copyCeil);
 }

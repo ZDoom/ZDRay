@@ -320,6 +320,23 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+static int RoundPowerOfTwo(int x)
+{
+	int mask = 1;
+
+	while (mask < 0x40000000)
+	{
+		if (x == mask || (x & (mask - 1)) == x)
+		{
+			return mask;
+		}
+
+		mask <<= 1;
+	}
+
+	return x;
+}
+
 //==========================================================================
 //
 // ParseArgs
@@ -449,7 +466,7 @@ static void ParseArgs(int argc, char **argv)
 			LMDims = atoi(optarg);
 			if (LMDims <= 0) LMDims = 1;
 			if (LMDims > 1024) LMDims = 1024;
-			LMDims = Math::RoundPowerOfTwo(LMDims);
+			LMDims = RoundPowerOfTwo(LMDims);
 			break;
 		case 'D':
 			VKDebug = true;

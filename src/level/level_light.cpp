@@ -25,7 +25,7 @@
 //    distribution.
 //
 
-#include "math/mathlib.h"
+#include "framework/vectors.h"
 #include "level/level.h"
 #include <algorithm>
 #include <memory>
@@ -38,11 +38,28 @@
 // convert from fixed point(FRACUNIT) to floating point
 #define F(x)  (((float)(x))/65536.0f)
 
+static int RoundPowerOfTwo(int x)
+{
+	int mask = 1;
+
+	while (mask < 0x40000000)
+	{
+		if (x == mask || (x & (mask - 1)) == x)
+		{
+			return mask;
+		}
+
+		mask <<= 1;
+	}
+
+	return x;
+}
+
 void FLevel::SetupLights()
 {
 	// GG to whoever memset'ed FLevel
-	defaultSunColor = vec3(1, 1, 1);
-	defaultSunDirection = vec3(0.45f, 0.3f, 0.9f);
+	defaultSunColor = FVector3(1, 1, 1);
+	defaultSunDirection = FVector3(0.45f, 0.3f, 0.9f);
 	DefaultSamples = 16;
 
 	for (int i = 0; i < (int)Things.Size(); ++i)
@@ -51,18 +68,18 @@ void FLevel::SetupLights()
 		if (thing->type == THING_ZDRAYINFO)
 		{
 			uint32_t lightcolor = 0xffffff;
-			vec3 sundir(0.0f, 0.0f, 0.0f);
-			vec3 suncolor(1.0f, 1.0f, 1.0f);
+			FVector3 sundir(0.0f, 0.0f, 0.0f);
+			FVector3 suncolor(1.0f, 1.0f, 1.0f);
 
 			// to do: is the math here correct?
 			float sdx = (float)std::cos(radians(thing->angle)) * (float)std::cos(radians(thing->pitch));
 			float sdy = (float)std::sin(radians(thing->angle)) * (float)std::cos(radians(thing->pitch));
 			float sdz = (float)-std::sin(radians(thing->pitch));
-			sundir.x = -sdx;
-			sundir.y = -sdy;
-			sundir.z = -sdz;
+			sundir.X = -sdx;
+			sundir.Y = -sdy;
+			sundir.Z = -sdz;
 
-			printf("   Sun vector: %f, %f, %f\n", sundir.x, sundir.y, sundir.z);
+			printf("   Sun vector: %f, %f, %f\n", sundir.X, sundir.Y, sundir.Z);
 
 			for (unsigned int propIndex = 0; propIndex < thing->props.Size(); propIndex++)
 			{
@@ -78,16 +95,16 @@ void FLevel::SetupLights()
 					DefaultSamples = atoi(key.value);
 					if (DefaultSamples < 8) DefaultSamples = 8;
 					if (DefaultSamples > 128) DefaultSamples = 128;
-					DefaultSamples = Math::RoundPowerOfTwo(DefaultSamples);
+					DefaultSamples = RoundPowerOfTwo(DefaultSamples);
 				}
 			}
 
-			if (dot(sundir, sundir) > 0.01f)
+			if ((sundir | sundir) > 0.01f)
 			{
-				sundir = normalize(sundir);
-				suncolor.x = ((lightcolor >> 16) & 0xff) / 255.0f;
-				suncolor.y = ((lightcolor >> 8) & 0xff) / 255.0f;
-				suncolor.z = (lightcolor & 0xff) / 255.0f;
+				sundir.MakeUnit();
+				suncolor.X = ((lightcolor >> 16) & 0xff) / 255.0f;
+				suncolor.Y = ((lightcolor >> 8) & 0xff) / 255.0f;
+				suncolor.Z = (lightcolor & 0xff) / 255.0f;
 
 				defaultSunColor = suncolor;
 				defaultSunDirection = sundir;
@@ -119,12 +136,12 @@ void FLevel::CheckSkySectors()
 	}
 }
 
-const vec3 &FLevel::GetSunColor() const
+const FVector3 &FLevel::GetSunColor() const
 {
 	return defaultSunColor;
 }
 
-const vec3 &FLevel::GetSunDirection() const
+const FVector3 &FLevel::GetSunDirection() const
 {
 	return defaultSunDirection;
 }
@@ -171,8 +188,8 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	MapNodeEx   *node;
 	int         side;
 	int         nodenum;
-	vec3     dp1;
-	vec3     dp2;
+	FVector3     dp1;
+	FVector3     dp2;
 	float       d;
 
 	// single subsector is a special case
@@ -187,16 +204,17 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	{
 		node = &GLNodes[nodenum];
 
-		vec3 pt1(F(node->x), F(node->y), 0);
-		vec3 pt2(F(node->dx), F(node->dy), 0);
-		//vec3 pt1(F(node->x << 16), F(node->y << 16), 0);
-		//vec3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
-		vec3 pos(F(x << 16), F(y << 16), 0);
+		FVector3 pt1(F(node->x), F(node->y), 0);
+		FVector3 pt2(F(node->dx), F(node->dy), 0);
+		//FVector3 pt1(F(node->x << 16), F(node->y << 16), 0);
+		//FVector3 pt2(F(node->dx << 16), F(node->dy << 16), 0);
+		FVector3 pos(F(x << 16), F(y << 16), 0);
 
 		dp1 = pt1 - pos;
 		dp2 = (pt2 + pt1) - pos;
-		d = cross(dp1, dp2).z;
+		d = (dp1 ^ dp2).Z;
 
+		#define FLOATSIGNBIT(f) (reinterpret_cast<const unsigned int&>(f) >> 31)
 		side = FLOATSIGNBIT(d);
 
 		nodenum = node->children[side ^ 1];
@@ -224,7 +242,7 @@ void FLevel::CreateLights()
 		if (thing->type != THING_POINTLIGHT_LM && thing->type != THING_SPOTLIGHT_LM)
 			continue;
 
-		vec3 lightColor(0, 0, 0);
+		FVector3 lightColor(0, 0, 0);
 		float lightIntensity = 1.0f;
 		float lightDistance = 0.0f;
 		float innerAngleCos = -1.0f;
@@ -237,7 +255,7 @@ void FLevel::CreateLights()
 			int r = thing->args[0];
 			int g = thing->args[1];
 			int b = thing->args[2];
-			lightColor = vec3(r / 255.0, g / 255.0, b / 255.0);
+			lightColor = FVector3(r / 255.0, g / 255.0, b / 255.0);
 		}
 		else if (thing->type == THING_SPOTLIGHT_LM)
 		{
@@ -251,7 +269,7 @@ void FLevel::CreateLights()
 				rgb = (uint32_t)hex.ToULong();
 			}
 
-			lightColor = vec3(
+			lightColor = FVector3(
 				((rgb >> 16) & 0xFF) / 255.0,
 				((rgb >> 8) & 0xFF) / 255.0,
 				((rgb) & 0xFF) / 255.0
@@ -267,7 +285,7 @@ void FLevel::CreateLights()
 		// lightmap light intensity (not to be confused with dynamic lights' intensity, which is actually lightmap light distance
 		lightIntensity = thing->alpha;
 
-		if (lightDistance > 0.0f && lightIntensity > 0.0f && lightColor != vec3(0, 0, 0))
+		if (lightDistance > 0.0f && lightIntensity > 0.0f && lightColor != FVector3(0, 0, 0))
 		{
 			int x = thing->x >> FRACBITS;
 			int y = thing->y >> FRACBITS;
@@ -283,8 +301,8 @@ void FLevel::CreateLights()
 			thingLight.bCeiling = false;
 			thingLight.ssect = PointInSubSector(x, y);
 			thingLight.sector = GetSectorFromSubSector(thingLight.ssect);
-			thingLight.origin.x = x;
-			thingLight.origin.y = y;
+			thingLight.origin.X = x;
+			thingLight.origin.Y = y;
 			thingLight.sectorGroup = thingLight.sector->group;
 
 			ThingLights.Push(thingLight);

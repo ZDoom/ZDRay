@@ -12,7 +12,6 @@ set(ZDRAY_SOURCES
 	src/commandline/getopt1.c
 	src/commandline/getopt.h
 	src/framework/halffloat.cpp
-	src/framework/binfile.cpp
 	src/framework/zstring.cpp
 	src/framework/zstrformat.cpp
 	src/framework/utf8.cpp
@@ -22,7 +21,11 @@ set(ZDRAY_SOURCES
 	src/framework/zdray.h
 	src/framework/xs_Float.h
 	src/framework/halffloat.h
-	src/framework/binfile.h
+	src/framework/vectors.h
+	src/framework/matrix.cpp
+	src/framework/matrix.h
+	src/framework/bounds.cpp
+	src/framework/bounds.h
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/blockmapbuilder/blockmapbuilder.h
 	src/level/level.cpp
@@ -43,47 +46,30 @@ set(ZDRAY_SOURCES
 	src/nodebuilder/nodebuild_utility.cpp
 	src/nodebuilder/nodebuild_classify_nosse2.cpp
 	src/nodebuilder/nodebuild.h
-	src/lightmap/pngwriter.cpp
-	src/lightmap/pngwriter.h
-	src/lightmap/levelmesh.cpp
-	src/lightmap/levelmesh.h
-	src/lightmap/lightmaptexture.cpp
-	src/lightmap/lightmaptexture.h
-	src/lightmap/collision.cpp
-	src/lightmap/collision.h
-	src/lightmap/delauneytriangulator.cpp
-	src/lightmap/delauneytriangulator.h
-	src/lightmap/stacktrace.cpp
-	src/lightmap/stacktrace.h
-	src/lightmap/surfaceclip.cpp
-	src/lightmap/surfaceclip.h
-	src/lightmap/gpuraytracer.cpp
-	src/lightmap/gpuraytracer.h
-	src/lightmap/glsl_frag.h
-	src/lightmap/glsl_vert.h
-	src/lightmap/glsl_frag_resolve.h
-	src/lightmap/renderdoc_app.h
-	src/lightmap/portal.h
-	src/math/mat.cpp
-	src/math/plane.cpp
-	src/math/angle.cpp
-	src/math/bounds.cpp
-	src/math/mathlib.cpp
-	src/math/mat.h
-	src/math/quaternion.h
-	src/math/vec.h
-	src/math/mathlib.h
+	src/lightmapper/hw_levelmesh.cpp
+	src/lightmapper/hw_levelmesh.h
+	src/lightmapper/hw_collision.cpp
+	src/lightmapper/hw_collision.h
+	src/lightmapper/vk_renderdevice.cpp
+	src/lightmapper/vk_renderdevice.h
+	src/lightmapper/vk_lightmap.cpp
+	src/lightmapper/vk_lightmap.h
+	src/lightmapper/vk_raytrace.cpp
+	src/lightmapper/vk_raytrace.h
+	src/lightmapper/textureid.h
+	src/lightmapper/doom_levelmesh.cpp
+	src/lightmapper/doom_levelmesh.h
+	src/lightmapper/gpuraytracer.cpp
+	src/lightmapper/gpuraytracer.h
 	src/models/model.cpp
 	src/models/model.h
 	src/models/model_md2.h
 	src/models/model_md3.h
 	src/models/model_obj.h
-	src/models/model_ue1.h
 	src/models/modelrenderer.h
 	src/models/models_md2.cpp
 	src/models/models_md3.cpp
 	src/models/models_obj.cpp
-	src/models/models_ue1.cpp
 	src/models/tab_anorms.h
 	src/platform/windows/resource.h
 )
@@ -108,8 +94,7 @@ source_group("src\\Parse" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/p
 source_group("src\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/.+")
 source_group("src\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
 source_group("src\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
-source_group("src\\Math" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/math/.+")
-source_group("src\\Lightmap" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmap/.+")
+source_group("src\\Lightmapper" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmapper/.+")
 source_group("src\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/models/.+")
 
 source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")

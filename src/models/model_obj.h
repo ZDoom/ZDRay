@@ -23,7 +23,6 @@
 #pragma once
 
 #include "model.h"
-#include "math/mathlib.h"
 
 #if 0
 

@@ -226,22 +226,3 @@ private:
 	std::vector<LightmapImage> atlasImages;
 	static const int atlasImageSize = 2048;
 };
-
-class BufferTransfer
-{
-public:
-	BufferTransfer& AddBuffer(VulkanBuffer* buffer, const void* data, size_t size);
-	BufferTransfer& AddBuffer(VulkanBuffer* buffer, const void* data0, size_t size0, const void* data1, size_t size1);
-	std::unique_ptr<VulkanBuffer> Execute(VulkanDevice* device, VulkanCommandBuffer* cmdbuffer);
-
-private:
-	struct BufferCopy
-	{
-		VulkanBuffer* buffer;
-		const void* data0;
-		size_t size0;
-		const void* data1;
-		size_t size1;
-	};
-	std::vector<BufferCopy> bufferCopies;
-};

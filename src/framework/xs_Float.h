@@ -37,6 +37,10 @@
 #define finline __forceinline
 #endif
 
+typedef double real64;
+typedef unsigned int uint32;
+typedef signed int int32;
+
 union _xs_doubleints
 {
 	real64 val;

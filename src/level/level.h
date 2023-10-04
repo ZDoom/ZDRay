@@ -7,7 +7,7 @@
 #include "framework/tarray.h"
 #include "nodebuilder/nodebuild.h"
 #include "blockmapbuilder/blockmapbuilder.h"
-#include "lightmap/levelmesh.h"
+#include "lightmapper/doom_levelmesh.h"
 #include <miniz/miniz.h>
 
 #define DEFINE_SPECIAL(name, num, min, max, map) name = num,
@@ -77,7 +77,7 @@ private:
 	void SetSlopesFromVertexHeights(IntThing* firstmt, IntThing* lastmt, const int* oldvertextable);
 	void SpawnSlopeMakers(IntThing* firstmt, IntThing* lastmt, const int* oldvertextable);
 	void CopyPlane(int tag, IntSector* dest, bool copyCeil);
-	void CopyPlane(int tag, const dvec2& pos, bool copyCeil);
+	void CopyPlane(int tag, const DVector2& pos, bool copyCeil);
 
 
 	MapNodeEx *NodesToEx(const MapNode *nodes, int count);
@@ -158,5 +158,5 @@ private:
 	int Lump;
 
 	bool NodesBuilt = false;
-	std::unique_ptr<LevelMesh> LightmapMesh;
+	std::unique_ptr<DoomLevelMesh> LightmapMesh;
 };
