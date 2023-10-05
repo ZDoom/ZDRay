@@ -1,7 +1,10 @@
 
 #include "gpuraytracer.h"
 #include "vk_renderdevice.h"
+#include "vk_raytrace.h"
+#include "vk_lightmap.h"
 #include "renderdoc_app.h"
+#include "doom_levelmesh.h"
 
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -20,7 +23,7 @@ GPURaytracer::~GPURaytracer()
 {
 }
 
-void GPURaytracer::Raytrace(DoomLevelMesh* levelMesh)
+void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 {
 	if (rdoc_api) rdoc_api->StartFrameCapture(nullptr, nullptr);
 
@@ -34,10 +37,28 @@ void GPURaytracer::Raytrace(DoomLevelMesh* levelMesh)
 
 	try
 	{
-		// To do raytrace here
+		auto raytrace = mDevice->GetRaytrace();
+		auto lightmap = mDevice->GetLightmap();
+
+		// mDevice->GetTextureManager()->CreateLightmap(mesh->LMTextureSize, mesh->LMTextureCount);
+
 		printf(".");
+		raytrace->SetLevelMesh(mesh);
+		lightmap->SetLevelMesh(mesh);
+		raytrace->BeginFrame();
+		lightmap->BeginFrame();
+
 		printf(".");
+		// lightmap->Raytrace(surfaces);
+
 		printf(".");
+		/*
+		TArray<uint16_t> buffer;
+		for (int arrayIndex = 0; arrayIndex < mesh->LMTextureCount; arrayIndex++)
+		{
+			mDevice->GetTextureManager()->DownloadLightmap(arrayIndex, buffer);
+		}
+		*/
 	}
 	catch (...)
 	{
