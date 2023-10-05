@@ -5,6 +5,23 @@
 #include "zvulkan/vulkanbuilders.h"
 #include "Framework/halffloat.h"
 #include "framework/zstring.h"
+#include <map>
+
+#include "glsl/binding_lightmapper.glsl.h"
+#include "glsl/binding_raytrace.glsl.h"
+#include "glsl/binding_textures.glsl.h"
+#include "glsl/frag_blur.glsl.h"
+#include "glsl/frag_copy.glsl.h"
+#include "glsl/frag_raytrace.glsl.h"
+#include "glsl/frag_resolve.glsl.h"
+#include "glsl/polyfill_rayquery.glsl.h"
+#include "glsl/trace_ambient_occlusion.glsl.h"
+#include "glsl/trace_levelmesh.glsl.h"
+#include "glsl/trace_light.glsl.h"
+#include "glsl/trace_sunlight.glsl.h"
+#include "glsl/vert_copy.glsl.h"
+#include "glsl/vert_raytrace.glsl.h"
+#include "glsl/vert_screenquad.glsl.h"
 
 #define USE_DRAWINDIRECT
 
@@ -626,9 +643,30 @@ int VkLightmap::GetRaytracePipelineIndex()
 
 FString VkLightmap::LoadPrivateShaderLump(const char* lumpname)
 {
-	// To do: load the shader
+	static std::map<FString, FString> sources =
+	{
+		{ "shaders/lightmap/binding_lightmapper.glsl", binding_lightmapper_glsl },
+		{ "shaders/lightmap/binding_raytrace.glsl", binding_raytrace_glsl },
+		{ "shaders/lightmap/binding_textures.glsl", binding_textures_glsl },
+		{ "shaders/lightmap/frag_blur.glsl", frag_blur_glsl },
+		{ "shaders/lightmap/frag_copy.glsl", frag_copy_glsl },
+		{ "shaders/lightmap/frag_raytrace.glsl", frag_raytrace_glsl },
+		{ "shaders/lightmap/frag_resolve.glsl", frag_resolve_glsl },
+		{ "shaders/lightmap/polyfill_rayquery.glsl", polyfill_rayquery_glsl },
+		{ "shaders/lightmap/trace_ambient_occlusion.glsl", trace_ambient_occlusion_glsl },
+		{ "shaders/lightmap/trace_levelmesh.glsl", trace_levelmesh_glsl },
+		{ "shaders/lightmap/trace_light.glsl", trace_light_glsl },
+		{ "shaders/lightmap/trace_sunlight.glsl", trace_sunlight_glsl },
+		{ "shaders/lightmap/vert_copy.glsl", vert_copy_glsl },
+		{ "shaders/lightmap/vert_raytrace.glsl", vert_raytrace_glsl },
+		{ "shaders/lightmap/vert_screenquad.glsl", vert_screenquad_glsl }
+	};
 
-	return FString();
+	auto it = sources.find(lumpname);
+	if (it != sources.end())
+		return it->second;
+	else
+		return FString();
 }
 
 ShaderIncludeResult VkLightmap::OnInclude(FString headerName, FString includerName, size_t depth, bool system)

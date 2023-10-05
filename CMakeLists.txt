@@ -63,6 +63,21 @@ set(ZDRAY_SOURCES
 	src/lightmapper/gpuraytracer.h
 	src/lightmapper/stacktrace.cpp
 	src/lightmapper/stacktrace.h
+	src/lightmapper/glsl/binding_lightmapper.glsl.h
+	src/lightmapper/glsl/binding_raytrace.glsl.h
+	src/lightmapper/glsl/binding_textures.glsl.h
+	src/lightmapper/glsl/frag_blur.glsl.h
+	src/lightmapper/glsl/frag_copy.glsl.h
+	src/lightmapper/glsl/frag_raytrace.glsl.h
+	src/lightmapper/glsl/frag_resolve.glsl.h
+	src/lightmapper/glsl/polyfill_rayquery.glsl.h
+	src/lightmapper/glsl/trace_ambient_occlusion.glsl.h
+	src/lightmapper/glsl/trace_levelmesh.glsl.h
+	src/lightmapper/glsl/trace_light.glsl.h
+	src/lightmapper/glsl/trace_sunlight.glsl.h
+	src/lightmapper/glsl/vert_copy.glsl.h
+	src/lightmapper/glsl/vert_raytrace.glsl.h
+	src/lightmapper/glsl/vert_screenquad.glsl.h
 	src/models/model.cpp
 	src/models/model.h
 	src/models/model_md2.h
@@ -97,6 +112,7 @@ source_group("src\\Platform" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sr
 source_group("src\\Platform\\Windows" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/.+")
 source_group("src\\Wad" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/wad/.+")
 source_group("src\\Lightmapper" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmapper/.+")
+source_group("src\\Lightmapper\\glsl" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/lightmapper/glsl/.+")
 source_group("src\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/models/.+")
 
 source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")
