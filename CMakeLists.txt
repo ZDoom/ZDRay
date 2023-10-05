@@ -61,6 +61,8 @@ set(ZDRAY_SOURCES
 	src/lightmapper/doom_levelmesh.h
 	src/lightmapper/gpuraytracer.cpp
 	src/lightmapper/gpuraytracer.h
+	src/lightmapper/stacktrace.cpp
+	src/lightmapper/stacktrace.h
 	src/models/model.cpp
 	src/models/model.h
 	src/models/model_md2.h

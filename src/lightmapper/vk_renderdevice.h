@@ -17,21 +17,35 @@ public:
 	VulkanRenderDevice();
 	~VulkanRenderDevice();
 
-	VulkanDevice* GetDevice() { return nullptr; }
-	VkCommandBufferManager* GetCommands() { return nullptr; }
-	VkDescriptorSetManager* GetDescriptorSetManager() { return nullptr; }
-	VkTextureManager* GetTextureManager() { return nullptr; }
-	VkRaytrace* GetRaytrace() { return nullptr; }
-	VkLightmap* GetLightmap() { return nullptr; }
+	VulkanDevice* GetDevice() { return device.get(); }
+	VkCommandBufferManager* GetCommands() { return commands.get(); }
+	VkDescriptorSetManager* GetDescriptorSetManager() { return descriptors.get(); }
+	VkTextureManager* GetTextureManager() { return textures.get(); }
+	VkRaytrace* GetRaytrace() { return raytrace.get(); }
+	VkLightmap* GetLightmap() { return lightmap.get(); }
 
 	int GetBindlessTextureIndex(FTextureID texture) { return -1; }
+
+	bool useRayQuery = false;
+
+private:
+	std::shared_ptr<VulkanDevice> device;
+	std::unique_ptr<VkCommandBufferManager> commands;
+	std::unique_ptr<VkDescriptorSetManager> descriptors;
+	std::unique_ptr<VkTextureManager> textures;
+	std::unique_ptr<VkRaytrace> raytrace;
+	std::unique_ptr<VkLightmap> lightmap;
 };
 
 class VkCommandBufferManager
 {
 public:
-	VulkanCommandBuffer* GetTransferCommands() { return nullptr; }
-	VulkanCommandBuffer* GetDrawCommands() { return nullptr; }
+	VkCommandBufferManager(VulkanRenderDevice* fb);
+
+	void SubmitAndWait();
+
+	VulkanCommandBuffer* GetTransferCommands();
+	VulkanCommandBuffer* GetDrawCommands();
 
 	void PushGroup(VulkanCommandBuffer* cmdbuffer, const FString& name) { }
 	void PopGroup(VulkanCommandBuffer* cmdbuffer) { }
@@ -65,6 +79,11 @@ public:
 
 	std::unique_ptr<DeleteList> TransferDeleteList = std::make_unique<DeleteList>();
 	std::unique_ptr<DeleteList> DrawDeleteList = std::make_unique<DeleteList>();
+
+private:
+	VulkanRenderDevice* fb = nullptr;
+	std::unique_ptr<VulkanCommandBuffer> TransferCommands;
+	std::unique_ptr<VulkanCommandBuffer> DrawCommands;
 };
 
 class VkTextureImage
@@ -90,15 +109,25 @@ public:
 class VkTextureManager
 {
 public:
+	VkTextureManager(VulkanRenderDevice* fb);
+
 	VkTextureImage Lightmap;
 	int LMTextureSize = 1024;
+
+private:
+	VulkanRenderDevice* fb = nullptr;
 };
 
 class VkDescriptorSetManager
 {
 public:
+	VkDescriptorSetManager(VulkanRenderDevice* fb);
+
 	VulkanDescriptorSetLayout* GetBindlessSetLayout() { return nullptr; }
 	VulkanDescriptorSet* GetBindlessDescriptorSet() { return nullptr; }
+
+private:
+	VulkanRenderDevice* fb = nullptr;
 };
 
 inline void I_FatalError(const char* reason) { throw std::runtime_error(reason); }

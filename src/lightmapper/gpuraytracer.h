@@ -13,5 +13,8 @@ public:
 	void Raytrace(DoomLevelMesh* levelMesh);
 
 private:
+	void PrintVulkanInfo();
+	void LoadRenderDoc();
+
 	std::unique_ptr<VulkanRenderDevice> mDevice;
 };
