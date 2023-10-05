@@ -2,6 +2,7 @@
 
 #include "framework/zstring.h"
 #include "zvulkan/vulkanobjects.h"
+#include "zvulkan/vulkanbuilders.h"
 #include "textureid.h"
 #include <stdexcept>
 
@@ -45,7 +46,6 @@ public:
 	void SubmitAndWait();
 
 	VulkanCommandBuffer* GetTransferCommands();
-	VulkanCommandBuffer* GetDrawCommands();
 
 	void PushGroup(VulkanCommandBuffer* cmdbuffer, const FString& name) { }
 	void PopGroup(VulkanCommandBuffer* cmdbuffer) { }
@@ -82,8 +82,9 @@ public:
 
 private:
 	VulkanRenderDevice* fb = nullptr;
-	std::unique_ptr<VulkanCommandBuffer> TransferCommands;
-	std::unique_ptr<VulkanCommandBuffer> DrawCommands;
+	std::unique_ptr<VulkanCommandPool> mCommandPool;
+	std::unique_ptr<VulkanCommandBuffer> mTransferCommands;
+	std::unique_ptr<VulkanCommandBuffer> mDrawCommands;
 };
 
 class VkTextureImage
@@ -111,8 +112,12 @@ class VkTextureManager
 public:
 	VkTextureManager(VulkanRenderDevice* fb);
 
+	void CreateLightmap(int newLMTextureSize, int newLMTextureCount);
+	void DownloadLightmap(int arrayIndex, TArray<uint16_t>& buffer);
+
 	VkTextureImage Lightmap;
-	int LMTextureSize = 1024;
+	int LMTextureSize = 0;
+	int LMTextureCount = 0;
 
 private:
 	VulkanRenderDevice* fb = nullptr;
@@ -123,11 +128,24 @@ class VkDescriptorSetManager
 public:
 	VkDescriptorSetManager(VulkanRenderDevice* fb);
 
-	VulkanDescriptorSetLayout* GetBindlessSetLayout() { return nullptr; }
-	VulkanDescriptorSet* GetBindlessDescriptorSet() { return nullptr; }
+	VulkanDescriptorSetLayout* GetBindlessSetLayout() { return BindlessDescriptorSetLayout.get(); }
+	VulkanDescriptorSet* GetBindlessDescriptorSet() { return BindlessDescriptorSet.get(); }
+
+	void UpdateBindlessDescriptorSet();
+	int AddBindlessTextureIndex(VulkanImageView* imageview, VulkanSampler* sampler);
 
 private:
+	void CreateBindlessDescriptorSet();
+
 	VulkanRenderDevice* fb = nullptr;
+
+	std::unique_ptr<VulkanDescriptorPool> BindlessDescriptorPool;
+	std::unique_ptr<VulkanDescriptorSet> BindlessDescriptorSet;
+	std::unique_ptr<VulkanDescriptorSetLayout> BindlessDescriptorSetLayout;
+	WriteDescriptors WriteBindless;
+	int NextBindlessIndex = 0;
+
+	static const int MaxBindlessTextures = 16536;
 };
 
 inline void I_FatalError(const char* reason) { throw std::runtime_error(reason); }
