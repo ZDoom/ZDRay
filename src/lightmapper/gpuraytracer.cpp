@@ -24,7 +24,35 @@ void GPURaytracer::Raytrace(DoomLevelMesh* levelMesh)
 {
 	if (rdoc_api) rdoc_api->StartFrameCapture(nullptr, nullptr);
 
-	// To do raytrace stuff here!
+#ifdef WIN32
+	LARGE_INTEGER s;
+	QueryPerformanceCounter(&s);
+#endif
+
+	printf("   Ray tracing in progress\n");
+	printf("   [");
+
+	try
+	{
+		// To do raytrace here
+		printf(".");
+		printf(".");
+		printf(".");
+	}
+	catch (...)
+	{
+		printf("]\n");
+		throw;
+	}
+	printf("]\n");
+
+#ifdef WIN32
+	LARGE_INTEGER e, f;
+	QueryPerformanceCounter(&e);
+	QueryPerformanceFrequency(&f);
+	printf("   GPU ray tracing time was %.3f seconds.\n", double(e.QuadPart - s.QuadPart) / double(f.QuadPart));
+#endif
+	printf("   Ray trace complete\n");
 
 	if (rdoc_api) rdoc_api->EndFrameCapture(nullptr, nullptr);
 }
