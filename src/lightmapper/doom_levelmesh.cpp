@@ -102,8 +102,6 @@ void DoomLevelSubmesh::CreateIndexes()
 	}
 }
 
-#if 0
-
 void DoomLevelSubmesh::BuildSectorGroups(const FLevel& doomMap)
 {
 	int groupIndex = 0;
@@ -117,7 +115,7 @@ void DoomLevelSubmesh::BuildSectorGroups(const FLevel& doomMap)
 	{
 		auto* sector = &doomMap.Sectors[i];
 
-		auto& currentSectorGroup = sectorGroup[sector->Index()];
+		auto& currentSectorGroup = sectorGroup[sector->Index(doomMap)];
 		if (currentSectorGroup == 0)
 		{
 			currentSectorGroup = ++groupIndex;
@@ -129,12 +127,12 @@ void DoomLevelSubmesh::BuildSectorGroups(const FLevel& doomMap)
 				auto* sector = queue.Last();
 				queue.Pop();
 
-				for (auto& line : sector->Lines)
+				for (auto& line : sector->lines)
 				{
 					auto otherSector = line->frontsector == sector ? line->backsector : line->frontsector;
 					if (otherSector && otherSector != sector)
 					{
-						auto& id = sectorGroup[otherSector->Index()];
+						auto& id = sectorGroup[otherSector->Index(doomMap)];
 
 						if (id == 0)
 						{
@@ -148,8 +146,9 @@ void DoomLevelSubmesh::BuildSectorGroups(const FLevel& doomMap)
 	}
 }
 
-void DoomLevelSubmesh::CreatePortals()
+void DoomLevelSubmesh::CreatePortals(FLevel& doomMap)
 {
+#if 0
 	std::map<LevelMeshPortal, int, IdenticalPortalComparator> transformationIndices; // TODO use the list of portals from the level to avoids duplicates?
 	transformationIndices.emplace(LevelMeshPortal{}, 0); // first portal is an identity matrix
 
@@ -226,7 +225,7 @@ void DoomLevelSubmesh::CreatePortals()
 							auto portalDestination = surface.Subsector->sector->GetPortal(plane)->mDestination;
 							if (portalDestination)
 							{
-								return sectorGroup[portalDestination->Index()];
+								return sectorGroup[portalDestination->Index(doomMap)];
 							}
 						}
 						else if (surface.Type == ST_MIDDLESIDE)
@@ -235,7 +234,7 @@ void DoomLevelSubmesh::CreatePortals()
 							auto sector = targetLine->frontsector ? targetLine->frontsector : targetLine->backsector;
 							if (sector)
 							{
-								return sectorGroup[sector->Index()];
+								return sectorGroup[sector->Index(doomMap)];
 							}
 						}
 						return 0;
@@ -256,8 +255,10 @@ void DoomLevelSubmesh::CreatePortals()
 				surface.portalIndex = 0;
 			}
 	}
+#endif
 }
 
+#if 0
 void DoomLevelSubmesh::BindLightmapSurfacesToGeometry(FLevel& doomMap)
 {
 	// You have no idea how long this took me to figure out...
@@ -297,12 +298,12 @@ void DoomLevelSubmesh::BindLightmapSurfacesToGeometry(FLevel& doomMap)
 		else
 		{
 			surface.Side = &doomMap.Sides[surface.TypeIndex];
-			SetSideLightmap(&surface);
+			SetSideLightmap(doomMap, &surface);
 		}
 	}
 }
 
-void DoomLevelSubmesh::SetSubsectorLightmap(DoomLevelMeshSurface* surface)
+void DoomLevelSubmesh::SetSubsectorLightmap(FLevel& doomMap, DoomLevelMeshSurface* surface)
 {
 	if (!surface->ControlSector)
 	{
@@ -323,7 +324,7 @@ void DoomLevelSubmesh::SetSubsectorLightmap(DoomLevelMeshSurface* surface)
 	}
 }
 
-void DoomLevelSubmesh::SetSideLightmap(DoomLevelMeshSurface* surface)
+void DoomLevelSubmesh::SetSideLightmap(FLevel& doomMap, DoomLevelMeshSurface* surface)
 {
 	if (!surface->ControlSector)
 	{
@@ -343,7 +344,7 @@ void DoomLevelSubmesh::SetSideLightmap(DoomLevelMeshSurface* surface)
 	}
 	else
 	{
-		const auto& ffloors = surface->Side->sector->e->XFloor.ffloors;
+		const auto& ffloors = doomMap.Sectors[surface->Side->sector].x3dfloors;
 		for (unsigned int i = 0; i < ffloors.Size(); i++)
 		{
 			if (ffloors[i]->model == surface->ControlSector)
@@ -356,7 +357,7 @@ void DoomLevelSubmesh::SetSideLightmap(DoomLevelMeshSurface* surface)
 
 void DoomLevelSubmesh::CreateLinePortalSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = side->sector;
+	IntSector* front = &doomMap.Sectors[side->sector];
 
 	FVector2 v1 = ToFVector2(side->V1()->fPos());
 	FVector2 v2 = ToFVector2(side->V2()->fPos());
@@ -379,7 +380,7 @@ void DoomLevelSubmesh::CreateLinePortalSurface(FLevel& doomMap, IntSideDef* side
 	DoomLevelMeshSurface surf;
 	surf.Submesh = this;
 	surf.Type = ST_MIDDLESIDE;
-	surf.TypeIndex = side->Index();
+	surf.TypeIndex = side->Index(doomMap);
 	surf.bSky = front->GetTexture(IntSector::floor) == skyflatnum || front->GetTexture(IntSector::ceiling) == skyflatnum;
 	surf.sampleDimension = side->textures[ETexpart::Mid].LightmapSampleDistance;
 	surf.startVertIndex = MeshVertices.Size();
@@ -391,7 +392,7 @@ void DoomLevelSubmesh::CreateLinePortalSurface(FLevel& doomMap, IntSideDef* side
 	MeshVertices.Push(verts[3]);
 
 	surf.plane = ToPlane(verts[0], verts[1], verts[2], verts[3]);
-	surf.sectorGroup = sectorGroup[front->Index()];
+	surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 
 	SetSideTextureUVs(surf, side, ETexpart::Top, v1Top, v1Bottom, v2Top, v2Bottom);
 
@@ -400,11 +401,14 @@ void DoomLevelSubmesh::CreateLinePortalSurface(FLevel& doomMap, IntSideDef* side
 
 void DoomLevelSubmesh::CreateSideSurfaces(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = side->sector;
+	IntSector* front = &doomMap.Sectors[side->sector];
 	IntSector* back = (side->line->frontsector == front) ? side->line->backsector : side->line->frontsector;
 
-	FVector2 v1 = ToFVector2(side->V1()->fPos());
-	FVector2 v2 = ToFVector2(side->V2()->fPos());
+	FVector2 v1 = ToFVector2(side->line->V1()->fPos());
+	FVector2 v2 = ToFVector2(side->line->V2()->fPos());
+
+	if (side->line->frontsector != front)
+		std::swap(v1, v2);
 
 	float v1Top = (float)front->ceilingplane.ZatPoint(v1);
 	float v1Bottom = (float)front->floorplane.ZatPoint(v1);
@@ -451,7 +455,7 @@ void DoomLevelSubmesh::CreateSideSurfaces(FLevel& doomMap, IntSideDef* side)
 
 void DoomLevelSubmesh::CreateLineHorizonSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = side->sector;
+	IntSector* front = &doomMap.Sectors[side->sector];
 
 	FVector2 v1 = ToFVector2(side->V1()->fPos());
 	FVector2 v2 = ToFVector2(side->V2()->fPos());
@@ -464,7 +468,7 @@ void DoomLevelSubmesh::CreateLineHorizonSurface(FLevel& doomMap, IntSideDef* sid
 	DoomLevelMeshSurface surf;
 	surf.Submesh = this;
 	surf.Type = ST_MIDDLESIDE;
-	surf.TypeIndex = side->Index();
+	surf.TypeIndex = side->Index(doomMap);
 	surf.bSky = front->GetTexture(IntSector::floor) == skyflatnum || front->GetTexture(IntSector::ceiling) == skyflatnum;
 	surf.sampleDimension = side->textures[ETexpart::Mid].LightmapSampleDistance;
 
@@ -486,7 +490,7 @@ void DoomLevelSubmesh::CreateLineHorizonSurface(FLevel& doomMap, IntSideDef* sid
 	MeshVertices.Push(verts[3]);
 
 	surf.plane = ToPlane(verts[0], verts[1], verts[2], verts[3]);
-	surf.sectorGroup = sectorGroup[front->Index()];
+	surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 
 	SetSideTextureUVs(surf, side, ETexpart::Top, v1Top, v1Bottom, v2Top, v2Bottom);
 
@@ -535,10 +539,10 @@ void DoomLevelSubmesh::CreateFrontWallSurface(FLevel& doomMap, IntSideDef* side)
 
 	surf.plane = ToPlane(verts[0], verts[1], verts[2], verts[3]);
 	surf.Type = ST_MIDDLESIDE;
-	surf.TypeIndex = side->Index();
+	surf.TypeIndex = side->Index(doomMap);
 	surf.sampleDimension = side->textures[ETexpart::Mid].LightmapSampleDistance;
 	surf.ControlSector = nullptr;
-	surf.sectorGroup = sectorGroup[front->Index()];
+	surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 	surf.texture = side->textures[ETexpart::Mid].texture;
 
 	SetSideTextureUVs(surf, side, ETexpart::Top, v1Top, v1Bottom, v2Top, v2Bottom);
@@ -548,7 +552,7 @@ void DoomLevelSubmesh::CreateFrontWallSurface(FLevel& doomMap, IntSideDef* side)
 
 void DoomLevelSubmesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = side->sector;
+	IntSector* front = &doomMap.Sectors[side->sector];
 
 	FVector2 v1 = ToFVector2(side->V1()->fPos());
 	FVector2 v2 = ToFVector2(side->V2()->fPos());
@@ -612,7 +616,7 @@ void DoomLevelSubmesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 
 	FVector3 offset = surf.plane.XYZ() * 0.05f; // for better accuracy when raytracing mid-textures from each side
 
-	if (side->line->sidedef[0] != side)
+	if (side->line->sidenum[0] != side->Index(doomMap))
 	{
 		surf.plane = -surf.plane;
 		surf.plane.W = -surf.plane.W;
@@ -624,10 +628,10 @@ void DoomLevelSubmesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 	MeshVertices.Push(verts[3] + offset);
 
 	surf.Type = ST_MIDDLESIDE;
-	surf.TypeIndex = side->Index();
+	surf.TypeIndex = side->Index(doomMap);
 	surf.sampleDimension = side->textures[ETexpart::Mid].LightmapSampleDistance;
 	surf.ControlSector = nullptr;
-	surf.sectorGroup = sectorGroup[front->Index()];
+	surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 	surf.texture = texture;
 	surf.alpha = float(side->line->alpha);
 
@@ -638,7 +642,7 @@ void DoomLevelSubmesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 
 void DoomLevelSubmesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = side->sector;
+	IntSector* front = &doomMap.Sectors[side->sector];
 	IntSector* back = (side->line->frontsector == front) ? side->line->backsector : side->line->frontsector;
 
 	FVector2 v1 = ToFVector2(side->V1()->fPos());
@@ -649,15 +653,15 @@ void DoomLevelSubmesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* si
 	float v2Top = (float)front->ceilingplane.ZatPoint(v2);
 	float v2Bottom = (float)front->floorplane.ZatPoint(v2);
 
-	for (unsigned int j = 0; j < front->e->XFloor.ffloors.Size(); j++)
+	for (unsigned int j = 0; j < front->x3dfloors.Size(); j++)
 	{
-		F3DFloor* xfloor = front->e->XFloor.ffloors[j];
+		IntSector* xfloor = front->x3dfloors[j];
 
 		// Don't create a line when both sectors have the same 3d floor
 		bool bothSides = false;
-		for (unsigned int k = 0; k < back->e->XFloor.ffloors.Size(); k++)
+		for (unsigned int k = 0; k < back->x3dfloors.Size(); k++)
 		{
-			if (back->e->XFloor.ffloors[k] == xfloor)
+			if (back->x3dfloors[k] == xfloor)
 			{
 				bothSides = true;
 				break;
@@ -669,7 +673,7 @@ void DoomLevelSubmesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* si
 		DoomLevelMeshSurface surf;
 		surf.Submesh = this;
 		surf.Type = ST_MIDDLESIDE;
-		surf.TypeIndex = side->Index();
+		surf.TypeIndex = side->Index(doomMap);
 		surf.ControlSector = xfloor->model;
 		surf.bSky = false;
 		surf.sampleDimension = side->textures[ETexpart::Mid].LightmapSampleDistance;
@@ -697,7 +701,7 @@ void DoomLevelSubmesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* si
 		MeshVertices.Push(verts[3]);
 
 		surf.plane = ToPlane(verts[0], verts[1], verts[2], verts[3]);
-		surf.sectorGroup = sectorGroup[front->Index()];
+		surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 		surf.texture = side->textures[ETexpart::Mid].texture;
 
 		SetSideTextureUVs(surf, side, ETexpart::Top, tlZ, blZ, trZ, brZ);
@@ -744,11 +748,11 @@ void DoomLevelSubmesh::CreateTopWallSurface(FLevel& doomMap, IntSideDef* side)
 
 	surf.plane = ToPlane(verts[0], verts[1], verts[2], verts[3]);
 	surf.Type = ST_UPPERSIDE;
-	surf.TypeIndex = side->Index();
+	surf.TypeIndex = side->Index(doomMap);
 	surf.bSky = bSky;
 	surf.sampleDimension = side->textures[ETexpart::Top].LightmapSampleDistance;
 	surf.ControlSector = nullptr;
-	surf.sectorGroup = sectorGroup[front->Index()];
+	surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 	surf.texture = side->textures[ETexpart::Top].texture;
 
 	SetSideTextureUVs(surf, side, ETexpart::Top, v1Top, v1TopBack, v2Top, v2TopBack);
@@ -793,11 +797,11 @@ void DoomLevelSubmesh::CreateBottomWallSurface(FLevel& doomMap, IntSideDef* side
 
 	surf.plane = ToPlane(verts[0], verts[1], verts[2], verts[3]);
 	surf.Type = ST_LOWERSIDE;
-	surf.TypeIndex = side->Index();
+	surf.TypeIndex = side->Index(doomMap);
 	surf.bSky = false;
 	surf.sampleDimension = side->textures[ETexpart::Bottom].LightmapSampleDistance;
 	surf.ControlSector = nullptr;
-	surf.sectorGroup = sectorGroup[front->Index()];
+	surf.sectorGroup = sectorGroup[front->Index(doomMap)];
 	surf.texture = side->textures[ETexpart::Bottom].texture;
 
 	SetSideTextureUVs(surf, side, ETexpart::Bottom, v1BottomBack, v1Bottom, v2BottomBack, v2Bottom);
@@ -880,7 +884,7 @@ void DoomLevelSubmesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, 
 
 	for (int j = 0; j < surf.numVerts; j++)
 	{
-		seg_t* seg = &sub->firstline[(surf.numVerts - 1) - j];
+		MapSegGLEx* seg = &doomMap.GLSegs[sub->firstline + (surf.numVerts - 1) - j];
 		FVector2 v1 = ToFVector2(seg->v1->fPos());
 
 		verts[j].X = v1.X;
@@ -895,7 +899,7 @@ void DoomLevelSubmesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, 
 	surf.sampleDimension = (controlSector ? controlSector : sector)->planes[IntSector::floor].LightmapSampleDistance;
 	surf.ControlSector = controlSector;
 	surf.plane = FVector4((float)plane.Normal().X, (float)plane.Normal().Y, (float)plane.Normal().Z, -(float)plane.D);
-	surf.sectorGroup = sectorGroup[sector->Index()];
+	surf.sectorGroup = sectorGroup[sector->Index(doomMap)];
 
 	Surfaces.Push(surf);
 }
@@ -949,15 +953,15 @@ void DoomLevelSubmesh::CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub
 	surf.TypeIndex = typeIndex;
 	surf.sampleDimension = (controlSector ? controlSector : sector)->planes[IntSector::ceiling].LightmapSampleDistance;
 	surf.ControlSector = controlSector;
-	surf.plane = FVector4((float)plane.Normal().X, (float)plane.Normal().Y, (float)plane.Normal().Z, -(float)plane.D);
-	surf.sectorGroup = sectorGroup[sector->Index()];
+	surf.plane = FVector4((float)plane.Normal().X, (float)plane.Normal().Y, (float)plane.Normal().Z, -(float)plane.d);
+	surf.sectorGroup = sectorGroup[sector->Index(doomMap)];
 
 	Surfaces.Push(surf);
 }
 
 void DoomLevelSubmesh::CreateSubsectorSurfaces(FLevel& doomMap)
 {
-	for (unsigned int i = 0; i < doomMap.GLSubsectors.Size(); i++)
+	for (unsigned int i = 0; i < doomMap.NumGLSubsectors; i++)
 	{
 		MapSubsectorEx* sub = &doomMap.GLSubsectors[i];
 
@@ -973,10 +977,10 @@ void DoomLevelSubmesh::CreateSubsectorSurfaces(FLevel& doomMap)
 		CreateFloorSurface(doomMap, sub, sector, nullptr, i);
 		CreateCeilingSurface(doomMap, sub, sector, nullptr, i);
 
-		for (unsigned int j = 0; j < sector->e->XFloor.ffloors.Size(); j++)
+		for (unsigned int j = 0; j < sector->x3dfloors.Size(); j++)
 		{
-			CreateFloorSurface(doomMap, sub, sector, sector->e->XFloor.ffloors[j]->model, i);
-			CreateCeilingSurface(doomMap, sub, sector, sector->e->XFloor.ffloors[j]->model, i);
+			CreateFloorSurface(doomMap, sub, sector, sector->x3dfloors[j]->model, i);
+			CreateCeilingSurface(doomMap, sub, sector, sector->x3dfloors[j]->model, i);
 		}
 	}
 }
@@ -1003,6 +1007,8 @@ bool DoomLevelSubmesh::IsSkySector(IntSector* sector, int plane)
 	// plane is either IntSector::ceiling or IntSector::floor
 	return sector->GetTexture(plane) == skyflatnum;
 }
+
+#endif
 
 bool DoomLevelSubmesh::IsDegenerate(const FVector3& v0, const FVector3& v1, const FVector3& v2)
 {
@@ -1332,5 +1338,3 @@ void DoomLevelSubmesh::BuildSurfaceParams(int lightMapTextureWidth, int lightMap
 	surface.AtlasTile.Width = width;
 	surface.AtlasTile.Height = height;
 }
-
-#endif

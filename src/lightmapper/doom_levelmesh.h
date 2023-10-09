@@ -61,7 +61,7 @@ public:
 	// Used by Maploader
 	void BindLightmapSurfacesToGeometry(FLevel& doomMap);
 	void PackLightmapAtlas(int lightmapStartIndex);
-	void CreatePortals();
+	void CreatePortals(FLevel& doomMap);
 	void DisableLightmaps() { Surfaces.Clear(); } // Temp hack that disables lightmapping
 
 	TArray<DoomLevelMeshSurface> Surfaces;
@@ -84,8 +84,8 @@ private:
 	void Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side);
 	void SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef* side, ETexpart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ);
 
-	void SetSubsectorLightmap(DoomLevelMeshSurface* surface);
-	void SetSideLightmap(DoomLevelMeshSurface* surface);
+	void SetSubsectorLightmap(FLevel& doomMap, DoomLevelMeshSurface* surface);
+	void SetSideLightmap(FLevel& doomMap, DoomLevelMeshSurface* surface);
 
 	void SetupLightmapUvs(FLevel& doomMap);
 

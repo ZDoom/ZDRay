@@ -90,7 +90,7 @@ extern FFileSystem fileSystem;
 class FTextureManager
 {
 public:
-	FGameTexture* GetGameTexture(FTextureID, bool)
+	FGameTexture* GetGameTexture(FTextureID texnum, bool animate = false)
 	{
 		return nullptr;
 	}

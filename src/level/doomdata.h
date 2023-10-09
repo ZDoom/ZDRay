@@ -14,6 +14,9 @@
 #undef min
 #undef max
 
+struct FLevel;
+struct DoomLevelMeshSurface;
+
 enum
 {
 	BOXTOP, BOXBOTTOM, BOXLEFT, BOXRIGHT
@@ -92,8 +95,12 @@ struct IntSideDef
 	SideDefSampleProps sampling;
 	TArray<UDMFKey> props;
 
+	DoomLevelMeshSurface* lightmap;
+
 	inline int GetSampleDistance(WallPart part) const;
 	inline int GetSectorGroup() const;
+
+	int Index(const FLevel& level) const;
 };
 
 struct MapLineDef
@@ -135,6 +142,8 @@ struct IntLineDef
 	SideDefSampleProps sampling;
 
 	inline int GetSectorGroup() const;
+
+	int Index(const FLevel& level) const;
 };
 
 struct MapSector
@@ -201,6 +210,8 @@ struct IntSector
 		}
 		return false;
 	}
+
+	int Index(const FLevel& level) const;
 };
 
 inline int IntLineDef::GetSectorGroup() const
@@ -531,3 +542,7 @@ const int BLOCKSIZE = 128;
 const int BLOCKFRACSIZE = BLOCKSIZE<<FRACBITS;
 const int BLOCKBITS = 7;
 const int BLOCKFRACBITS = FRACBITS+7;
+
+inline int IntSector::Index(const FLevel& level) const { return (int)(ptrdiff_t)(this - level.Sectors.Data()); }
+inline int IntSideDef::Index(const FLevel& level) const { return (int)(ptrdiff_t)(this - level.Sides.Data()); }
+inline int IntLineDef::Index(const FLevel& level) const { return (int)(ptrdiff_t)(this - level.Lines.Data()); }
