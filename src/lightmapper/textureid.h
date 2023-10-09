@@ -1,5 +1,11 @@
 #pragma once
 
+#include "framework/tarray.h"
+#include "framework/templates.h"
+#include "framework/zstring.h"
+
+class FGameTexture;
+
 enum class ETextureType : uint8_t
 {
 	Any,
@@ -63,3 +69,64 @@ public:
 	constexpr FSetTextureID(int v) : FTextureID(v) {}
 };
 
+
+
+struct FileData
+{
+	char* GetMem() { return nullptr; }
+};
+
+class FFileSystem
+{
+public:
+	int CheckNumForFullName(const FString& fullname) { return -1; }
+	int FileLength(int lump) { return 0; }
+	FileData ReadFile(int lump) { return {}; }
+	const char* GetFileFullName(int lump, bool returnshort = true) const { return ""; }
+};
+
+extern FFileSystem fileSystem;
+
+class FTextureManager
+{
+public:
+	FGameTexture* GetGameTexture(FTextureID, bool)
+	{
+		return nullptr;
+	}
+
+	enum
+	{
+		TEXMAN_TryAny = 1,
+		TEXMAN_Overridable = 2,
+		TEXMAN_ReturnFirst = 4,
+		TEXMAN_AllowSkins = 8,
+		TEXMAN_ShortNameOnly = 16,
+		TEXMAN_DontCreate = 32,
+		TEXMAN_Localize = 64,
+		TEXMAN_ForceLookup = 128,
+		TEXMAN_NoAlias = 256,
+	};
+
+	enum
+	{
+		HIT_Wall = 1,
+		HIT_Flat = 2,
+		HIT_Sky = 4,
+		HIT_Sprite = 8,
+
+		HIT_Columnmode = HIT_Wall | HIT_Sky | HIT_Sprite
+	};
+
+	FTextureID CheckForTexture(const char* name, ETextureType usetype, uint32_t flags = TEXMAN_TryAny) { return {}; }
+};
+
+extern FTextureManager TexMan;
+
+class FGameTexture
+{
+public:
+	bool isValid() const { return false; }
+	float GetDisplayWidth() const { return 64.0f; }
+	float GetDisplayHeight() const { return 64.0f; }
+};

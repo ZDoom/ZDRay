@@ -56,6 +56,7 @@ set(ZDRAY_SOURCES
 	src/lightmapper/vk_lightmap.h
 	src/lightmapper/vk_raytrace.cpp
 	src/lightmapper/vk_raytrace.h
+	src/lightmapper/textureid.cpp
 	src/lightmapper/textureid.h
 	src/lightmapper/doom_levelmesh.cpp
 	src/lightmapper/doom_levelmesh.h

@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "framework/zdray.h"
 #include "framework/tarray.h"
 #include "framework/templates.h"
 #include "framework/zstring.h"
@@ -393,9 +394,9 @@ struct ThingLight
 	{
 		float originZ;
 		if (!bCeiling)
-			originZ = sector->floorplane.zAt(origin.X, origin.Y) + height;
+			originZ = sector->floorplane.ZatPoint(origin.X, origin.Y) + height;
 		else
-			originZ = sector->ceilingplane.zAt(origin.X, origin.Y) - height;
+			originZ = sector->ceilingplane.ZatPoint(origin.X, origin.Y) - height;
 		return FVector3(origin.X, origin.Y, originZ);
 	}
 

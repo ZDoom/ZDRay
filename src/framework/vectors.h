@@ -1796,7 +1796,9 @@ class Plane
 public:
 	void Set(float a, float b, float c, float d) { this->a = a; this->b = b; this->c = c; this->d = d; }
 
-	float zAt(float x, float y) const { return (d - a * x - b * y) / c; }
+	float ZatPoint(float x, float y) const { return (d - a * x - b * y) / c; }
+	float ZatPoint(const FVector2& pt) const { return ZatPoint(pt.X, pt.Y); }
+	float ZatPoint(const DVector2& pt) const { return ZatPoint((float)pt.X, (float)pt.Y); }
 
 	FVector3 Normal() const { return FVector3(a, b, c); }
 

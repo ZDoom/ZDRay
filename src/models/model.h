@@ -4,105 +4,15 @@
 #include "framework/templates.h"
 #include "framework/zstring.h"
 #include "framework/vectors.h"
+#include "lightmapper/textureid.h"
 #include <stdint.h>
 #include <string>
 #include <memory>
 
 class FModelRenderer;
-class FGameTexture;
 class IModelVertexBuffer;
 class FModel;
 struct FSpriteModelFrame;
-
-struct FileData
-{
-	char* GetMem() { return nullptr; }
-};
-
-class FFileSystem
-{
-public:
-	int CheckNumForFullName(const FString& fullname) { return -1; }
-	int FileLength(int lump) { return 0; }
-	FileData ReadFile(int lump) { return {}; }
-	const char* GetFileFullName(int lump, bool returnshort = true) const { return ""; }
-};
-
-extern FFileSystem fileSystem;
-
-class FTextureID
-{
-public:
-	bool isValid() const { return false; }
-	int GetIndex() const { return 0; }
-};
-
-class FNullTextureID : public FTextureID
-{
-public:
-};
-
-class FGameTexture
-{
-public:
-};
-
-enum class ETextureType : uint8_t
-{
-	Any,
-	Wall,
-	Flat,
-	Sprite,
-	WallPatch,
-	Build,		// no longer used but needs to remain for ZScript
-	SkinSprite,
-	Decal,
-	MiscPatch,
-	FontChar,
-	Override,	// For patches between TX_START/TX_END
-	Autopage,	// Automap background - used to enable the use of FAutomapTexture
-	SkinGraphic,
-	Null,
-	FirstDefined,
-	Special,
-	SWCanvas,
-};
-
-class FTextureManager
-{
-public:
-	FGameTexture* GetGameTexture(FTextureID, bool)
-	{
-		return nullptr;
-	}
-
-	enum
-	{
-		TEXMAN_TryAny = 1,
-		TEXMAN_Overridable = 2,
-		TEXMAN_ReturnFirst = 4,
-		TEXMAN_AllowSkins = 8,
-		TEXMAN_ShortNameOnly = 16,
-		TEXMAN_DontCreate = 32,
-		TEXMAN_Localize = 64,
-		TEXMAN_ForceLookup = 128,
-		TEXMAN_NoAlias = 256,
-	};
-
-	enum
-	{
-		HIT_Wall = 1,
-		HIT_Flat = 2,
-		HIT_Sky = 4,
-		HIT_Sprite = 8,
-
-		HIT_Columnmode = HIT_Wall | HIT_Sky | HIT_Sprite
-	};
-
-	FTextureID CheckForTexture(const char* name, ETextureType usetype, uint32_t flags = TEXMAN_TryAny) { return {}; }
-};
-
-extern FTextureManager TexMan;
 
 struct FModelVertex
 {

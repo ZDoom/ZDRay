@@ -31,9 +31,6 @@
 #include "model_md3.h"
 #include "modelrenderer.h"
 
-FFileSystem fileSystem;
-FTextureManager TexMan;
-
 /////////////////////////////////////////////////////////////////////////////
 
 FModel::FModel()

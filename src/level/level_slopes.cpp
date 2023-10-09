@@ -213,7 +213,7 @@ void FProcessor::SpawnSlopeMakers(IntThing* firstmt, IntThing* lastmt, const int
 				ceiling = false;
 			}
 
-			pos.Z = double(refplane->zAt(float(pos.X), float(pos.Y))) + pos.Z;
+			pos.Z = double(refplane->ZatPoint(pos)) + pos.Z;
 
 			/*if (mt->type <= SMT_SlopeCeilingPointLine)
 			{ // SlopeFloorPointLine and SlopCeilingPointLine
