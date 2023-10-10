@@ -146,12 +146,12 @@ const FVector3 &FLevel::GetSunDirection() const
 	return defaultSunDirection;
 }
 
-IntSector *FLevel::GetFrontSector(const IntSideDef *side)
+IntSector *FLevel::GetFrontSector(const IntSideDef *side) const
 {
 	return &Sectors[side->sector];
 }
 
-IntSector *FLevel::GetBackSector(const IntSideDef *side)
+IntSector *FLevel::GetBackSector(const IntSideDef *side) const
 {
 	IntLineDef *line = side->line;
 	if (!(line->flags & ML_TWOSIDED))
@@ -169,7 +169,7 @@ IntSector *FLevel::GetBackSector(const IntSideDef *side)
 	return GetFrontSector(&Sides[sidenum]);
 }
 
-IntSector *FLevel::GetSectorFromSubSector(const MapSubsectorEx *sub)
+IntSector *FLevel::GetSectorFromSubSector(const MapSubsectorEx *sub) const
 {
 	for (int i = 0; i < (int)sub->numlines; i++)
 	{
@@ -223,7 +223,7 @@ MapSubsectorEx *FLevel::PointInSubSector(const int x, const int y)
 	return &GLSubsectors[nodenum & ~NFX_SUBSECTOR];
 }
 
-FloatVertex FLevel::GetSegVertex(unsigned int index)
+FloatVertex FLevel::GetSegVertex(unsigned int index) const
 {
 	FloatVertex v;
 	v.x = F(GLVertices[index].x);

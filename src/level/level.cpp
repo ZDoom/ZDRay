@@ -624,7 +624,10 @@ void FLevel::PostLoadInitialization()
 		Sectors[i].controlsector = false;
 
 	for (unsigned int i = 0; i < Sides.Size(); i++)
+	{
 		Sides[i].line = nullptr;
+		Sides[i].sectordef = &Sectors[Sides[i].sector];
+	}
 
 	for (unsigned int i = 0; i < Lines.Size(); i++)
 	{
@@ -670,8 +673,11 @@ void FLevel::PostLoadInitialization()
 
 		sector.lines.Push(line);
 
-		line->frontsector = (line->sidenum[0] != NO_INDEX) ? &Sectors[Sides[line->sidenum[0]].sector] : nullptr;
-		line->backsector = (line->sidenum[1] != NO_INDEX) ? &Sectors[Sides[line->sidenum[1]].sector] : nullptr;
+		line->sidedef[0] = (line->sidenum[0] != NO_INDEX) ? &Sides[line->sidenum[0]] : nullptr;
+		line->sidedef[1] = (line->sidenum[1] != NO_INDEX) ? &Sides[line->sidenum[1]] : nullptr;
+
+		line->frontsector = line->sidedef[0] ? &Sectors[line->sidedef[0]->sector] : nullptr;
+		line->backsector = line->sidedef[1] ? &Sectors[line->sidedef[1]->sector] : nullptr;
 	}
 
 	// Find plane portals

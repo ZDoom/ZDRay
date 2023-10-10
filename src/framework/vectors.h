@@ -1802,6 +1802,14 @@ public:
 
 	FVector3 Normal() const { return FVector3(a, b, c); }
 
+	void FlipVert()
+	{
+		a = -a;
+		b = -b;
+		c = -c;
+		d = -d;
+	}
+
 	float a, b, c, d;
 };
 

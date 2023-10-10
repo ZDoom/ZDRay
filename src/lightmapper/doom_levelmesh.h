@@ -28,13 +28,6 @@ enum DoomLevelMeshSurfaceType
 	ST_FLOOR
 };
 
-enum class ETexpart
-{
-	Mid,
-	Top,
-	Bottom
-};
-
 struct DoomLevelMeshSurface : public LevelMeshSurface
 {
 	DoomLevelMeshSurfaceType Type = ST_UNKNOWN;
@@ -82,10 +75,7 @@ private:
 	void CreateMidWallSurface(FLevel& doomMap, IntSideDef* side);
 	void CreateBottomWallSurface(FLevel& doomMap, IntSideDef* side);
 	void Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side);
-	void SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef* side, ETexpart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ);
-
-	void SetSubsectorLightmap(FLevel& doomMap, DoomLevelMeshSurface* surface);
-	void SetSideLightmap(FLevel& doomMap, DoomLevelMeshSurface* surface);
+	void SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef* side, WallPart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ);
 
 	void SetupLightmapUvs(FLevel& doomMap);
 
@@ -94,7 +84,7 @@ private:
 	static bool IsTopSideSky(IntSector* frontsector, IntSector* backsector, IntSideDef* side);
 	static bool IsTopSideVisible(IntSideDef* side);
 	static bool IsBottomSideVisible(IntSideDef* side);
-	static bool IsSkySector(IntSector* sector, int plane);
+	static bool IsSkySector(IntSector* sector, SecPlaneType plane);
 
 	static FVector4 ToPlane(const FVector3& pt1, const FVector3& pt2, const FVector3& pt3)
 	{

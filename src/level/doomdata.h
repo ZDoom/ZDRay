@@ -6,6 +6,7 @@
 #include "framework/templates.h"
 #include "framework/zstring.h"
 #include "framework/vectors.h"
+#include "lightmapper/textureid.h"
 #include <memory>
 #include <cmath>
 #include <optional>
@@ -77,6 +78,8 @@ struct SideDefSampleProps
 };
 
 struct IntLineDef;
+struct IntSector;
+class FTextureID;
 
 struct IntSideDef
 {
@@ -90,17 +93,23 @@ struct IntSideDef
 	int sector;
 	int lightdef;
 
+	IntSector* sectordef;
 	IntLineDef *line;
 
 	SideDefSampleProps sampling;
 	TArray<UDMFKey> props;
 
-	DoomLevelMeshSurface* lightmap;
+	FTextureID GetTexture(WallPart part) { return FNullTextureID(); }
+	float GetTextureYOffset(WallPart part) { return 0.0f; }
+	float GetTextureYScale(WallPart part) { return 1.0f; }
 
 	inline int GetSampleDistance(WallPart part) const;
 	inline int GetSectorGroup() const;
 
 	int Index(const FLevel& level) const;
+
+	FVector2 V1(const FLevel& level) const;
+	FVector2 V2(const FLevel& level) const;
 };
 
 struct MapLineDef
@@ -137,6 +146,7 @@ struct IntLineDef
 	TArray<UDMFKey> props;
 	TArray<int> ids;
 
+	IntSideDef* sidedef[2] = { nullptr, nullptr };
 	IntSector *frontsector = nullptr, *backsector = nullptr;
 
 	SideDefSampleProps sampling;
@@ -184,6 +194,8 @@ struct IntSector
 	bool controlsector;
 	TArray<IntSector*> x3dfloors;
 
+	bool HasLightmaps = false;
+
 	union
 	{
 		bool skyPlanes[2];
@@ -196,6 +208,8 @@ struct IntSector
 	TArray<IntLineDef*> portals;
 
 	int group = 0;
+
+	FTextureID GetTexture(SecPlaneType plane) { return FNullTextureID(); }
 
 	// Utility functions
 	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }
@@ -236,10 +250,16 @@ struct MapSubsector
 	uint16_t	firstline;
 };
 
+struct MapSegGLEx;
+struct IntSector;
+
 struct MapSubsectorEx
 {
 	uint32_t	numlines;
 	uint32_t	firstline;
+
+	MapSegGLEx* GetFirstLine(const FLevel& level) const;
+	IntSector* GetSector(const FLevel& level) const;
 };
 
 struct MapSeg
@@ -460,11 +480,57 @@ struct ThingLight
 
 enum mapFlags_t
 {
-	ML_BLOCKING = 1,    // Solid, is an obstacle.
-	ML_BLOCKMONSTERS = 2,    // Blocks monsters only.
-	ML_TWOSIDED = 4,    // Backside will not be present at all if not two sided.
 	ML_TRANSPARENT1 = 2048, // 25% or 75% transcluency?
-	ML_TRANSPARENT2 = 4096  // 25% or 75% transcluency?
+	ML_TRANSPARENT2 = 4096,  // 25% or 75% transcluency?
+
+	ML_BLOCKING = 0x00000001,	// solid, is an obstacle
+	ML_BLOCKMONSTERS = 0x00000002,	// blocks monsters only
+	ML_TWOSIDED = 0x00000004,	// backside will not be present at all if not two sided
+
+	// If a texture is pegged, the texture will have
+	// the end exposed to air held constant at the
+	// top or bottom of the texture (stairs or pulled
+	// down things) and will move with a height change
+	// of one of the neighbor sectors.
+	// Unpegged textures always have the first row of
+	// the texture at the top pixel of the line for both
+	// top and bottom textures (use next to windows).
+
+	ML_DONTPEGTOP = 0x00000008,	// upper texture unpegged
+	ML_DONTPEGBOTTOM = 0x00000010,	// lower texture unpegged
+	ML_SECRET = 0x00000020,	// don't map as two sided: IT'S A SECRET!
+	ML_SOUNDBLOCK = 0x00000040,	// don't let sound cross two of these
+	ML_DONTDRAW = 0x00000080,	// don't draw on the automap
+	ML_MAPPED = 0x00000100,	// set if already drawn in automap
+	ML_REPEAT_SPECIAL = 0x00000200,	// special is repeatable
+
+	// 0x400, 0x800 and 0x1000 are ML_SPAC_MASK, they can be used for internal things but not for real map flags.
+	ML_ADDTRANS = 0x00000400,	// additive translucency (can only be set internally)
+	ML_COMPATSIDE = 0x00000800,	// for compatible PointOnLineSide checks. Using the global compatibility check would be a bit expensive for this check.
+
+	// Extended flags
+	ML_NOSKYWALLS = 0x00001000,	// Don't draw sky above or below walls
+	ML_MONSTERSCANACTIVATE = 0x00002000,	// [RH] Monsters (as well as players) can activate the line
+	ML_BLOCK_PLAYERS = 0x00004000,
+	ML_BLOCKEVERYTHING = 0x00008000,	// [RH] Line blocks everything
+	ML_ZONEBOUNDARY = 0x00010000,
+	ML_RAILING = 0x00020000,
+	ML_BLOCK_FLOATERS = 0x00040000,
+	ML_CLIP_MIDTEX = 0x00080000,	// Automatic for every Strife line
+	ML_WRAP_MIDTEX = 0x00100000,
+	ML_3DMIDTEX = 0x00200000,
+	ML_CHECKSWITCHRANGE = 0x00400000,
+	ML_FIRSTSIDEONLY = 0x00800000,	// activated only when crossed from front side
+	ML_BLOCKPROJECTILE = 0x01000000,
+	ML_BLOCKUSE = 0x02000000,	// blocks all use actions through this line
+	ML_BLOCKSIGHT = 0x04000000,	// blocks monster line of sight
+	ML_BLOCKHITSCAN = 0x08000000,	// blocks hitscan attacks
+	ML_3DMIDTEX_IMPASS = 0x10000000,	// [TP] if 3D midtex, behaves like a height-restricted ML_BLOCKING
+	ML_REVEALED = 0x20000000,	// set if revealed in automap
+	ML_DRAWFULLHEIGHT = 0x40000000,	// Draw the full height of the upper/lower sections
+	ML_PORTALCONNECT = 0x80000000,	// for internal use only: This line connects to a sector with a linked portal (used to speed up sight checks.)
+	// Flag words may not exceed 32 bit due to VM limitations.
+	ML2_BLOCKLANDMONSTERS = 0x1,	// MBF21
 };
 
 #define NO_SIDE_INDEX           -1
@@ -523,11 +589,11 @@ struct FLevel
 
 	const FVector3 &GetSunColor() const;
 	const FVector3 &GetSunDirection() const;
-	IntSector *GetFrontSector(const IntSideDef *side);
-	IntSector *GetBackSector(const IntSideDef *side);
-	IntSector *GetSectorFromSubSector(const MapSubsectorEx *sub);
+	IntSector* GetFrontSector(const IntSideDef* side) const;
+	IntSector* GetBackSector(const IntSideDef* side) const;
+	IntSector* GetSectorFromSubSector(const MapSubsectorEx* sub) const;
 	MapSubsectorEx *PointInSubSector(const int x, const int y);
-	FloatVertex GetSegVertex(unsigned int index);
+	FloatVertex GetSegVertex(unsigned int index) const;
 
 	int FindFirstSectorFromTag(int tag);
 	unsigned FindFirstLineId(int lineId);
@@ -546,3 +612,9 @@ const int BLOCKFRACBITS = FRACBITS+7;
 inline int IntSector::Index(const FLevel& level) const { return (int)(ptrdiff_t)(this - level.Sectors.Data()); }
 inline int IntSideDef::Index(const FLevel& level) const { return (int)(ptrdiff_t)(this - level.Sides.Data()); }
 inline int IntLineDef::Index(const FLevel& level) const { return (int)(ptrdiff_t)(this - level.Lines.Data()); }
+
+inline MapSegGLEx* MapSubsectorEx::GetFirstLine(const FLevel& level) const { return firstline != NO_INDEX ? &level.GLSegs[firstline] : nullptr; }
+inline IntSector* MapSubsectorEx::GetSector(const FLevel& level) const { return level.GetSectorFromSubSector(this); }
+
+inline FVector2 IntSideDef::V1(const FLevel& level) const { auto v = level.GetSegVertex(sectordef == line->frontsector ? line->v1 : line->v2); return FVector2(v.x, v.y); }
+inline FVector2 IntSideDef::V2(const FLevel& level) const { auto v = level.GetSegVertex(sectordef == line->frontsector ? line->v2 : line->v1); return FVector2(v.x, v.y); }
