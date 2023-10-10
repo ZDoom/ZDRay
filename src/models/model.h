@@ -4,7 +4,7 @@
 #include "framework/templates.h"
 #include "framework/zstring.h"
 #include "framework/vectors.h"
-#include "lightmapper/textureid.h"
+#include "framework/textureid.h"
 #include <stdint.h>
 #include <string>
 #include <memory>

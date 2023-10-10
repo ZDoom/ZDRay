@@ -1,14 +1,14 @@
 
 #pragma once
 
-#include "Framework/tarray.h"
-#include "Framework/vectors.h"
-#include "Framework/matrix.h"
-#include "Framework/bounds.h"
+#include "framework/tarray.h"
+#include "framework/vectors.h"
+#include "framework/matrix.h"
+#include "framework/bounds.h"
+#include "framework/textureid.h"
 #include "hw_collision.h"
 #include <memory>
 #include <cstring>
-#include "textureid.h"
 
 #include <dp_rect_pack/dp_rect_pack.h>
 

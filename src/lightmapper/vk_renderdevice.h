@@ -1,9 +1,9 @@
 #pragma once
 
 #include "framework/zstring.h"
+#include "framework/textureid.h"
 #include "zvulkan/vulkanobjects.h"
 #include "zvulkan/vulkanbuilders.h"
-#include "textureid.h"
 #include <stdexcept>
 
 class VkRaytrace;

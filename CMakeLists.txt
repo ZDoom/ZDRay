@@ -26,6 +26,8 @@ set(ZDRAY_SOURCES
 	src/framework/matrix.h
 	src/framework/bounds.cpp
 	src/framework/bounds.h
+	src/framework/textureid.cpp
+	src/framework/textureid.h
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/blockmapbuilder/blockmapbuilder.h
 	src/level/level.cpp
@@ -56,8 +58,6 @@ set(ZDRAY_SOURCES
 	src/lightmapper/vk_lightmap.h
 	src/lightmapper/vk_raytrace.cpp
 	src/lightmapper/vk_raytrace.h
-	src/lightmapper/textureid.cpp
-	src/lightmapper/textureid.h
 	src/lightmapper/doom_levelmesh.cpp
 	src/lightmapper/doom_levelmesh.h
 	src/lightmapper/gpuraytracer.cpp
