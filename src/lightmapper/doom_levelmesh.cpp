@@ -288,7 +288,7 @@ void DoomLevelSubmesh::BindLightmapSurfacesToGeometry(FLevel& doomMap)
 
 void DoomLevelSubmesh::CreateLinePortalSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 
 	FVector2 v1 = side->V1(doomMap);
 	FVector2 v2 = side->V2(doomMap);
@@ -332,7 +332,7 @@ void DoomLevelSubmesh::CreateLinePortalSurface(FLevel& doomMap, IntSideDef* side
 
 void DoomLevelSubmesh::CreateSideSurfaces(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 	IntSector* back = (side->line->frontsector == front) ? side->line->backsector : side->line->frontsector;
 
 	FVector2 v1 = side->V1(doomMap);
@@ -383,7 +383,7 @@ void DoomLevelSubmesh::CreateSideSurfaces(FLevel& doomMap, IntSideDef* side)
 
 void DoomLevelSubmesh::CreateLineHorizonSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 
 	FVector2 v1 = side->V1(doomMap);
 	FVector2 v2 = side->V2(doomMap);
@@ -427,7 +427,7 @@ void DoomLevelSubmesh::CreateLineHorizonSurface(FLevel& doomMap, IntSideDef* sid
 
 void DoomLevelSubmesh::CreateFrontWallSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 
 	FVector2 v1 = side->V1(doomMap);
 	FVector2 v2 = side->V2(doomMap);
@@ -473,7 +473,7 @@ void DoomLevelSubmesh::CreateFrontWallSurface(FLevel& doomMap, IntSideDef* side)
 
 void DoomLevelSubmesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 
 	FVector2 v1 = side->V1(doomMap);
 	FVector2 v2 = side->V2(doomMap);
@@ -563,7 +563,7 @@ void DoomLevelSubmesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 
 void DoomLevelSubmesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 	IntSector* back = (side->line->frontsector == front) ? side->line->backsector : side->line->frontsector;
 
 	FVector2 v1 = side->V1(doomMap);
@@ -633,7 +633,7 @@ void DoomLevelSubmesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* si
 
 void DoomLevelSubmesh::CreateTopWallSurface(FLevel& doomMap, IntSideDef* side)
 {
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 	IntSector* back = (side->line->frontsector == front) ? side->line->backsector : side->line->frontsector;
 
 	FVector2 v1 = side->V1(doomMap);
@@ -686,7 +686,7 @@ void DoomLevelSubmesh::CreateBottomWallSurface(FLevel& doomMap, IntSideDef* side
 	if (!IsBottomSideVisible(side))
 		return;
 
-	IntSector* front = &doomMap.Sectors[side->sector];
+	IntSector* front = side->sectordef;
 	IntSector* back = (side->line->frontsector == front) ? side->line->backsector : side->line->frontsector;
 
 	FVector2 v1 = side->V1(doomMap);
@@ -917,14 +917,16 @@ bool DoomLevelSubmesh::IsTopSideSky(IntSector* frontsector, IntSector* backsecto
 
 bool DoomLevelSubmesh::IsTopSideVisible(IntSideDef* side)
 {
-	auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::TOP), true);
-	return tex && tex->isValid();
+	//auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::TOP), true);
+	//return tex && tex->isValid();
+	return true;
 }
 
 bool DoomLevelSubmesh::IsBottomSideVisible(IntSideDef* side)
 {
-	auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::BOTTOM), true);
-	return tex && tex->isValid();
+	//auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::BOTTOM), true);
+	//return tex && tex->isValid();
+	return true;
 }
 
 bool DoomLevelSubmesh::IsSkySector(IntSector* sector, SecPlaneType plane)
@@ -957,11 +959,11 @@ void DoomLevelSubmesh::DumpMesh(const FString& objFilename, const FString& mtlFi
 	fprintf(f, "# MeshVertices: %u, MeshElements: %u, Surfaces: %u\n", MeshVertices.Size(), MeshElements.Size(), Surfaces.Size());
 	fprintf(f, "mtllib %s\n", mtlFilename.GetChars());
 
-	double scale = 1 / 10.0;
+	double scale = 1 / 100.0;
 
 	for (const auto& v : MeshVertices)
 	{
-		fprintf(f, "v %f %f %f\n", v.X * scale, v.Y * scale, v.Z * scale);
+		fprintf(f, "v %f %f %f\n", v.X * scale, v.Z * scale, -v.Y * scale);
 	}
 
 	{
