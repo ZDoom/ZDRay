@@ -49,8 +49,28 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 		raytrace->BeginFrame();
 		lightmap->BeginFrame();
 
-		printf(".");
-		//lightmap->Raytrace(surfaces);
+		// Keep baking until all surfaces have been processed
+		while (true)
+		{
+			printf(".");
+
+			TArray<LevelMeshSurface*> surfaces;
+			for (int i = 0, count = submesh->GetSurfaceCount(); i < count; i++)
+			{
+				LevelMeshSurface* surface = submesh->GetSurface(i);
+				if (surface->needsUpdate)
+				{
+					surfaces.Push(surface);
+				}
+			}
+
+			if (surfaces.Size() == 0)
+				break;
+
+			lightmap->Raytrace(surfaces);
+
+			mDevice->GetCommands()->SubmitAndWait();
+		}
 
 		printf(".");
 

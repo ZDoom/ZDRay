@@ -66,6 +66,8 @@ void VkCommandBufferManager::SubmitAndWait()
 			.AddCommandBuffer(mTransferCommands.get())
 			.Execute(fb->GetDevice(), fb->GetDevice()->GraphicsQueue);
 
+		TransferDeleteList->Add(std::move(mTransferCommands));
+
 		vkDeviceWaitIdle(fb->GetDevice()->device);
 	}
 
@@ -113,7 +115,7 @@ void VkTextureManager::CreateLightmap(int newLMTextureSize, int newLMTextureCoun
 
 	PipelineBarrier()
 		.AddImage(Lightmap.Image.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, LMTextureCount)
-		.Execute(fb->GetCommands()->GetTransferCommands(), 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		.Execute(fb->GetCommands()->GetTransferCommands(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
 void VkTextureManager::DownloadLightmap(int arrayIndex, uint16_t* buffer)
