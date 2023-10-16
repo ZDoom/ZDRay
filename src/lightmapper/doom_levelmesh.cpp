@@ -2,6 +2,7 @@
 #include "doom_levelmesh.h"
 #include "level/level.h"
 #include "framework/halffloat.h"
+#include "framework/binfile.h"
 #include <algorithm>
 #include <map>
 
@@ -27,7 +28,7 @@ void DoomLevelMesh::DumpMesh(const FString& objFilename, const FString& mtlFilen
 	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->DumpMesh(objFilename, mtlFilename);
 }
 
-void DoomLevelMesh::AddLightmapLump(FWadWriter& wadFile)
+void DoomLevelMesh::AddLightmapLump(FLevel& doomMap, FWadWriter& wadFile)
 {
 	/*
 	// LIGHTMAP V2 pseudo-C specification:
@@ -62,20 +63,15 @@ void DoomLevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	for (unsigned int i = 0; i < submesh->Surfaces.Size(); i++)
 	{
 		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
-		if (surface->atlasPageIndex != -1)
+		if (surface->AtlasTile.ArrayIndex != -1)
 		{
 			surfaceCount++;
 			pixelCount += surface->Area();
-			uvCount += surface->verts.size();
-
-			if (surface->Area() != surf.texPixels.size())
-			{
-				printf("Error: Surface area does not match the pixel count.\n");
-			}
+			uvCount += surface->numVerts;
 		}
 	}
 
-	printf("   Writing %u surfaces out of %llu\n", surfaceCount, surfaces.size());
+	printf("   Writing %u surfaces out of %llu\n", surfaceCount, (size_t)submesh->Surfaces.Size());
 
 	const int version = 2;
 
@@ -118,23 +114,23 @@ void DoomLevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	{
 		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
 
-		if (surface->atlasPageIndex == -1)
+		if (surface->AtlasTile.ArrayIndex == -1)
 			continue;
 
 		lumpFile.Write32(surface->Type);
 		lumpFile.Write32(surface->TypeIndex);
-		lumpFile.Write32(surface->ControlSector ? uint32_t(surface->ControlSector - &map->Sectors[0]) : 0xffffffff);
+		lumpFile.Write32(surface->ControlSector ? uint32_t(surface->ControlSector->Index(doomMap)) : 0xffffffff);
 
-		lumpFile.Write16(uint16_t(surface->texWidth));
-		lumpFile.Write16(uint16_t(surface->texHeight));
+		lumpFile.Write16(uint16_t(surface->AtlasTile.Width));
+		lumpFile.Write16(uint16_t(surface->AtlasTile.Height));
 
 		lumpFile.Write32(pixelsOffset * 3);
 
-		lumpFile.Write32(surface->lightUV.size());
+		lumpFile.Write32(surface->numVerts);
 		lumpFile.Write32(uvOffset);
 
 		pixelsOffset += surface->Area();
-		uvOffset += surface->lightUV.size();
+		uvOffset += (uint32_t)surface->numVerts;
 	}
 
 	if (debug)
@@ -147,19 +143,22 @@ void DoomLevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	{
 		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
 
-		if (surface->atlasPageIndex == -1)
+		if (surface->AtlasTile.ArrayIndex == -1)
 			continue;
 
-		if (debug)
+		const uint16_t* pixels = submesh->LMTextureData.Data() + surface->AtlasTile.ArrayIndex * submesh->LMTextureSize * submesh->LMTextureSize * 4;
+		int width = surface->AtlasTile.Width;
+		int height = surface->AtlasTile.Height;
+		for (int y = 0; y < height; y++)
 		{
-			printf("Surface %llu contains %llu pixels\n", i, surface->texPixels.size());
-		}
-
-		for (const auto& pixel : surface->texPixels)
-		{
-			lumpFile.Write16(floatToHalf(clamp(pixel.r, 0.0f, 65000.0f)));
-			lumpFile.Write16(floatToHalf(clamp(pixel.g, 0.0f, 65000.0f)));
-			lumpFile.Write16(floatToHalf(clamp(pixel.b, 0.0f, 65000.0f)));
+			const uint16_t* srcline = pixels + (surface->AtlasTile.X + (surface->AtlasTile.Y + y) * submesh->LMTextureSize) * 4;
+			for (int x = 0; x < width; x++)
+			{
+				lumpFile.Write16(*(srcline++));
+				lumpFile.Write16(*(srcline++));
+				lumpFile.Write16(*(srcline++));
+				srcline++;
+			}
 		}
 	}
 
@@ -173,45 +172,32 @@ void DoomLevelMesh::AddLightmapLump(FWadWriter& wadFile)
 	{
 		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
 
-		if (surface->atlasPageIndex == -1)
+		if (surface->AtlasTile.ArrayIndex == -1)
 			continue;
 
 		if (debug)
 		{
-			printf("Surface %llu contains %llu UVs\n", i, surface->verts.size());
+			printf("Surface %u contains %u UVs\n", i, surface->numVerts);
 		}
 
 		// as of V2 LIGHTMAP version: internal lightmapper uses ZDRay order triangle strips in its internal representation. It will convert from triangle strips to triangle fan on its own.
 
-		int count = surface->verts.size();
-		if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+		float offsetU = surface->AtlasTile.X / (float)submesh->LMTextureSize;
+		float offsetV = surface->AtlasTile.Y / (float)submesh->LMTextureSize;
+		float scaleU = surface->AtlasTile.Width / (float)submesh->LMTextureSize;
+		float scaleV = surface->AtlasTile.Height / (float)submesh->LMTextureSize;
+		FVector2* texcoords = (FVector2*)surface->TexCoords;
+		for (int j = 0, count = surface->numVerts; j < count; j++)
 		{
-			for (int j = 0; j < count; j++)
-			{
-				lumpFile.WriteFloat(surface->lightUV[j].x);
-				lumpFile.WriteFloat(surface->lightUV[j].y);
-			}
-		}
-		else
-		{
-			lumpFile.WriteFloat(surface->lightUV[0].x);
-			lumpFile.WriteFloat(surface->lightUV[0].y);
-
-			lumpFile.WriteFloat(surface->lightUV[1].x);
-			lumpFile.WriteFloat(surface->lightUV[1].y);
-
-			lumpFile.WriteFloat(surface->lightUV[2].x);
-			lumpFile.WriteFloat(surface->lightUV[2].y);
-
-			lumpFile.WriteFloat(surface->lightUV[3].x);
-			lumpFile.WriteFloat(surface->lightUV[3].y);
+			lumpFile.WriteFloat((texcoords[j].X - offsetU) * scaleU);
+			lumpFile.WriteFloat((texcoords[j].Y - offsetV) * scaleV);
 		}
 	}
 
 	// Compress and store in lump
 	ZLibOut zout(wadFile);
 	wadFile.StartWritingLump("LIGHTMAP");
-	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
+	zout.Write(buffer.data(), (int)(ptrdiff_t)(lumpFile.BufferAt() - lumpFile.Buffer()));
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1150,11 +1136,9 @@ void DoomLevelSubmesh::DumpMesh(const FString& objFilename, const FString& mtlFi
 		fprintf(f, "v %f %f %f\n", v.X * scale, v.Z * scale, -v.Y * scale);
 	}
 
+	for (const auto& uv : LightmapUvs)
 	{
-		for (const auto& uv : LightmapUvs)
-		{
-			fprintf(f, "vt %f %f\n", uv.X, uv.Y);
-		}
+		fprintf(f, "vt %f %f\n", uv.X, uv.Y);
 	}
 
 	auto name = [](DoomLevelMeshSurfaceType type) -> const char* {

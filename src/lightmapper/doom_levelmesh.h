@@ -15,7 +15,7 @@ public:
 	int AddSurfaceLights(const LevelMeshSurface* surface, LevelMeshLight* list, int listMaxSize) override;
 	void DumpMesh(const FString& objFilename, const FString& mtlFilename) const;
 
-	void AddLightmapLump(FWadWriter& out);
+	void AddLightmapLump(FLevel& doomMap, FWadWriter& out);
 };
 
 enum DoomLevelMeshSurfaceType
@@ -55,7 +55,6 @@ public:
 	void BindLightmapSurfacesToGeometry(FLevel& doomMap);
 	void PackLightmapAtlas(int lightmapStartIndex);
 	void CreatePortals(FLevel& doomMap);
-	void DisableLightmaps() { Surfaces.Clear(); } // Temp hack that disables lightmapping
 
 	TArray<DoomLevelMeshSurface> Surfaces;
 	TArray<FVector2> LightmapUvs;

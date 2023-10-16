@@ -113,7 +113,7 @@ public:
 	VkTextureManager(VulkanRenderDevice* fb);
 
 	void CreateLightmap(int newLMTextureSize, int newLMTextureCount);
-	void DownloadLightmap(int arrayIndex, TArray<uint16_t>& buffer);
+	void DownloadLightmap(int arrayIndex, uint16_t* buffer);
 
 	VkTextureImage Lightmap;
 	int LMTextureSize = 0;

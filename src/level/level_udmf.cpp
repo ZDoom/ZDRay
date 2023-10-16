@@ -941,8 +941,7 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 
 	if (LightmapMesh)
 	{
-		LightmapMesh->AddLightmapLump(out);
-		//LightmapMesh->Export("level.obj");
+		LightmapMesh->AddLightmapLump(Level, out);
 	}
 
 	out.CreateLabel("ENDMAP");

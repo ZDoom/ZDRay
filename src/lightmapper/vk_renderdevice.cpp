@@ -116,10 +116,9 @@ void VkTextureManager::CreateLightmap(int newLMTextureSize, int newLMTextureCoun
 		.Execute(fb->GetCommands()->GetTransferCommands(), 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
-void VkTextureManager::DownloadLightmap(int arrayIndex, TArray<uint16_t>& buffer)
+void VkTextureManager::DownloadLightmap(int arrayIndex, uint16_t* buffer)
 {
-	unsigned int totalSize = LMTextureSize * LMTextureSize;
-	buffer.Resize(totalSize);
+	unsigned int totalSize = LMTextureSize * LMTextureSize * 4;
 
 	auto stagingBuffer = BufferBuilder()
 		.Size(totalSize * sizeof(uint16_t))
@@ -150,7 +149,7 @@ void VkTextureManager::DownloadLightmap(int arrayIndex, TArray<uint16_t>& buffer
 	fb->GetCommands()->SubmitAndWait();
 
 	uint16_t* srcdata = (uint16_t*)stagingBuffer->Map(0, totalSize * sizeof(uint16_t));
-	memcpy(buffer.Data(), srcdata, totalSize * sizeof(uint16_t));
+	memcpy(buffer, srcdata, totalSize * sizeof(uint16_t));
 	stagingBuffer->Unmap();
 }
 

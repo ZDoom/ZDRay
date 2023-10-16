@@ -39,8 +39,9 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 	{
 		auto raytrace = mDevice->GetRaytrace();
 		auto lightmap = mDevice->GetLightmap();
+		auto submesh = mesh->StaticMesh.get();
 
-		// mDevice->GetTextureManager()->CreateLightmap(mesh->LMTextureSize, mesh->LMTextureCount);
+		mDevice->GetTextureManager()->CreateLightmap(submesh->LMTextureSize, submesh->LMTextureCount);
 
 		printf(".");
 		raytrace->SetLevelMesh(mesh);
@@ -49,16 +50,15 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 		lightmap->BeginFrame();
 
 		printf(".");
-		// lightmap->Raytrace(surfaces);
+		//lightmap->Raytrace(surfaces);
 
 		printf(".");
-		/*
-		TArray<uint16_t> buffer;
-		for (int arrayIndex = 0; arrayIndex < mesh->LMTextureCount; arrayIndex++)
+
+		submesh->LMTextureData.Resize(submesh->LMTextureSize * submesh->LMTextureSize * submesh->LMTextureCount * 4);
+		for (int arrayIndex = 0; arrayIndex < submesh->LMTextureCount; arrayIndex++)
 		{
-			mDevice->GetTextureManager()->DownloadLightmap(arrayIndex, buffer);
+			mDevice->GetTextureManager()->DownloadLightmap(arrayIndex, submesh->LMTextureData.Data() + arrayIndex * submesh->LMTextureSize * submesh->LMTextureSize * 4);
 		}
-		*/
 	}
 	catch (...)
 	{
