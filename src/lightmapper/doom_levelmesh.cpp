@@ -186,8 +186,8 @@ void DoomLevelMesh::AddLightmapLump(FLevel& doomMap, FWadWriter& wadFile)
 
 		float offsetU = surface->AtlasTile.X / (float)submesh->LMTextureSize;
 		float offsetV = surface->AtlasTile.Y / (float)submesh->LMTextureSize;
-		float scaleU = surface->AtlasTile.Width / (float)submesh->LMTextureSize;
-		float scaleV = surface->AtlasTile.Height / (float)submesh->LMTextureSize;
+		float scaleU = (float)submesh->LMTextureSize;
+		float scaleV = (float)submesh->LMTextureSize;
 		FVector2* texcoords = (FVector2*)surface->TexCoords;
 		for (int j = 0, count = surface->numVerts; j < count; j++)
 		{
@@ -438,7 +438,7 @@ void DoomLevelSubmesh::BindLightmapSurfacesToGeometry(FLevel& doomMap)
 	// Reorder vertices into renderer format
 	for (DoomLevelMeshSurface& surface : Surfaces)
 	{
-		if (surface.Type == ST_FLOOR)
+		/*if (surface.Type == ST_FLOOR)
 		{
 			// reverse vertices on floor
 			for (int j = surface.startUvIndex + surface.numVerts - 1, k = surface.startUvIndex; j > k; j--, k++)
@@ -452,7 +452,7 @@ void DoomLevelSubmesh::BindLightmapSurfacesToGeometry(FLevel& doomMap)
 			// to   0 2 1 3
 			std::swap(LightmapUvs[surface.startUvIndex + 1], LightmapUvs[surface.startUvIndex + 2]);
 			std::swap(LightmapUvs[surface.startUvIndex + 2], LightmapUvs[surface.startUvIndex + 3]);
-		}
+		}*/
 
 		surface.TexCoords = (float*)&LightmapUvs[surface.startUvIndex];
 	}
