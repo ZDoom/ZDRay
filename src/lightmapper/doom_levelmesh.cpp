@@ -1,6 +1,7 @@
 
 #include "doom_levelmesh.h"
 #include "level/level.h"
+#include "framework/halffloat.h"
 #include <algorithm>
 #include <map>
 
@@ -26,8 +27,191 @@ void DoomLevelMesh::DumpMesh(const FString& objFilename, const FString& mtlFilen
 	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->DumpMesh(objFilename, mtlFilename);
 }
 
-void DoomLevelMesh::AddLightmapLump(FWadWriter& out)
+void DoomLevelMesh::AddLightmapLump(FWadWriter& wadFile)
 {
+	/*
+	// LIGHTMAP V2 pseudo-C specification:
+
+	struct LightmapLump
+	{
+		int version = 2;
+		uint32_t surfaceCount;
+		uint32_t pixelCount;
+		uint32_t uvCount;
+		SurfaceEntry surfaces[surfaceCount];
+		uint16_t pixels[pixelCount * 3];
+		float uvs[uvCount * 2];
+	};
+
+	struct SurfaceEntry
+	{
+		uint32_t type, typeIndex;
+		uint32_t controlSector; // 0xFFFFFFFF is none
+		uint16_t width, height; // in pixels
+		uint32_t pixelsOffset; // offset in pixels array
+		uint32_t uvCount, uvOffset;
+	};
+	*/
+	// Calculate size of lump
+	uint32_t surfaceCount = 0;
+	uint32_t pixelCount = 0;
+	uint32_t uvCount = 0;
+
+	auto submesh = static_cast<DoomLevelSubmesh*>(StaticMesh.get());
+
+	for (unsigned int i = 0; i < submesh->Surfaces.Size(); i++)
+	{
+		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
+		if (surface->atlasPageIndex != -1)
+		{
+			surfaceCount++;
+			pixelCount += surface->Area();
+			uvCount += surface->verts.size();
+
+			if (surface->Area() != surf.texPixels.size())
+			{
+				printf("Error: Surface area does not match the pixel count.\n");
+			}
+		}
+	}
+
+	printf("   Writing %u surfaces out of %llu\n", surfaceCount, surfaces.size());
+
+	const int version = 2;
+
+	const uint32_t headerSize = sizeof(int) + 3 * sizeof(uint32_t);
+	const uint32_t bytesPerSurfaceEntry = sizeof(uint32_t) * 6 + sizeof(uint16_t) * 2;
+	const uint32_t bytesPerPixel = sizeof(uint16_t) * 3; // F16 RGB
+	const uint32_t bytesPerUV = sizeof(float) * 2; // FVector2
+
+	uint32_t lumpSize = headerSize + surfaceCount * bytesPerSurfaceEntry + pixelCount * bytesPerPixel + uvCount * bytesPerUV;
+
+	bool debug = false;
+
+	if (debug)
+	{
+		printf("Lump size %u bytes\n", lumpSize);
+		printf("Surfaces: %u\nPixels: %u\nUVs: %u\n", surfaceCount, pixelCount, uvCount);
+	}
+
+	// Setup buffer
+	std::vector<uint8_t> buffer(lumpSize);
+	BinFile lumpFile;
+	lumpFile.SetBuffer(buffer.data());
+
+	// Write header
+	lumpFile.Write32(version);
+	lumpFile.Write32(surfaceCount);
+	lumpFile.Write32(pixelCount);
+	lumpFile.Write32(uvCount);
+
+	if (debug)
+	{
+		printf("--- Saving surfaces ---\n");
+	}
+
+	// Write surfaces
+	uint32_t pixelsOffset = 0;
+	uint32_t uvOffset = 0;
+
+	for (unsigned int i = 0; i < submesh->Surfaces.Size(); i++)
+	{
+		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
+
+		if (surface->atlasPageIndex == -1)
+			continue;
+
+		lumpFile.Write32(surface->Type);
+		lumpFile.Write32(surface->TypeIndex);
+		lumpFile.Write32(surface->ControlSector ? uint32_t(surface->ControlSector - &map->Sectors[0]) : 0xffffffff);
+
+		lumpFile.Write16(uint16_t(surface->texWidth));
+		lumpFile.Write16(uint16_t(surface->texHeight));
+
+		lumpFile.Write32(pixelsOffset * 3);
+
+		lumpFile.Write32(surface->lightUV.size());
+		lumpFile.Write32(uvOffset);
+
+		pixelsOffset += surface->Area();
+		uvOffset += surface->lightUV.size();
+	}
+
+	if (debug)
+	{
+		printf("--- Saving pixels ---\n");
+	}
+
+	// Write surface pixels
+	for (unsigned int i = 0; i < submesh->Surfaces.Size(); i++)
+	{
+		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
+
+		if (surface->atlasPageIndex == -1)
+			continue;
+
+		if (debug)
+		{
+			printf("Surface %llu contains %llu pixels\n", i, surface->texPixels.size());
+		}
+
+		for (const auto& pixel : surface->texPixels)
+		{
+			lumpFile.Write16(floatToHalf(clamp(pixel.r, 0.0f, 65000.0f)));
+			lumpFile.Write16(floatToHalf(clamp(pixel.g, 0.0f, 65000.0f)));
+			lumpFile.Write16(floatToHalf(clamp(pixel.b, 0.0f, 65000.0f)));
+		}
+	}
+
+	if (debug)
+	{
+		printf("--- Saving UVs ---\n");
+	}
+
+	// Write normalized texture coordinates
+	for (unsigned int i = 0; i < submesh->Surfaces.Size(); i++)
+	{
+		DoomLevelMeshSurface* surface = &submesh->Surfaces[i];
+
+		if (surface->atlasPageIndex == -1)
+			continue;
+
+		if (debug)
+		{
+			printf("Surface %llu contains %llu UVs\n", i, surface->verts.size());
+		}
+
+		// as of V2 LIGHTMAP version: internal lightmapper uses ZDRay order triangle strips in its internal representation. It will convert from triangle strips to triangle fan on its own.
+
+		int count = surface->verts.size();
+		if (surface->type == ST_FLOOR || surface->type == ST_CEILING)
+		{
+			for (int j = 0; j < count; j++)
+			{
+				lumpFile.WriteFloat(surface->lightUV[j].x);
+				lumpFile.WriteFloat(surface->lightUV[j].y);
+			}
+		}
+		else
+		{
+			lumpFile.WriteFloat(surface->lightUV[0].x);
+			lumpFile.WriteFloat(surface->lightUV[0].y);
+
+			lumpFile.WriteFloat(surface->lightUV[1].x);
+			lumpFile.WriteFloat(surface->lightUV[1].y);
+
+			lumpFile.WriteFloat(surface->lightUV[2].x);
+			lumpFile.WriteFloat(surface->lightUV[2].y);
+
+			lumpFile.WriteFloat(surface->lightUV[3].x);
+			lumpFile.WriteFloat(surface->lightUV[3].y);
+		}
+	}
+
+	// Compress and store in lump
+	ZLibOut zout(wadFile);
+	wadFile.StartWritingLump("LIGHTMAP");
+	zout.Write(buffer.data(), lumpFile.BufferAt() - lumpFile.Buffer());
 }
 
 /////////////////////////////////////////////////////////////////////////////
