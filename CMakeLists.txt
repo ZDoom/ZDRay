@@ -11,6 +11,8 @@ set(ZDRAY_SOURCES
 	src/commandline/getopt.c
 	src/commandline/getopt1.c
 	src/commandline/getopt.h
+	src/framework/binfile.cpp
+	src/framework/binfile.h
 	src/framework/halffloat.cpp
 	src/framework/zstring.cpp
 	src/framework/zstrformat.cpp
