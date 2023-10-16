@@ -16,6 +16,8 @@ DoomLevelMesh::DoomLevelMesh(FLevel& doomMap, int samples, int lmdims)
 	StaticMesh = std::make_unique<DoomLevelSubmesh>();
 
 	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->CreateStatic(doomMap);
+	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->PackLightmapAtlas(0);
+	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->BindLightmapSurfacesToGeometry(doomMap);
 }
 
 int DoomLevelMesh::AddSurfaceLights(const LevelMeshSurface* surface, LevelMeshLight* list, int listMaxSize)

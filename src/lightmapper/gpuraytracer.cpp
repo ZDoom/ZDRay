@@ -46,13 +46,14 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 		printf(".");
 		raytrace->SetLevelMesh(mesh);
 		lightmap->SetLevelMesh(mesh);
-		raytrace->BeginFrame();
-		lightmap->BeginFrame();
 
 		// Keep baking until all surfaces have been processed
 		while (true)
 		{
 			printf(".");
+
+			raytrace->BeginFrame();
+			lightmap->BeginFrame();
 
 			TArray<LevelMeshSurface*> surfaces;
 			for (int i = 0, count = submesh->GetSurfaceCount(); i < count; i++)

@@ -1680,7 +1680,6 @@ VulkanInstanceBuilder::VulkanInstanceBuilder()
 {
 	apiVersionsToTry = { VK_API_VERSION_1_2, VK_API_VERSION_1_1, VK_API_VERSION_1_0 };
 
-	OptionalExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 	OptionalExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 }
 
@@ -1701,6 +1700,7 @@ VulkanInstanceBuilder& VulkanInstanceBuilder::RequireSurfaceExtensions(bool enab
 	if (enable)
 	{
 		RequireExtension(VK_KHR_SURFACE_EXTENSION_NAME);
+		OptionalExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 		RequireExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
