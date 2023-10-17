@@ -32,26 +32,22 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 	QueryPerformanceCounter(&s);
 #endif
 
-	printf("   Ray tracing in progress\n");
-	printf("   [");
-
 	try
 	{
 		auto raytrace = mDevice->GetRaytrace();
 		auto lightmap = mDevice->GetLightmap();
 		auto submesh = mesh->StaticMesh.get();
 
+		printf("   Map uses %u lightmap textures\n", submesh->LMTextureCount);
+
 		mDevice->GetTextureManager()->CreateLightmap(submesh->LMTextureSize, submesh->LMTextureCount);
 
-		printf(".");
 		raytrace->SetLevelMesh(mesh);
 		lightmap->SetLevelMesh(mesh);
 
 		// Keep baking until all surfaces have been processed
 		while (true)
 		{
-			printf(".");
-
 			raytrace->BeginFrame();
 			lightmap->BeginFrame();
 
@@ -68,12 +64,14 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 			if (surfaces.Size() == 0)
 				break;
 
+			printf("   Ray tracing surfaces: %u / %u\r", submesh->GetSurfaceCount() - surfaces.Size(), submesh->GetSurfaceCount());
+
 			lightmap->Raytrace(surfaces);
 
 			mDevice->GetCommands()->SubmitAndWait();
 		}
 
-		printf(".");
+		printf("   Ray tracing surfaces: %u / %u\n", submesh->GetSurfaceCount(), submesh->GetSurfaceCount());
 
 		submesh->LMTextureData.Resize(submesh->LMTextureSize * submesh->LMTextureSize * submesh->LMTextureCount * 4);
 		for (int arrayIndex = 0; arrayIndex < submesh->LMTextureCount; arrayIndex++)
@@ -83,10 +81,9 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 	}
 	catch (...)
 	{
-		printf("]\n");
+		printf("\n");
 		throw;
 	}
-	printf("]\n");
 
 #ifdef WIN32
 	LARGE_INTEGER e, f;

@@ -5,6 +5,7 @@
 #include "framework/binfile.h"
 #include <algorithm>
 #include <map>
+#include <set>
 
 extern float lm_scale;
 
@@ -13,16 +14,42 @@ DoomLevelMesh::DoomLevelMesh(FLevel& doomMap, int samples, int lmdims)
 	SunColor = doomMap.defaultSunColor; // TODO keep only one copy?
 	SunDirection = doomMap.defaultSunDirection;
 
+	printf("   Building level mesh\n");
+
 	StaticMesh = std::make_unique<DoomLevelSubmesh>();
 
 	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->CreateStatic(doomMap);
 	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->PackLightmapAtlas(0);
 	static_cast<DoomLevelSubmesh*>(StaticMesh.get())->BindLightmapSurfacesToGeometry(doomMap);
+
+	BuildLightLists(doomMap);
 }
 
 int DoomLevelMesh::AddSurfaceLights(const LevelMeshSurface* surface, LevelMeshLight* list, int listMaxSize)
 {
-	return 0;
+	const DoomLevelMeshSurface* doomsurface = static_cast<const DoomLevelMeshSurface*>(surface);
+	int listpos = 0;
+	for (ThingLight* light : doomsurface->LightList)
+	{
+		if (listpos == listMaxSize)
+			break;
+
+		LevelMeshLight& meshlight = list[listpos++];
+		meshlight.Origin = light->LightOrigin();
+		meshlight.RelativeOrigin = light->LightRelativeOrigin();
+		meshlight.Radius = light->LightRadius();
+		meshlight.Intensity = light->intensity;
+		meshlight.InnerAngleCos = light->innerAngleCos;
+		meshlight.OuterAngleCos = light->outerAngleCos;
+		meshlight.SpotDir = light->SpotDir();
+		meshlight.Color = light->rgb;
+
+		/*if (light->sector)
+			meshlight.SectorGroup = static_cast<DoomLevelSubmesh*>(StaticMesh.get())->sectorGroup[light->sector->Index()];
+		else*/
+			meshlight.SectorGroup = 0;
+	}
+	return listpos;
 }
 
 void DoomLevelMesh::DumpMesh(const FString& objFilename, const FString& mtlFilename) const
@@ -200,6 +227,73 @@ void DoomLevelMesh::AddLightmapLump(FLevel& doomMap, FWadWriter& wadFile)
 	ZLibOut zout(wadFile);
 	wadFile.StartWritingLump("LIGHTMAP");
 	zout.Write(buffer.data(), (int)(ptrdiff_t)(lumpFile.BufferAt() - lumpFile.Buffer()));
+}
+
+void DoomLevelMesh::PropagateLight(FLevel& doomMap, ThingLight* light, int recursiveDepth)
+{
+	if (recursiveDepth > 32)
+		return;
+
+	auto submesh = static_cast<DoomLevelSubmesh*>(StaticMesh.get());
+
+	SphereShape sphere;
+	sphere.center = light->LightRelativeOrigin();
+	sphere.radius = light->LightRadius();
+	//std::set<Portal, RecursivePortalComparator> portalsToErase;
+	for (int triangleIndex : TriangleMeshShape::find_all_hits(submesh->Collision.get(), &sphere))
+	{
+		DoomLevelMeshSurface* surface = &submesh->Surfaces[submesh->MeshSurfaceIndexes[triangleIndex]];
+
+		// skip any surface which isn't physically connected to the sector group in which the light resides
+		//if (light->sectorGroup == surface->sectorGroup)
+		{
+			/*if (surface->portalIndex >= 0)
+			{
+				auto portal = portals[surface->portalIndex].get();
+
+				if (touchedPortals.insert(*portal).second)
+				{
+					auto fakeLight = std::make_unique<ThingLight>(*light);
+
+					fakeLight->relativePosition.emplace(portal->TransformPosition(light->LightRelativeOrigin()));
+					fakeLight->sectorGroup = portal->targetSectorGroup;
+
+					PropagateLight(doomMap, fakeLight.get(), recursiveDepth + 1);
+					portalsToErase.insert(*portal);
+					portalLights.push_back(std::move(fakeLight));
+				}
+			}*/
+
+			// Add light to the list if it isn't already there
+			bool found = false;
+			for (ThingLight* light2 : surface->LightList)
+			{
+				if (light2 == light)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				surface->LightList.push_back(light);
+		}
+	}
+
+	/*for (auto& portal : portalsToErase)
+	{
+		touchedPortals.erase(portal);
+	}*/
+}
+
+void DoomLevelMesh::BuildLightLists(FLevel& doomMap)
+{
+	for (unsigned i = 0; i < doomMap.ThingLights.Size(); ++i)
+	{
+		printf("   Building light lists: %u / %u\r", i, doomMap.ThingLights.Size());
+		PropagateLight(doomMap, &doomMap.ThingLights[i]);
+	}
+
+	printf("   Building light lists: %u / %u\n", doomMap.ThingLights.Size(), doomMap.ThingLights.Size());
 }
 
 /////////////////////////////////////////////////////////////////////////////

@@ -14,8 +14,18 @@ public:
 
 	int AddSurfaceLights(const LevelMeshSurface* surface, LevelMeshLight* list, int listMaxSize) override;
 	void DumpMesh(const FString& objFilename, const FString& mtlFilename) const;
-
 	void AddLightmapLump(FLevel& doomMap, FWadWriter& out);
+
+private:
+	void BuildLightLists(FLevel& doomMap);
+	void PropagateLight(FLevel& doomMap, ThingLight* light, int recursiveDepth = 0);
+
+	// Portal to portals[] index
+	//std::map<Portal, int, IdenticalPortalComparator> portalCache;
+
+	// Portal lights
+	//std::vector<std::unique_ptr<ThingLight>> portalLights;
+	//std::set<Portal, RecursivePortalComparator> touchedPortals;
 };
 
 enum DoomLevelMeshSurfaceType
@@ -38,6 +48,8 @@ struct DoomLevelMeshSurface : public LevelMeshSurface
 	IntSector* ControlSector = nullptr;
 
 	float* TexCoords = nullptr;
+
+	std::vector<ThingLight*> LightList;
 };
 
 class DoomLevelSubmesh : public LevelSubmesh
