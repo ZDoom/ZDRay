@@ -118,7 +118,7 @@ void VkLightmap::SelectSurfaces(const TArray<LevelMeshSurface*>& surfaces)
 	selectedSurfaces.Clear();
 
 	const int spacing = 5; // Note: the spacing is here to avoid that the resolve sampler finds data from other surface tiles
-	RectPacker packer(bakeImageSize - 2, bakeImageSize - 2, RectPacker::Spacing(spacing));
+	RectPacker packer(bakeImageSize - spacing, bakeImageSize - spacing, RectPacker::Spacing(spacing));
 
 	for (int i = 0, count = surfaces.Size(); i < count; i++)
 	{
@@ -991,8 +991,9 @@ void VkLightmap::CreateCopyPipeline()
 		.Create(fb->GetDevice());
 
 	copy.descriptorPool = DescriptorPoolBuilder()
-		.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256)
-		.MaxSets(256)
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+		.AddPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1)
+		.MaxSets(1)
 		.DebugName("copy.descriptorPool")
 		.Create(fb->GetDevice());
 
