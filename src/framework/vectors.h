@@ -44,6 +44,7 @@
 #include <math.h>
 #include <float.h>
 #include <string.h>
+#include <algorithm>
 
 // this is needed to properly normalize angles. We cannot do that with compiler provided conversions because they differ too much
 #include "xs_Float.h"

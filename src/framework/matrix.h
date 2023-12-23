@@ -29,7 +29,7 @@ typedef double FLOATTYPE;
 typedef float FLOATTYPE;
 #endif
 
-#ifndef NO_SSE
+#ifndef DISABLE_SSE
 #include <emmintrin.h>
 #endif
 
@@ -108,7 +108,7 @@ class VSMatrix {
 
 		FVector4 operator *(const FVector4& v) const
 		{
-			#ifdef NO_SSE
+			#ifdef DISABLE_SSE
 			FVector4 result;
 			result.X = mMatrix[0 * 4 + 0] * v.X + mMatrix[1 * 4 + 0] * v.Y + mMatrix[2 * 4 + 0] * v.Z + mMatrix[3 * 4 + 0] * v.W;
 			result.Y = mMatrix[0 * 4 + 1] * v.X + mMatrix[1 * 4 + 1] * v.Y + mMatrix[2 * 4 + 1] * v.Z + mMatrix[3 * 4 + 1] * v.W;

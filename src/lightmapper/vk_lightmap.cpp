@@ -3,7 +3,7 @@
 #include "vk_renderdevice.h"
 #include "vk_raytrace.h"
 #include "zvulkan/vulkanbuilders.h"
-#include "Framework/halffloat.h"
+#include "framework/halffloat.h"
 #include "framework/zstring.h"
 #include <map>
 
