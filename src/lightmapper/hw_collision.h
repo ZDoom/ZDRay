@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Framework/vectors.h"
+#include "framework/vectors.h"
 #include <vector>
 #include <cmath>
 

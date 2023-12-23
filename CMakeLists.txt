@@ -135,7 +135,7 @@ if(${TARGET_ARCHITECTURE} MATCHES "x86_64")
 	set_source_files_properties(src/nodebuilder/nodebuild_classify_sse1.cpp PROPERTIES COMPILE_FLAGS "${SSE1_ENABLE}")
 	set_source_files_properties(src/nodebuilder/nodebuild_classify_sse2.cpp PROPERTIES COMPILE_FLAGS "${SSE2_ENABLE}")
 else()
-	add_definitions(-DNO_SSE)
+	add_definitions(-DDISABLE_SSE)
 endif()
 
 CHECK_FUNCTION_EXISTS(stricmp STRICMP_EXISTS)

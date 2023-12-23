@@ -24,7 +24,8 @@
 #include <algorithm>
 #include <functional>
 #include <cfloat>
-#ifndef NO_SSE
+#include <cstdint>
+#ifndef DISABLE_SSE
 #include <immintrin.h>
 #endif
 
@@ -285,7 +286,7 @@ float TriangleMeshShape::intersect_triangle_ray(TriangleMeshShape *shape, const 
 		shape->vertices[shape->elements[start_element + 2]]
 	};
 
-	// Moeller–Trumbore ray-triangle intersection algorithm:
+	// Moellerï¿½Trumbore ray-triangle intersection algorithm:
 
 	FVector3 D = ray.end - ray.start;
 
@@ -784,7 +785,7 @@ static const uint32_t clearsignbitmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff,
 
 IntersectionTest::OverlapResult IntersectionTest::ray_aabb(const RayBBox &ray, const CollisionBBox &aabb)
 {
-#ifndef NO_SSE
+#ifndef DISABLE_SSE
 
 	__m128 v = _mm_loadu_ps(&ray.v.X);
 	__m128 w = _mm_loadu_ps(&ray.w.X);
