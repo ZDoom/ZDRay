@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <functional>
 #include <cfloat>
+#include <cstdint>
 #ifndef NO_SSE
 #include <immintrin.h>
 #endif
