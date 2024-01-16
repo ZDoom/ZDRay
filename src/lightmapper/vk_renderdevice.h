@@ -6,8 +6,8 @@
 #include "zvulkan/vulkanbuilders.h"
 #include <stdexcept>
 
-class VkRaytrace;
-class VkLightmap;
+class VkLevelMesh;
+class VkLightmapper;
 class VkCommandBufferManager;
 class VkDescriptorSetManager;
 class VkTextureManager;
@@ -22,8 +22,8 @@ public:
 	VkCommandBufferManager* GetCommands() { return commands.get(); }
 	VkDescriptorSetManager* GetDescriptorSetManager() { return descriptors.get(); }
 	VkTextureManager* GetTextureManager() { return textures.get(); }
-	VkRaytrace* GetRaytrace() { return raytrace.get(); }
-	VkLightmap* GetLightmap() { return lightmap.get(); }
+	VkLevelMesh* GetLevelMesh() { return levelmesh.get(); }
+	VkLightmapper* GetLightmapper() { return lightmapper.get(); }
 
 	int GetBindlessTextureIndex(FTextureID texture) { return -1; }
 
@@ -34,8 +34,8 @@ private:
 	std::unique_ptr<VkCommandBufferManager> commands;
 	std::unique_ptr<VkDescriptorSetManager> descriptors;
 	std::unique_ptr<VkTextureManager> textures;
-	std::unique_ptr<VkRaytrace> raytrace;
-	std::unique_ptr<VkLightmap> lightmap;
+	std::unique_ptr<VkLevelMesh> levelmesh;
+	std::unique_ptr<VkLightmapper> lightmapper;
 };
 
 class VkCommandBufferManager
@@ -128,8 +128,8 @@ class VkDescriptorSetManager
 public:
 	VkDescriptorSetManager(VulkanRenderDevice* fb);
 
-	VulkanDescriptorSetLayout* GetBindlessSetLayout() { return BindlessDescriptorSetLayout.get(); }
-	VulkanDescriptorSet* GetBindlessDescriptorSet() { return BindlessDescriptorSet.get(); }
+	VulkanDescriptorSetLayout* GetBindlessLayout() { return BindlessDescriptorSetLayout.get(); }
+	VulkanDescriptorSet* GetBindlessSet() { return BindlessDescriptorSet.get(); }
 
 	void UpdateBindlessDescriptorSet();
 	int AddBindlessTextureIndex(VulkanImageView* imageview, VulkanSampler* sampler);

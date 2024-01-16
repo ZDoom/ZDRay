@@ -1,8 +1,8 @@
 
 #include "gpuraytracer.h"
 #include "vk_renderdevice.h"
-#include "vk_raytrace.h"
-#include "vk_lightmap.h"
+#include "vk_levelmesh.h"
+#include "vk_lightmapper.h"
 #include "renderdoc_app.h"
 #include "doom_levelmesh.h"
 
@@ -34,44 +34,44 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 
 	try
 	{
-		auto raytrace = mDevice->GetRaytrace();
-		auto lightmap = mDevice->GetLightmap();
+		auto levelmesh = mDevice->GetLevelMesh();
+		auto lightmapper = mDevice->GetLightmapper();
 		auto submesh = mesh->StaticMesh.get();
 
 		printf("   Map uses %u lightmap textures\n", submesh->LMTextureCount);
 
 		mDevice->GetTextureManager()->CreateLightmap(submesh->LMTextureSize, submesh->LMTextureCount);
 
-		raytrace->SetLevelMesh(mesh);
-		lightmap->SetLevelMesh(mesh);
+		levelmesh->SetLevelMesh(mesh);
+		lightmapper->SetLevelMesh(mesh);
 
 		// Keep baking until all surfaces have been processed
 		while (true)
 		{
-			raytrace->BeginFrame();
-			lightmap->BeginFrame();
+			levelmesh->BeginFrame();
+			lightmapper->BeginFrame();
 
-			TArray<LevelMeshSurface*> surfaces;
-			for (int i = 0, count = submesh->GetSurfaceCount(); i < count; i++)
+			TArray<LightmapTile*> tiles;
+			for (unsigned int i = 0, count = submesh->LightmapTiles.Size(); i < count; i++)
 			{
-				LevelMeshSurface* surface = submesh->GetSurface(i);
-				if (surface->needsUpdate)
+				LightmapTile* tile = &submesh->LightmapTiles[i];
+				if (tile->NeedsUpdate)
 				{
-					surfaces.Push(surface);
+					tiles.Push(tile);
 				}
 			}
 
-			if (surfaces.Size() == 0)
+			if (tiles.Size() == 0)
 				break;
 
-			printf("   Ray tracing surfaces: %u / %u\r", submesh->GetSurfaceCount() - surfaces.Size(), submesh->GetSurfaceCount());
+			printf("   Ray tracing tiles: %u / %u\r", submesh->LightmapTiles.Size() - tiles.Size(), submesh->LightmapTiles.Size());
 
-			lightmap->Raytrace(surfaces);
+			lightmapper->Raytrace(tiles);
 
 			mDevice->GetCommands()->SubmitAndWait();
 		}
 
-		printf("   Ray tracing surfaces: %u / %u\n", submesh->GetSurfaceCount(), submesh->GetSurfaceCount());
+		printf("   Ray tracing tiles: %u / %u\n", submesh->LightmapTiles.Size(), submesh->LightmapTiles.Size());
 
 		submesh->LMTextureData.Resize(submesh->LMTextureSize * submesh->LMTextureSize * submesh->LMTextureCount * 4);
 		for (int arrayIndex = 0; arrayIndex < submesh->LMTextureCount; arrayIndex++)

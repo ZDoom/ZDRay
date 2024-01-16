@@ -52,16 +52,25 @@ set(ZDRAY_SOURCES
 	src/nodebuilder/nodebuild.h
 	src/lightmapper/hw_levelmesh.cpp
 	src/lightmapper/hw_levelmesh.h
+	src/lightmapper/hw_levelmeshlight.h
+	src/lightmapper/hw_levelmeshportal.h
+	src/lightmapper/hw_levelmeshsurface.h
+	src/lightmapper/hw_lightmaptile.h
+	src/lightmapper/flatvertices.h
+	src/lightmapper/hw_materialstate.h
+	src/lightmapper/hw_surfaceuniforms.h
 	src/lightmapper/hw_collision.cpp
 	src/lightmapper/hw_collision.h
 	src/lightmapper/vk_renderdevice.cpp
 	src/lightmapper/vk_renderdevice.h
-	src/lightmapper/vk_lightmap.cpp
-	src/lightmapper/vk_lightmap.h
-	src/lightmapper/vk_raytrace.cpp
-	src/lightmapper/vk_raytrace.h
+	src/lightmapper/vk_levelmesh.cpp
+	src/lightmapper/vk_levelmesh.h
+	src/lightmapper/vk_lightmapper.cpp
+	src/lightmapper/vk_lightmapper.h
 	src/lightmapper/doom_levelmesh.cpp
 	src/lightmapper/doom_levelmesh.h
+	src/lightmapper/doom_levelsubmesh.cpp
+	src/lightmapper/doom_levelsubmesh.h
 	src/lightmapper/gpuraytracer.cpp
 	src/lightmapper/gpuraytracer.h
 	src/lightmapper/stacktrace.cpp

@@ -1,7 +1,7 @@
 
 #include "vk_renderdevice.h"
-#include "vk_raytrace.h"
-#include "vk_lightmap.h"
+#include "vk_levelmesh.h"
+#include "vk_lightmapper.h"
 #include "stacktrace.h"
 #include <zvulkan/vulkanbuilders.h>
 #include <zvulkan/vulkancompatibledevice.h>
@@ -37,8 +37,8 @@ VulkanRenderDevice::VulkanRenderDevice()
 	commands = std::make_unique<VkCommandBufferManager>(this);
 	descriptors = std::make_unique<VkDescriptorSetManager>(this);
 	textures = std::make_unique<VkTextureManager>(this);
-	raytrace = std::make_unique<VkRaytrace>(this);
-	lightmap = std::make_unique<VkLightmap>(this);
+	levelmesh = std::make_unique<VkLevelMesh>(this);
+	lightmapper = std::make_unique<VkLightmapper>(this);
 }
 
 VulkanRenderDevice::~VulkanRenderDevice()

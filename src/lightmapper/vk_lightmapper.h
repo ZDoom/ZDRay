@@ -2,8 +2,7 @@
 
 #include "hw_levelmesh.h"
 #include "zvulkan/vulkanobjects.h"
-#include "dp_rect_pack/dp_rect_pack.h"
-#include "framework/zstring.h"
+#include <dp_rect_pack/dp_rect_pack.h>
 
 typedef dp::rect_pack::RectPacker<int> RectPacker;
 
@@ -96,9 +95,9 @@ struct LightInfo
 	float Padding3;
 };
 
-struct SelectedSurface
+struct SelectedTile
 {
-	LevelMeshSurface* Surface = nullptr;
+	LightmapTile* Tile = nullptr;
 	int X = -1;
 	int Y = -1;
 	bool Rendered = false;
@@ -120,20 +119,20 @@ struct CopyTileInfo
 
 static_assert(sizeof(CopyTileInfo) == sizeof(int32_t) * 8);
 
-class VkLightmap
+class VkLightmapper
 {
 public:
-	VkLightmap(VulkanRenderDevice* fb);
-	~VkLightmap();
+	VkLightmapper(VulkanRenderDevice* fb);
+	~VkLightmapper();
 
 	void BeginFrame();
-	void Raytrace(const TArray<LevelMeshSurface*>& surfaces);
+	void Raytrace(const TArray<LightmapTile*>& surfaces);
 	void SetLevelMesh(LevelMesh* level);
 
 private:
 	void ReleaseResources();
 
-	void SelectSurfaces(const TArray<LevelMeshSurface*>& surfaces);
+	void SelectTiles(const TArray<LightmapTile*>& surfaces);
 	void UploadUniforms();
 	void Render();
 	void Resolve();
@@ -156,16 +155,18 @@ private:
 	int GetRaytracePipelineIndex();
 
 	static FString LoadPrivateShaderLump(const char* lumpname);
-	static FString LoadPublicShaderLump(const char* lumpname) { return LoadPrivateShaderLump(lumpname); }
+	static FString LoadPublicShaderLump(const char* lumpname);
 	static ShaderIncludeResult OnInclude(FString headerName, FString includerName, size_t depth, bool system);
+
+	FVector3 SwapYZ(const FVector3& v) { return FVector3(v.X, v.Z, v.Y); }
 
 	VulkanRenderDevice* fb = nullptr;
 	LevelMesh* mesh = nullptr;
 
 	bool useRayQuery = true;
 
-	TArray<SelectedSurface> selectedSurfaces;
-	TArray<TArray<SelectedSurface*>> copylists;
+	TArray<SelectedTile> selectedTiles;
+	TArray<TArray<SelectedTile*>> copylists;
 	TArray<LevelMeshLight> templightlist;
 
 	struct

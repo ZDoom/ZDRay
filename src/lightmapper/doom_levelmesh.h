@@ -10,6 +10,32 @@ class FWadWriter;
 class DoomLevelMesh : public LevelMesh
 {
 public:
+	DoomLevelMesh(FLevel& doomMap);
+
+	int AddSurfaceLights(const LevelMeshSurface* surface, LevelMeshLight* list, int listMaxSize) override;
+
+	void BeginFrame(FLevel& doomMap);
+	bool TraceSky(const FVector3& start, FVector3 direction, float dist);
+	void DumpMesh(const FString& objFilename, const FString& mtlFilename) const;
+	void AddLightmapLump(FLevel& doomMap, FWadWriter& out);
+
+	void BuildSectorGroups(const FLevel& doomMap);
+
+	TArray<int> sectorGroup; // index is sector, value is sectorGroup
+	TArray<int> sectorPortals[2]; // index is sector+plane, value is index into the portal list
+	TArray<int> linePortals; // index is linedef, value is index into the portal list
+
+private:
+	void CreatePortals(FLevel& doomMap);
+	void BuildLightLists(FLevel& doomMap);
+	void PropagateLight(FLevel& doomMap, ThingLight* light, int recursiveDepth = 0);
+};
+
+#if 0
+
+class DoomLevelMesh : public LevelMesh
+{
+public:
 	DoomLevelMesh(FLevel& level, int samples, int lmdims);
 
 	int AddSurfaceLights(const LevelMeshSurface* surface, LevelMeshLight* list, int listMaxSize) override;
@@ -140,3 +166,5 @@ private:
 	static FVector3 ToFVector3(const DVector3& v) { return FVector3((float)v.X, (float)v.Y, (float)v.Z); }
 	static FVector4 ToFVector4(const DVector4& v) { return FVector4((float)v.X, (float)v.Y, (float)v.Z, (float)v.W); }
 };
+
+#endif
