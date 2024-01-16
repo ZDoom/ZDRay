@@ -118,7 +118,18 @@ public:
 		HIT_Columnmode = HIT_Wall | HIT_Sky | HIT_Sprite
 	};
 
-	FTextureID CheckForTexture(const char* name, ETextureType usetype, uint32_t flags = TEXMAN_TryAny) { return {}; }
+	FTextureID CheckForTexture(const char* name, ETextureType usetype, uint32_t flags = TEXMAN_TryAny)
+	{
+		if (name == nullptr || name[0] == '\0')
+			return FTextureID(-1);
+		if (name[0] == '-' && name[1] == '\0')
+			return FTextureID(0);
+
+		// To do: actually build up a list of texture ids
+		return FTextureID(1);
+	}
+
+	
 };
 
 extern FTextureManager TexMan;

@@ -99,7 +99,12 @@ struct IntSideDef
 	SideDefSampleProps sampling;
 	TArray<UDMFKey> props;
 
-	FTextureID GetTexture(WallPart part) { return FNullTextureID(); }
+	FTextureID GetTexture(WallPart part)
+	{
+		const char* names[3] = { toptexture, midtexture, bottomtexture };
+		return TexMan.CheckForTexture(names[(int)part], ETextureType::Wall);
+	}
+
 	float GetTextureYOffset(WallPart part) { return 0.0f; }
 	float GetTextureYScale(WallPart part) { return 1.0f; }
 

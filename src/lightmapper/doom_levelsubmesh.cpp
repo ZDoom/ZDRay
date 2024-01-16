@@ -111,7 +111,10 @@ void DoomLevelSubmesh::CreateSideSurfaces(std::map<LightmapTileBinding, int>& bi
 	}
 	else if (!back)
 	{
-		CreateFrontWallSurface(bindings, doomMap, side);
+		if (side->GetTexture(WallPart::MIDDLE).isValid())
+		{
+			CreateFrontWallSurface(bindings, doomMap, side);
+		}
 	}
 	else
 	{
@@ -195,7 +198,6 @@ void DoomLevelSubmesh::CreateLineHorizonSurface(std::map<LightmapTileBinding, in
 	AddWallVertices(surf, verts);
 
 	SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
-	AddSurfaceToTile(surf, bindings, doomMap, side->GetSampleDistance(WallPart::MIDDLE));
 
 	Surfaces.Push(surf);
 }
