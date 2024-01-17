@@ -214,7 +214,10 @@ struct IntSector
 
 	int group = 0;
 
-	FTextureID GetTexture(SecPlaneType plane) { return FNullTextureID(); }
+	FTextureID GetTexture(SecPlaneType plane)
+	{
+		return TexMan.CheckForTexture(GetTextureName(plane), ETextureType::Flat);
+	}
 
 	// Utility functions
 	inline const char* GetTextureName(int plane) const { return plane != PLANE_FLOOR ? data.ceilingpic : data.floorpic; }

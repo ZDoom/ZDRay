@@ -637,9 +637,9 @@ void DoomLevelSubmesh::CreateCeilingSurface(std::map<LightmapTileBinding, int>& 
 	surf.MeshLocation.StartElementIndex = Mesh.Indexes.Size();
 	for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
 	{
-		Mesh.Indexes.Push(startVertIndex);
-		Mesh.Indexes.Push(startVertIndex + j - 1);
 		Mesh.Indexes.Push(startVertIndex + j);
+		Mesh.Indexes.Push(startVertIndex + j - 1);
+		Mesh.Indexes.Push(startVertIndex);
 		numElements += 3;
 	}
 	surf.MeshLocation.NumElements = numElements;
