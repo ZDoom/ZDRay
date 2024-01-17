@@ -701,6 +701,7 @@ void DoomLevelSubmesh::AddSurfaceToTile(DoomLevelMeshSurface& surf, std::map<Lig
 	if (surf.IsSky)
 	{
 		surf.LightmapTileIndex = -1;
+		return;
 	}
 
 	LightmapTileBinding binding;
