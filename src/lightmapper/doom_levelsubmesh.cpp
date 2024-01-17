@@ -332,20 +332,20 @@ void DoomLevelSubmesh::Create3DFloorWallSurfaces(std::map<LightmapTileBinding, i
 	FVector2 v1 = side->V1(doomMap);
 	FVector2 v2 = side->V2(doomMap);
 
-	float v1Top = (float)front->ceilingplane.ZatPoint(v1);
-	float v1Bottom = (float)front->floorplane.ZatPoint(v1);
-	float v2Top = (float)front->ceilingplane.ZatPoint(v2);
-	float v2Bottom = (float)front->floorplane.ZatPoint(v2);
+	float v1Top = (float)back->ceilingplane.ZatPoint(v1);
+	float v1Bottom = (float)back->floorplane.ZatPoint(v1);
+	float v2Top = (float)back->ceilingplane.ZatPoint(v2);
+	float v2Bottom = (float)back->floorplane.ZatPoint(v2);
 
-	for (unsigned int j = 0; j < front->x3dfloors.Size(); j++)
+	for (unsigned int j = 0; j < back->x3dfloors.Size(); j++)
 	{
-		IntSector* xfloor = front->x3dfloors[j];
+		IntSector* xfloor = back->x3dfloors[j];
 
 		// Don't create a line when both sectors have the same 3d floor
 		bool bothSides = false;
-		for (unsigned int k = 0; k < back->x3dfloors.Size(); k++)
+		for (unsigned int k = 0; k < front->x3dfloors.Size(); k++)
 		{
-			if (back->x3dfloors[k] == xfloor)
+			if (front->x3dfloors[k] == xfloor)
 			{
 				bothSides = true;
 				break;
@@ -377,7 +377,7 @@ void DoomLevelSubmesh::Create3DFloorWallSurfaces(std::map<LightmapTileBinding, i
 		verts[2].z = trZ;
 		verts[3].z = tlZ;
 
-		surf.SectorGroup = LevelMesh->sectorGroup[front->Index(doomMap)];
+		surf.SectorGroup = LevelMesh->sectorGroup[back->Index(doomMap)];
 		surf.Texture = side->GetTexture(WallPart::MIDDLE);
 
 		AddWallVertices(surf, verts);
