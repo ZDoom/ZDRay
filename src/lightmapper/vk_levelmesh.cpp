@@ -491,6 +491,11 @@ void VkLevelMeshUploader::EndTransfer(size_t transferBufferSize)
 	Mesh->fb->GetCommands()->TransferDeleteList->Add(std::move(transferBuffer));
 }
 
+static FVector3 SwapYZ(const FVector3& v)
+{
+	return FVector3(v.X, v.Z, v.Y);
+}
+
 void VkLevelMeshUploader::UploadNodes()
 {
 	// Copy node buffer header and create a root node that merges the static and dynamic AABB trees
@@ -509,8 +514,8 @@ void VkLevelMeshUploader::UploadNodes()
 		nodesHeader.root = locations[1].Node.Offset + locations[1].Node.Size;
 
 		CollisionNode info;
-		info.center = bbox.Center;
-		info.extents = bbox.Extents;
+		info.center = SwapYZ(bbox.Center);
+		info.extents = SwapYZ(bbox.Extents);
 		info.left = locations[0].Node.Offset + root0;
 		info.right = locations[1].Node.Offset + root1;
 		info.element_index = -1;
@@ -541,8 +546,8 @@ void VkLevelMeshUploader::UploadNodes()
 		for (auto& node : submesh->Collision->get_nodes())
 		{
 			CollisionNode info;
-			info.center = node.aabb.Center;
-			info.extents = node.aabb.Extents;
+			info.center = SwapYZ(node.aabb.Center);
+			info.extents = SwapYZ(node.aabb.Extents);
 			info.left = node.left != -1 ? node.left + cur.Node.Offset : -1;
 			info.right = node.right != -1 ? node.right + cur.Node.Offset : -1;
 			info.element_index = node.element_index != -1 ? node.element_index + cur.Index.Offset : -1;
@@ -551,7 +556,7 @@ void VkLevelMeshUploader::UploadNodes()
 
 		size_t copysize = submesh->Collision->get_nodes().size() * sizeof(CollisionNode);
 		if (copysize > 0)
-			cmdbuffer->copyBuffer(transferBuffer.get(), Mesh->NodeBuffer.get(), datapos, +sizeof(CollisionNodeBufferHeader) + cur.Node.Offset * sizeof(CollisionNode), copysize);
+			cmdbuffer->copyBuffer(transferBuffer.get(), Mesh->NodeBuffer.get(), datapos, sizeof(CollisionNodeBufferHeader) + cur.Node.Offset * sizeof(CollisionNode), copysize);
 		datapos += copysize;
 	}
 }
