@@ -86,7 +86,9 @@ sector
 	lm_sampledist_floor = &lt;int&gt; (default: 0)
 	lm_sampledist_ceiling = &lt;int&gt; (default: 0)
 
-	// Update the lightmap for the sector every frame when visible in the game. Note that this is expensive to do, but it allows moving lights.
+	// Update the lightmap for the sector every frame when visible in the game.
+	// All sides belonging to the sector will also be affected.
+	// Note that this is computationally expensive, but it allows animated and moving lights.
 	lm_dynamic = &lt;bool&gt; (default: false)
 }
 </pre>
