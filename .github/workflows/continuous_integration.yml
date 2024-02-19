@@ -42,9 +42,57 @@ jobs:
         export MAKEFLAGS=--keep-going
         cmake --build build --config Release --parallel 3
 
+    - name: Create Package
+      if: runner.os == 'Windows'  # Remove to make packages of all targets
+      shell: bash
+      run: |
+        cd build
+        mkdir package
+        if [[ "${{ runner.os }}" == 'Windows' ]]; then
+          cp ${{ matrix.config }}/zdray.exe package
+        elif [[ "${{ runner.os }}" == 'macOS' ]]; then
+          cp zdray package
+        elif [[ "${{ runner.os }}" == 'Linux' ]]; then
+          cp zdray package
+        fi
+
+    - name: Upload Package
+      if: runner.os == 'Windows'  # Remove to store packages of all targets
+      uses: actions/upload-artifact@v4
+      with:
+        path: build/package
+        name: ${{ matrix.config.name }}
+
     - name: List Build Directory
       if: always()
       shell: bash
       run: |
         git status
         ls -lR build
+
+  deploy:
+    name: Update Latest successful build
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: Windows
+        path: build/zdray-prerelease
+
+    - name: Zip artifacts
+      shell: bash
+      run: |
+        cd build
+        zip -r zdray-prerelease.zip zdray-prerelease
+
+    - name: Update nightly release
+      uses: pyTooling/Actions/releaser@r0
+      with:
+        tag: nightly
+        rm: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+        files: build/zdray-prerelease.zip
