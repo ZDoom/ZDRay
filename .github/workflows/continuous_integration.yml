@@ -49,7 +49,7 @@ jobs:
         cd build
         mkdir package
         if [[ "${{ runner.os }}" == 'Windows' ]]; then
-          cp ${{ matrix.config }}/zdray.exe package
+          cp Release/zdray.exe package
         elif [[ "${{ runner.os }}" == 'macOS' ]]; then
           cp zdray package
         elif [[ "${{ runner.os }}" == 'Linux' ]]; then
