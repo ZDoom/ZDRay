@@ -36,11 +36,10 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 	{
 		auto levelmesh = mDevice->GetLevelMesh();
 		auto lightmapper = mDevice->GetLightmapper();
-		auto submesh = mesh->StaticMesh.get();
 
-		printf("   Map uses %u lightmap textures\n", submesh->LMTextureCount);
+		printf("   Map uses %u lightmap textures\n", mesh->LMTextureCount);
 
-		mDevice->GetTextureManager()->CreateLightmap(submesh->LMTextureSize, submesh->LMTextureCount);
+		mDevice->GetTextureManager()->CreateLightmap(mesh->LMTextureSize, mesh->LMTextureCount);
 
 		levelmesh->SetLevelMesh(mesh);
 		lightmapper->SetLevelMesh(mesh);
@@ -52,9 +51,9 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 			lightmapper->BeginFrame();
 
 			TArray<LightmapTile*> tiles;
-			for (unsigned int i = 0, count = submesh->LightmapTiles.Size(); i < count; i++)
+			for (unsigned int i = 0, count = mesh->LightmapTiles.Size(); i < count; i++)
 			{
-				LightmapTile* tile = &submesh->LightmapTiles[i];
+				LightmapTile* tile = &mesh->LightmapTiles[i];
 				if (tile->NeedsUpdate)
 				{
 					tiles.Push(tile);
@@ -64,19 +63,19 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 			if (tiles.Size() == 0)
 				break;
 
-			printf("   Ray tracing tiles: %u / %u\r", submesh->LightmapTiles.Size() - tiles.Size(), submesh->LightmapTiles.Size());
+			printf("   Ray tracing tiles: %u / %u\r", mesh->LightmapTiles.Size() - tiles.Size(), mesh->LightmapTiles.Size());
 
 			lightmapper->Raytrace(tiles);
 
 			mDevice->GetCommands()->SubmitAndWait();
 		}
 
-		printf("   Ray tracing tiles: %u / %u\n", submesh->LightmapTiles.Size(), submesh->LightmapTiles.Size());
+		printf("   Ray tracing tiles: %u / %u\n", mesh->LightmapTiles.Size(), mesh->LightmapTiles.Size());
 
-		submesh->LMTextureData.Resize(submesh->LMTextureSize * submesh->LMTextureSize * submesh->LMTextureCount * 4);
-		for (int arrayIndex = 0; arrayIndex < submesh->LMTextureCount; arrayIndex++)
+		mesh->LMTextureData.Resize(mesh->LMTextureSize * mesh->LMTextureSize * mesh->LMTextureCount * 4);
+		for (int arrayIndex = 0; arrayIndex < mesh->LMTextureCount; arrayIndex++)
 		{
-			mDevice->GetTextureManager()->DownloadLightmap(arrayIndex, submesh->LMTextureData.Data() + arrayIndex * submesh->LMTextureSize * submesh->LMTextureSize * 4);
+			mDevice->GetTextureManager()->DownloadLightmap(arrayIndex, mesh->LMTextureData.Data() + arrayIndex * mesh->LMTextureSize * mesh->LMTextureSize * 4);
 		}
 	}
 	catch (...)

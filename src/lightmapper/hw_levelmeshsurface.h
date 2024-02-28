@@ -9,11 +9,10 @@
 
 class LevelSubmesh;
 struct LevelMeshSurface;
+struct ThingLight;
 
 struct LevelMeshSurface
 {
-	LevelSubmesh* Submesh = nullptr;
-
 	struct
 	{
 		unsigned int StartVertIndex = 0;
@@ -28,9 +27,9 @@ struct LevelMeshSurface
 
 	bool AlwaysUpdate = false;
 
-	FTextureID Texture = FNullTextureID();
+	FTextureID Texture = FNullTextureID(); // FGameTexture* Texture = nullptr;
 	float Alpha = 1.0;
-	
+
 	bool IsSky = false;
 	int PortalIndex = 0;
 	int SectorGroup = 0;
@@ -38,8 +37,9 @@ struct LevelMeshSurface
 	// Light list location in the lightmapper GPU buffers
 	struct
 	{
-		int Pos = -1;
+		int Pos = 0;
 		int Count = 0;
-		int ResetCounter = -1;
 	} LightList;
+
+	TArray<ThingLight*> Lights;
 };

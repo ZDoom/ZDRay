@@ -25,7 +25,9 @@ public:
 	VkLevelMesh* GetLevelMesh() { return levelmesh.get(); }
 	VkLightmapper* GetLightmapper() { return lightmapper.get(); }
 
-	int GetBindlessTextureIndex(FTextureID texture) { return -1; }
+	int GetBindlessTextureIndex(FTextureID texture) { return 0; }
+
+	bool IsRayQueryEnabled() const { return useRayQuery; }
 
 	bool useRayQuery = false;
 

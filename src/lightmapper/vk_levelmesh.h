@@ -34,7 +34,11 @@ struct SurfaceInfo
 	uint32_t PortalIndex;
 	int32_t TextureIndex;
 	float Alpha;
-	float Padding;
+	float Padding0;
+	uint32_t LightStart;
+	uint32_t LightEnd;
+	uint32_t Padding1;
+	uint32_t Padding2;
 };
 
 struct PortalInfo
@@ -42,22 +46,28 @@ struct PortalInfo
 	VSMatrix transformation;
 };
 
-struct SubmeshBufferRange
+struct LightInfo
+{
+	FVector3 Origin;
+	float Padding0;
+	FVector3 RelativeOrigin;
+	float Padding1;
+	float Radius;
+	float Intensity;
+	float InnerAngleCos;
+	float OuterAngleCos;
+	FVector3 SpotDir;
+	float Padding2;
+	FVector3 Color;
+	float Padding3;
+};
+
+static_assert(sizeof(LightInfo) == sizeof(float) * 20);
+
+struct MeshBufferRange
 {
 	int Offset = 0;
 	int Size = 0;
-};
-
-struct SubmeshBufferLocation
-{
-	LevelSubmesh* Submesh = nullptr;
-	SubmeshBufferRange Vertex;
-	SubmeshBufferRange Index;
-	SubmeshBufferRange Node;
-	SubmeshBufferRange SurfaceIndex;
-	SubmeshBufferRange Surface;
-	SubmeshBufferRange UniformIndexes;
-	SubmeshBufferRange Uniforms;
 };
 
 class VkLevelMesh
@@ -77,6 +87,8 @@ public:
 	VulkanBuffer* GetSurfaceBuffer() { return SurfaceBuffer.get(); }
 	VulkanBuffer* GetUniformsBuffer() { return UniformsBuffer.get(); }
 	VulkanBuffer* GetPortalBuffer() { return PortalBuffer.get(); }
+	VulkanBuffer* GetLightBuffer() { return LightBuffer.get(); }
+	VulkanBuffer* GetLightIndexBuffer() { return LightIndexBuffer.get(); }
 
 	LevelMesh* GetMesh() { return Mesh; }
 
@@ -94,20 +106,13 @@ private:
 	void CreateStaticBLAS();
 	void CreateDynamicBLAS();
 	void CreateTLASInstanceBuffer();
-	void CreateTopLevelAS();
+	void CreateTopLevelAS(int instanceCount);
 
 	void UploadMeshes(bool dynamicOnly);
 	void UploadTLASInstanceBuffer();
-	void UpdateTopLevelAS();
+	void UpdateTopLevelAS(int instanceCount);
 
-	BLAS CreateBLAS(LevelSubmesh *submesh, bool preferFastBuild, int vertexOffset, int indexOffset);
-
-	int GetMaxVertexBufferSize();
-	int GetMaxIndexBufferSize();
-	int GetMaxNodeBufferSize();
-	int GetMaxSurfaceBufferSize();
-	int GetMaxUniformsBufferSize();
-	int GetMaxSurfaceIndexBufferSize();
+	BLAS CreateBLAS(bool preferFastBuild, int indexOffset, int indexCount);
 
 	VulkanRenderDevice* fb = nullptr;
 
@@ -116,6 +121,20 @@ private:
 	LevelMesh NullMesh;
 	LevelMesh* Mesh = nullptr;
 
+	struct
+	{
+		TArray<MeshBufferRange> Vertex;
+		TArray<MeshBufferRange> Index;
+		TArray<MeshBufferRange> Node;
+		TArray<MeshBufferRange> SurfaceIndex;
+		TArray<MeshBufferRange> Surface;
+		TArray<MeshBufferRange> UniformIndexes;
+		TArray<MeshBufferRange> Uniforms;
+		TArray<MeshBufferRange> Portals;
+		TArray<MeshBufferRange> Light;
+		TArray<MeshBufferRange> LightIndex;
+	} Locations;
+
 	std::unique_ptr<VulkanBuffer> VertexBuffer;
 	std::unique_ptr<VulkanBuffer> UniformIndexBuffer;
 	std::unique_ptr<VulkanBuffer> IndexBuffer;
@@ -123,16 +142,10 @@ private:
 	std::unique_ptr<VulkanBuffer> SurfaceBuffer;
 	std::unique_ptr<VulkanBuffer> UniformsBuffer;
 	std::unique_ptr<VulkanBuffer> PortalBuffer;
+	std::unique_ptr<VulkanBuffer> LightBuffer;
+	std::unique_ptr<VulkanBuffer> LightIndexBuffer;
 
 	std::unique_ptr<VulkanBuffer> NodeBuffer;
-
-	TArray<FFlatVertex> Vertices;
-	static const int MaxDynamicVertices = 100'000;
-	static const int MaxDynamicIndexes = 100'000;
-	static const int MaxDynamicSurfaces = 100'000;
-	static const int MaxDynamicUniforms = 100'000;
-	static const int MaxDynamicSurfaceIndexes = 25'000;
-	static const int MaxDynamicNodes = 10'000;
 
 	BLAS StaticBLAS;
 	BLAS DynamicBLAS;
@@ -154,27 +167,24 @@ class VkLevelMeshUploader
 public:
 	VkLevelMeshUploader(VkLevelMesh* mesh);
 
-	void Upload(bool dynamicOnly);
+	void Upload();
 
 private:
 	void BeginTransfer(size_t transferBufferSize);
 	void EndTransfer(size_t transferBufferSize);
+	size_t GetTransferSize();
+	void ClearRanges();
+
 	void UploadNodes();
-	void UploadVertices();
-	void UploadUniformIndexes();
-	void UploadIndexes();
-	void UploadSurfaceIndexes();
 	void UploadSurfaces();
 	void UploadUniforms();
 	void UploadPortals();
-	void UpdateSizes();
-	void UpdateLocations();
-	size_t GetTransferSize();
+	void UploadLights();
 
-	VkLevelMesh* Mesh;
-	TArray<SubmeshBufferLocation> locations;
-	unsigned int start = 0;
-	unsigned int end = 0;
+	template<typename T>
+	void UploadRanges(const TArray<MeshBufferRange>& ranges, const T* srcbuffer, VulkanBuffer* destbuffer);
+
+	VkLevelMesh* Mesh = nullptr;
 	uint8_t* data = nullptr;
 	size_t datapos = 0;
 	VulkanCommandBuffer* cmdbuffer = nullptr;

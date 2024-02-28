@@ -20,16 +20,16 @@ struct Uniforms
 
 struct LightmapRaytracePC
 {
-	uint32_t LightStart;
-	uint32_t LightEnd;
 	int32_t SurfaceIndex;
-	int32_t PushPadding1;
+	int32_t Padding0;
+	int32_t Padding1;
+	int32_t Padding2;
 	FVector3 WorldToLocal;
 	float TextureSize;
 	FVector3 ProjLocalToU;
-	float PushPadding2;
+	float Padding3;
 	FVector3 ProjLocalToV;
-	float PushPadding3;
+	float Padding4;
 	float TileX;
 	float TileY;
 	float TileWidth;
@@ -79,22 +79,6 @@ struct LightmapBakeImage
 	uint16_t maxY = 0;
 };
 
-struct LightInfo
-{
-	FVector3 Origin;
-	float Padding0;
-	FVector3 RelativeOrigin;
-	float Padding1;
-	float Radius;
-	float Intensity;
-	float InnerAngleCos;
-	float OuterAngleCos;
-	FVector3 SpotDir;
-	float Padding2;
-	FVector3 Color;
-	float Padding3;
-};
-
 struct SelectedTile
 {
 	LightmapTile* Tile = nullptr;
@@ -102,8 +86,6 @@ struct SelectedTile
 	int Y = -1;
 	bool Rendered = false;
 };
-
-static_assert(sizeof(LightInfo) == sizeof(float) * 20);
 
 struct CopyTileInfo
 {
@@ -147,7 +129,6 @@ private:
 	void CreateBlurPipeline();
 	void CreateCopyPipeline();
 	void CreateUniformBuffer();
-	void CreateLightBuffer();
 	void CreateTileBuffer();
 	void CreateDrawIndexedBuffer();
 	void CreateBakeImage();
@@ -182,15 +163,6 @@ private:
 
 	struct
 	{
-		const int BufferSize = 2 * 1024 * 1024;
-		std::unique_ptr<VulkanBuffer> Buffer;
-		LightInfo* Lights = nullptr;
-		int Pos = 0;
-		int ResetCounter = 0;
-	} lights;
-
-	struct
-	{
 		const int BufferSize = 100'000;
 		std::unique_ptr<VulkanBuffer> Buffer;
 		CopyTileInfo* Tiles = nullptr;
@@ -211,7 +183,7 @@ private:
 		std::unique_ptr<VulkanShader> vertRaytrace;
 		std::unique_ptr<VulkanShader> vertScreenquad;
 		std::unique_ptr<VulkanShader> vertCopy;
-		std::unique_ptr<VulkanShader> fragRaytrace[8];
+		std::unique_ptr<VulkanShader> fragRaytrace[16];
 		std::unique_ptr<VulkanShader> fragResolve;
 		std::unique_ptr<VulkanShader> fragBlur[2];
 		std::unique_ptr<VulkanShader> fragCopy;
@@ -222,7 +194,7 @@ private:
 		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout0;
 		std::unique_ptr<VulkanDescriptorSetLayout> descriptorSetLayout1;
 		std::unique_ptr<VulkanPipelineLayout> pipelineLayout;
-		std::unique_ptr<VulkanPipeline> pipeline[8];
+		std::unique_ptr<VulkanPipeline> pipeline[16];
 		std::unique_ptr<VulkanRenderPass> renderPass;
 		std::unique_ptr<VulkanDescriptorPool> descriptorPool0;
 		std::unique_ptr<VulkanDescriptorPool> descriptorPool1;

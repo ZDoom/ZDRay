@@ -414,6 +414,14 @@ struct ThingLight
 	IntSector       *sector;
 	MapSubsectorEx  *ssect;
 
+	// Locations in the level mesh light list. Ends with index = 0 or all entries used
+	enum { max_levelmesh_entries = 4 };
+	struct
+	{
+		int index = 0;
+		int portalgroup = 0;
+	} levelmesh[max_levelmesh_entries];
+
 	// Portal related functionality
 	std::optional<FVector3> relativePosition;
 	int sectorGroup = 0;

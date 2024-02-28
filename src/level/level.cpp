@@ -841,8 +841,11 @@ void FProcessor::BuildLightmaps()
 
 	printf("   Creating level mesh\n");
 	LightmapMesh = std::make_unique<DoomLevelMesh>(Level);
-	printf("   Surfaces: %d\n", LightmapMesh->StaticMesh->GetSurfaceCount());
-	printf("   Tiles: %d\n", (int)LightmapMesh->StaticMesh->LightmapTiles.Size());
+	LightmapMesh->SetupTileTransforms();
+	LightmapMesh->PackLightmapAtlas(0);
+	LightmapMesh->BeginFrame(Level);
+	printf("   Surfaces: %d\n", LightmapMesh->GetSurfaceCount());
+	printf("   Tiles: %d\n", (int)LightmapMesh->LightmapTiles.Size());
 
 	std::unique_ptr<GPURaytracer> gpuraytracer = std::make_unique<GPURaytracer>();
 	gpuraytracer->Raytrace(LightmapMesh.get());

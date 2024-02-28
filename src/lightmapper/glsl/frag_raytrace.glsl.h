@@ -8,37 +8,36 @@ static const char* frag_raytrace_glsl = R"glsl(
 #include <shaders/lightmap/trace_sunlight.glsl>
 #include <shaders/lightmap/trace_light.glsl>
 #include <shaders/lightmap/trace_ambient_occlusion.glsl>
-
-#if defined(USE_DRAWINDIRECT)
-
-layout(location = 1) in flat int InstanceIndex;
-
-#endif
+#include <shaders/lightmap/trace_bounce.glsl>
 
 layout(location = 0) centroid in vec3 worldpos;
+layout(location = 1) in flat int InstanceIndex;
+
 layout(location = 0) out vec4 fragcolor;
 
 void main()
 {
-#if defined(USE_DRAWINDIRECT)
-	uint LightStart = constants[InstanceIndex].LightStart;
-	uint LightEnd = constants[InstanceIndex].LightEnd;
 	int SurfaceIndex = constants[InstanceIndex].SurfaceIndex;
-#endif
+	uint LightStart = surfaces[SurfaceIndex].LightStart;
+	uint LightEnd = surfaces[SurfaceIndex].LightEnd;
 
 	vec3 normal = surfaces[SurfaceIndex].Normal;
-	vec3 origin = worldpos + normal * 0.1;
+	vec3 origin = worldpos;
 
 #if defined(USE_SUNLIGHT)
-	vec3 incoming = TraceSunLight(origin, normal, SurfaceIndex);
+	vec3 incoming = TraceSunLight(origin, normal);
 #else
 	vec3 incoming = vec3(0.0);
 #endif
 
 	for (uint j = LightStart; j < LightEnd; j++)
 	{
-		incoming += TraceLight(origin, normal, lights[j], SurfaceIndex);
+		incoming += TraceLight(origin, normal, lights[lightIndexes[j]], 0.0);
 	}
+
+#if defined(USE_BOUNCE)
+	incoming += TraceBounceLight(origin, normal);
+#endif
 
 #if defined(USE_AO)
 	incoming.rgb *= TraceAmbientOcclusion(origin, normal);

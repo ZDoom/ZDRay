@@ -69,8 +69,6 @@ set(ZDRAY_SOURCES
 	src/lightmapper/vk_lightmapper.h
 	src/lightmapper/doom_levelmesh.cpp
 	src/lightmapper/doom_levelmesh.h
-	src/lightmapper/doom_levelsubmesh.cpp
-	src/lightmapper/doom_levelsubmesh.h
 	src/lightmapper/gpuraytracer.cpp
 	src/lightmapper/gpuraytracer.h
 	src/lightmapper/stacktrace.cpp
@@ -82,8 +80,10 @@ set(ZDRAY_SOURCES
 	src/lightmapper/glsl/frag_copy.glsl.h
 	src/lightmapper/glsl/frag_raytrace.glsl.h
 	src/lightmapper/glsl/frag_resolve.glsl.h
+	src/lightmapper/glsl/montecarlo.glsl.h
 	src/lightmapper/glsl/polyfill_rayquery.glsl.h
 	src/lightmapper/glsl/trace_ambient_occlusion.glsl.h
+	src/lightmapper/glsl/trace_bounce.glsl.h
 	src/lightmapper/glsl/trace_levelmesh.glsl.h
 	src/lightmapper/glsl/trace_light.glsl.h
 	src/lightmapper/glsl/trace_sunlight.glsl.h
