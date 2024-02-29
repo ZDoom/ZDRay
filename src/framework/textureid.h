@@ -3,6 +3,8 @@
 #include "framework/tarray.h"
 #include "framework/templates.h"
 #include "framework/zstring.h"
+#include <map>
+#include <memory>
 
 class FGameTexture;
 
@@ -87,12 +89,37 @@ public:
 
 extern FFileSystem fileSystem;
 
+class FGameTexture
+{
+public:
+	bool isValid() const { return Valid; }
+	float GetDisplayWidth() const { return 64.0f; }
+	float GetDisplayHeight() const { return 64.0f; }
+	float GetScaleY() const { return 1.0f; }
+
+private:
+	FString Name;
+	bool Valid = true;
+
+	friend class FTextureManager;
+};
+
 class FTextureManager
 {
 public:
+	FTextureManager()
+	{
+		Textures.Push(std::make_unique<FGameTexture>());
+		Textures.Last()->Name = "-";
+		Textures.Last()->Valid = false;
+	}
+
 	FGameTexture* GetGameTexture(FTextureID texnum, bool animate = false)
 	{
-		return nullptr;
+		if (!texnum.isValid() || texnum.isNull())
+			return Textures[0].get();
+
+		return Textures[texnum.GetIndex()].get();
 	}
 
 	enum
@@ -125,19 +152,20 @@ public:
 		if (name[0] == '-' && name[1] == '\0')
 			return FTextureID(0);
 
-		// To do: actually build up a list of texture ids
-		return FTextureID(1);
+		auto it = NameToID.find(name);
+		if (it != NameToID.end())
+			return FTextureID(it->second);
+
+		int id = Textures.Size();
+		Textures.Push(std::make_unique<FGameTexture>());
+		Textures.Last()->Name = name;
+		NameToID[name] = id;
+
+		return FTextureID(id);
 	}
 
-	
+	std::map<FString, int> NameToID;
+	TArray<std::unique_ptr<FGameTexture>> Textures;
 };
 
 extern FTextureManager TexMan;
-
-class FGameTexture
-{
-public:
-	bool isValid() const { return false; }
-	float GetDisplayWidth() const { return 64.0f; }
-	float GetDisplayHeight() const { return 64.0f; }
-};

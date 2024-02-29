@@ -190,6 +190,9 @@ struct IntSector
 	Plane ceilingplane;
 	Plane floorplane;
 
+	double floorTexZ;
+	double ceilingTexZ;
+
 	int sampleDistanceCeiling;
 	int sampleDistanceFloor;
 

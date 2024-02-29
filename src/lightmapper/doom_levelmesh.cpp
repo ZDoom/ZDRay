@@ -224,11 +224,7 @@ void DoomLevelMesh::CreateSideSurfaces(FLevel& doomMap, IntSideDef* side)
 	float v2Top = (float)front->ceilingplane.ZatPoint(v2);
 	float v2Bottom = (float)front->floorplane.ZatPoint(v2);
 
-	/*if (side->line->getPortal() && side->line->frontsector == front)
-	{
-		CreateLinePortalSurface(doomMap, side);
-	}
-	else*/ if (side->line->special == Line_Horizon && front != back)
+	if (side->line->special == Line_Horizon && front != back)
 	{
 		CreateLineHorizonSurface(doomMap, side);
 	}
@@ -382,14 +378,14 @@ void DoomLevelMesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 
 	const auto& texture = side->GetTexture(WallPart::MIDDLE);
 
-	//if ((side->Flags & WALLF_WRAP_MIDTEX) || (side->line->flags & WALLF_WRAP_MIDTEX))
+	if (/*(side->flags & ML_3DMIDTEX) ||*/ (side->line->flags & ML_3DMIDTEX))
 	{
 		verts[0].z = v1Bottom;
 		verts[1].z = v2Bottom;
 		verts[2].z = v1Top;
 		verts[3].z = v2Top;
 	}
-	/*else
+	else
 	{
 		int offset = 0;
 
@@ -404,18 +400,18 @@ void DoomLevelMesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 
 		if (side->line->flags & ML_DONTPEGBOTTOM)
 		{
-			yTextureOffset += (float)side->sectordef->planes[PLANE_FLOOR].TexZ;
+			yTextureOffset += (float)side->sectordef->floorTexZ;
 		}
 		else
 		{
-			yTextureOffset += (float)(side->sectordef->planes[PLANE_CEILING].TexZ - gameTexture->GetDisplayHeight() / side->GetTextureYScale(WallPart::MIDDLE));
+			yTextureOffset += (float)(side->sectordef->ceilingTexZ - gameTexture->GetDisplayHeight() / side->GetTextureYScale(WallPart::MIDDLE));
 		}
 
 		verts[0].z = std::min(std::max(yTextureOffset + mid1Bottom, v1Bottom), v1Top);
 		verts[1].z = std::min(std::max(yTextureOffset + mid2Bottom, v2Bottom), v2Top);
 		verts[2].z = std::max(std::min(yTextureOffset + mid1Top, v1Top), v1Bottom);
 		verts[3].z = std::max(std::min(yTextureOffset + mid2Top, v2Top), v2Bottom);
-	}*/
+	}
 
 	// mid texture
 	DoomLevelMeshSurface surf;
@@ -775,16 +771,14 @@ bool DoomLevelMesh::IsTopSideSky(IntSector* frontsector, IntSector* backsector, 
 
 bool DoomLevelMesh::IsTopSideVisible(IntSideDef* side)
 {
-	//auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::TOP), true);
-	//return tex && tex->isValid();
-	return true;
+	auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::TOP), true);
+	return tex && tex->isValid();
 }
 
 bool DoomLevelMesh::IsBottomSideVisible(IntSideDef* side)
 {
-	//auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::BOTTOM), true);
-	//return tex && tex->isValid();
-	return true;
+	auto tex = TexMan.GetGameTexture(side->GetTexture(WallPart::BOTTOM), true);
+	return tex && tex->isValid();
 }
 
 bool DoomLevelMesh::IsSkySector(IntSector* sector, SecPlaneType plane)

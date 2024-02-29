@@ -450,6 +450,8 @@ void FProcessor::ParseSector(IntSector *sec)
 	sec->sampleDistanceFloor = 0;
 
 	int ceilingplane = 0, floorplane = 0;
+	bool floorTexZSet = false;
+	bool ceilingTexZSet = false;
 
 	SC_MustGetStringName("{");
 	while (!SC_CheckString("}"))
@@ -457,6 +459,16 @@ void FProcessor::ParseSector(IntSector *sec)
 		const char *value;
 		const char *key = ParseKey(value);
 
+		if (stricmp(key, "heightfloor") == 0)
+		{
+			sec->floorTexZ = CheckFloat(key);
+			floorTexZSet = true;
+		}
+		else if (stricmp(key, "heightceiling") == 0)
+		{
+			sec->ceilingTexZ = CheckFloat(key);
+			ceilingTexZSet = true;
+		}
 		if (stricmp(key, "textureceiling") == 0)
 		{
 			CopyUDMFString(sec->data.ceilingpic, 64, value);
@@ -468,10 +480,14 @@ void FProcessor::ParseSector(IntSector *sec)
 		else if (stricmp(key, "heightceiling") == 0)
 		{
 			sec->data.ceilingheight = CheckFloat(key);
+			if (!ceilingTexZSet)
+				sec->ceilingTexZ = sec->data.ceilingheight;
 		}
 		else if (stricmp(key, "heightfloor") == 0)
 		{
 			sec->data.floorheight = CheckFloat(key);
+			if (!floorTexZSet)
+				sec->floorTexZ = sec->data.floorheight;
 		}
 		else if (stricmp(key, "lightlevel") == 0)
 		{
