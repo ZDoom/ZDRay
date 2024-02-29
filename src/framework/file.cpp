@@ -1,6 +1,6 @@
 
-#include "File.h"
-#include "UTF16.h"
+#include "file.h"
+#include "utf16.h"
 #include <stdexcept>
 
 #ifndef WIN32
