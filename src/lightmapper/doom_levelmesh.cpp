@@ -279,12 +279,12 @@ void DoomLevelMesh::AddWallVertices(DoomLevelMeshSurface& surf, FFlatVertex* ver
 	Mesh.Vertices.Push(verts[3]);
 
 	unsigned int startVertIndex = surf.MeshLocation.StartVertIndex;
+	Mesh.Indexes.Push(startVertIndex + 2);
+	Mesh.Indexes.Push(startVertIndex + 1);
 	Mesh.Indexes.Push(startVertIndex + 0);
 	Mesh.Indexes.Push(startVertIndex + 1);
 	Mesh.Indexes.Push(startVertIndex + 2);
 	Mesh.Indexes.Push(startVertIndex + 3);
-	Mesh.Indexes.Push(startVertIndex + 2);
-	Mesh.Indexes.Push(startVertIndex + 1);
 
 	surf.Bounds = GetBoundsFromSurface(surf);
 }
