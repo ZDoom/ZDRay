@@ -30,6 +30,12 @@ set(ZDRAY_SOURCES
 	src/framework/bounds.h
 	src/framework/textureid.cpp
 	src/framework/textureid.h
+	src/framework/zipreader.cpp
+	src/framework/zipreader.h
+	src/framework/file.cpp
+	src/framework/file.h
+	src/framework/utf16.cpp
+	src/framework/utf16.h
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/blockmapbuilder/blockmapbuilder.h
 	src/level/level.cpp
@@ -107,6 +113,8 @@ set(THIRDPARTY_SOURCES
 	${CMAKE_SOURCE_DIR}/thirdparty/dp_rect_pack/dp_rect_pack.h
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.h
 	${CMAKE_SOURCE_DIR}/thirdparty/miniz/miniz.c
+	${CMAKE_SOURCE_DIR}/thirdparty/picopng/picopng.cpp
+	${CMAKE_SOURCE_DIR}/thirdparty/picopng/picopng.h
 )
 
 set(ZDRAY_LIBS
@@ -130,6 +138,7 @@ source_group("src\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/src/
 source_group("thirdparty" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/.+")
 source_group("thirdparty\\dp_rect_pack" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dp_rect_pack/.+")
 source_group("thirdparty\\miniz" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/miniz/.+")
+source_group("thirdparty\\picopng" REGULAR_EXPRESSION "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/picopng/.+")
 
 include_directories( src "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ZVulkan/include" "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" )
 
