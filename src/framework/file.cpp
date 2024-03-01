@@ -10,6 +10,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <libgen.h>
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
 #endif
 
 #ifdef WIN32
