@@ -3,6 +3,7 @@
 #include "framework/tarray.h"
 #include "framework/templates.h"
 #include "framework/zstring.h"
+#include "framework/filesystem.h"
 #include <map>
 #include <memory>
 
@@ -70,24 +71,6 @@ class FSetTextureID : public FTextureID
 public:
 	constexpr FSetTextureID(int v) : FTextureID(v) {}
 };
-
-
-
-struct FileData
-{
-	char* GetMem() { return nullptr; }
-};
-
-class FFileSystem
-{
-public:
-	int CheckNumForFullName(const FString& fullname) { return -1; }
-	int FileLength(int lump) { return 0; }
-	FileData ReadFile(int lump) { return {}; }
-	const char* GetFileFullName(int lump, bool returnshort = true) const { return ""; }
-};
-
-extern FFileSystem fileSystem;
 
 class FGameTexture
 {

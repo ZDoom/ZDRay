@@ -36,6 +36,8 @@ set(ZDRAY_SOURCES
 	src/framework/file.h
 	src/framework/utf16.cpp
 	src/framework/utf16.h
+	src/framework/filesystem.cpp
+	src/framework/filesystem.h
 	src/blockmapbuilder/blockmapbuilder.cpp
 	src/blockmapbuilder/blockmapbuilder.h
 	src/level/level.cpp
