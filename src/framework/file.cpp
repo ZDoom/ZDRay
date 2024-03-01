@@ -15,6 +15,10 @@
 #endif
 #endif
 
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 #ifdef WIN32
 
 #define NOMINMAX
