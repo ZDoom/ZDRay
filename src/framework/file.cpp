@@ -15,10 +15,6 @@
 #endif
 #endif
 
-#ifdef __APPLE__
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-
 #ifdef WIN32
 
 #define NOMINMAX
@@ -343,109 +339,6 @@ std::vector<std::string> Directory::folders(const std::string& filename)
 	throw std::runtime_error("Directory::folders not implemented");
 #endif
 }
-
-#ifdef WIN32
-std::string Directory::exe_path()
-{
-	WCHAR exe_filename[1024];
-	DWORD len = GetModuleFileNameW(nullptr, exe_filename, 1024);
-	if (len == 0 || len == 1024)
-		throw std::runtime_error("GetModuleFileName failed!");
-	return FilePath::remove_last_component(from_utf16(exe_filename));
-}
-#else
-std::string Directory::exe_path()
-{
-	char exe_file[PATH_MAX];
-#ifdef __APPLE__
-	CFBundleRef mainBundle = CFBundleGetMainBundle();
-	if (mainBundle)
-	{
-		CFURLRef mainURL = CFBundleCopyBundleURL(mainBundle);
-
-		if (mainURL)
-		{
-			int ok = CFURLGetFileSystemRepresentation(
-				mainURL, (Boolean)true, (UInt8*)exe_file, PATH_MAX
-			);
-
-			if (ok)
-			{
-				return std::string(exe_file) + "/";
-			}
-		}
-	}
-
-	throw std::runtime_error("get_exe_path failed");
-
-#else
-#ifndef PROC_EXE_PATH
-#define PROC_EXE_PATH "/proc/self/exe"
-#endif
-	int size;
-	struct stat sb;
-	if (lstat(PROC_EXE_PATH, &sb) < 0)
-	{
-#ifdef EXTERN___PROGNAME
-		char* pathenv, * name, * end;
-		char fname[PATH_MAX];
-		char cwd[PATH_MAX];
-		struct stat sba;
-
-		exe_file[0] = '\0';
-		if ((pathenv = getenv("PATH")) != nullptr)
-		{
-			for (name = pathenv; name; name = end)
-			{
-				if ((end = strchr(name, ':')))
-					*end++ = '\0';
-				snprintf(fname, sizeof(fname),
-					"%s/%s", name, (char*)__progname);
-				if (stat(fname, &sba) == 0) {
-					snprintf(exe_file, sizeof(exe_file),
-						"%s/", name);
-					break;
-				}
-			}
-		}
-		// if getenv failed or path still not found
-		// try current directory as last resort
-		if (!exe_file[0])
-		{
-			if (getcwd(cwd, sizeof(cwd)) != nullptr)
-			{
-				snprintf(fname, sizeof(fname),
-					"%s/%s", cwd, (char*)__progname);
-				if (stat(fname, &sba) == 0)
-					snprintf(exe_file, sizeof(exe_file),
-						"%s/", cwd);
-			}
-		}
-		if (!exe_file[0])
-			throw std::runtime_error("get_exe_path: could not find path");
-		else
-			return std::string(exe_file);
-#else
-		throw std::runtime_error("get_exe_path: proc file system not accesible");
-#endif
-	}
-	else
-	{
-		size = readlink(PROC_EXE_PATH, exe_file, PATH_MAX);
-		if (size < 0)
-		{
-			throw std::runtime_error(strerror(errno));
-		}
-		else
-		{
-			exe_file[size] = '\0';
-			return std::string(dirname(exe_file)) + "/";
-		}
-	}
-#endif
-
-}
-#endif
 
 void Directory::create(const std::string& path)
 {
