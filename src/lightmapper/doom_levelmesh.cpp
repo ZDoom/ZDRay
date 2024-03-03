@@ -475,26 +475,26 @@ void DoomLevelMesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 		surf.ControlSector = xfloor;
 		surf.IsSky = false;
 
-		float blZ = (float)xfloor->floorplane.ZatPoint(v1);
-		float brZ = (float)xfloor->floorplane.ZatPoint(v2);
-		float tlZ = (float)xfloor->ceilingplane.ZatPoint(v1);
-		float trZ = (float)xfloor->ceilingplane.ZatPoint(v2);
+		float v1Top = (float)xfloor->ceilingplane.ZatPoint(v1);
+		float v1Bottom = (float)xfloor->floorplane.ZatPoint(v1);
+		float v2Top = (float)xfloor->ceilingplane.ZatPoint(v2);
+		float v2Bottom = (float)xfloor->floorplane.ZatPoint(v2);
 
 		FFlatVertex verts[4];
-		verts[0].x = verts[2].x = v2.X;
-		verts[0].y = verts[2].y = v2.Y;
-		verts[1].x = verts[3].x = v1.X;
-		verts[1].y = verts[3].y = v1.Y;
-		verts[0].z = brZ;
-		verts[1].z = blZ;
-		verts[2].z = trZ;
-		verts[3].z = tlZ;
+		verts[0].x = verts[2].x = v1.X;
+		verts[0].y = verts[2].y = v1.Y;
+		verts[1].x = verts[3].x = v2.X;
+		verts[1].y = verts[3].y = v2.Y;
+		verts[0].z = v1Bottom;
+		verts[1].z = v2Bottom;
+		verts[2].z = v1Top;
+		verts[3].z = v2Top;
 
 		surf.SectorGroup = sectorGroup[back->Index(doomMap)];
 		surf.Texture = side->GetTexture(WallPart::MIDDLE);
 
 		AddWallVertices(surf, verts);
-		SetSideTextureUVs(surf, side, WallPart::TOP, tlZ, blZ, trZ, brZ);
+		SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
 		AddSurfaceToTile(surf, doomMap, side->GetSampleDistance(WallPart::MIDDLE));
 
 		Surfaces.Push(surf);
@@ -660,7 +660,7 @@ void DoomLevelMesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, Int
 
 	for (int j = 0; j < surf.MeshLocation.NumVerts; j++)
 	{
-		MapSegGLEx* seg = &doomMap.GLSegs[sub->firstline + (surf.MeshLocation.NumVerts - 1) - j];
+		MapSegGLEx* seg = &doomMap.GLSegs[sub->firstline + j];
 		auto v = doomMap.GetSegVertex(seg->v1);
 		FVector2 v1(v.x, v.y);
 		FVector2 uv = (mat * FVector4(v1.X / 64.f, -v1.Y / 64.f, 0.f, 1.f)).XY(); // The magic 64.f and negative Y is based on SetFlatVertex
@@ -675,12 +675,25 @@ void DoomLevelMesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, Int
 	unsigned int startVertIndex = surf.MeshLocation.StartVertIndex;
 	unsigned int numElements = 0;
 	surf.MeshLocation.StartElementIndex = Mesh.Indexes.Size();
-	for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
+	if (!IsFacingUp(verts, surf.MeshLocation.NumVerts))
 	{
-		Mesh.Indexes.Push(startVertIndex);
-		Mesh.Indexes.Push(startVertIndex + j - 1);
-		Mesh.Indexes.Push(startVertIndex + j);
-		numElements += 3;
+		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
+		{
+			Mesh.Indexes.Push(startVertIndex);
+			Mesh.Indexes.Push(startVertIndex + j - 1);
+			Mesh.Indexes.Push(startVertIndex + j);
+			numElements += 3;
+		}
+	}
+	else
+	{
+		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
+		{
+			Mesh.Indexes.Push(startVertIndex + j);
+			Mesh.Indexes.Push(startVertIndex + j - 1);
+			Mesh.Indexes.Push(startVertIndex);
+			numElements += 3;
+		}
 	}
 	surf.MeshLocation.NumElements = numElements;
 	surf.Bounds = GetBoundsFromSurface(surf);
@@ -744,12 +757,25 @@ void DoomLevelMesh::CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, I
 	unsigned int startVertIndex = surf.MeshLocation.StartVertIndex;
 	unsigned int numElements = 0;
 	surf.MeshLocation.StartElementIndex = Mesh.Indexes.Size();
-	for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
+	if (!IsFacingUp(verts, surf.MeshLocation.NumVerts))
 	{
-		Mesh.Indexes.Push(startVertIndex + j);
-		Mesh.Indexes.Push(startVertIndex + j - 1);
-		Mesh.Indexes.Push(startVertIndex);
-		numElements += 3;
+		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
+		{
+			Mesh.Indexes.Push(startVertIndex + j);
+			Mesh.Indexes.Push(startVertIndex + j - 1);
+			Mesh.Indexes.Push(startVertIndex);
+			numElements += 3;
+		}
+	}
+	else
+	{
+		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
+		{
+			Mesh.Indexes.Push(startVertIndex);
+			Mesh.Indexes.Push(startVertIndex + j - 1);
+			Mesh.Indexes.Push(startVertIndex + j);
+			numElements += 3;
+		}
 	}
 	surf.MeshLocation.NumElements = numElements;
 	surf.Bounds = GetBoundsFromSurface(surf);

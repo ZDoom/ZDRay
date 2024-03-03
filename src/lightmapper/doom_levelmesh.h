@@ -109,6 +109,18 @@ private:
 	void PropagateLight(FLevel& doomMap, ThingLight* light, int recursiveDepth);
 	int GetLightIndex(ThingLight* light, int portalgroup);
 
+	static bool IsFacingUp(FFlatVertex* vertices, int count)
+	{
+		for (int i = 2; i < count; i++)
+		{
+			if (!IsDegenerate(vertices[i - 2].fPos(), vertices[i - 1].fPos(), vertices[i].fPos()))
+			{
+				return ToPlane(vertices[i - 2].fPos(), vertices[i - 1].fPos(), vertices[i].fPos()).Z >= 0.0f;
+			}
+		}
+		return true;
+	}
+
 	static FVector4 ToPlane(const FFlatVertex& pt1, const FFlatVertex& pt2, const FFlatVertex& pt3)
 	{
 		return ToPlane(FVector3(pt1.x, pt1.y, pt1.z), FVector3(pt2.x, pt2.y, pt2.z), FVector3(pt3.x, pt3.y, pt3.z));
