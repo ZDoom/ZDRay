@@ -36,9 +36,14 @@ VulkanRenderDevice::VulkanRenderDevice()
 
 	commands = std::make_unique<VkCommandBufferManager>(this);
 	descriptors = std::make_unique<VkDescriptorSetManager>(this);
+	samplers = std::make_unique<VkSamplerManager>(this);
 	textures = std::make_unique<VkTextureManager>(this);
 	levelmesh = std::make_unique<VkLevelMesh>(this);
 	lightmapper = std::make_unique<VkLightmapper>(this);
+
+	descriptors->AddBindlessTextureIndex(GetTextureManager()->GetNullTextureView(), GetSamplerManager()->Get());
+	descriptors->AddBindlessTextureIndex(GetTextureManager()->GetNullTextureView(), GetSamplerManager()->Get());
+	descriptors->UpdateBindlessDescriptorSet();
 }
 
 VulkanRenderDevice::~VulkanRenderDevice()
@@ -89,6 +94,51 @@ VulkanCommandBuffer* VkCommandBufferManager::GetTransferCommands()
 
 VkTextureManager::VkTextureManager(VulkanRenderDevice* fb) : fb(fb)
 {
+	CreateNullTexture();
+}
+
+void VkTextureManager::CreateNullTexture()
+{
+	NullTexture = ImageBuilder()
+		.Format(VK_FORMAT_R8G8B8A8_UNORM)
+		.Size(1, 1)
+		.Usage(VK_IMAGE_USAGE_SAMPLED_BIT)
+		.DebugName("VkTextureManager.NullTexture")
+		.Create(fb->GetDevice());
+
+	NullTextureView = ImageViewBuilder()
+		.Image(NullTexture.get(), VK_FORMAT_R8G8B8A8_UNORM)
+		.DebugName("VkTextureManager.NullTextureView")
+		.Create(fb->GetDevice());
+
+	auto stagingBuffer = BufferBuilder()
+		.Size(4)
+		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
+		.DebugName("VkTextureManager.NullTextureStaging")
+		.Create(fb->GetDevice());
+
+	// Put white in the texture
+	uint32_t* data = (uint32_t*)stagingBuffer->Map(0, 4);
+	*data = 0xffffffff;
+	stagingBuffer->Unmap();
+
+	PipelineBarrier()
+		.AddImage(NullTexture.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_ASPECT_COLOR_BIT)
+		.Execute(fb->GetCommands()->GetTransferCommands(), VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+	VkBufferImageCopy region = {};
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.layerCount = 1;
+	region.imageExtent.depth = 1;
+	region.imageExtent.width = 1;
+	region.imageExtent.height = 1;
+	fb->GetCommands()->GetTransferCommands()->copyBufferToImage(stagingBuffer->buffer, NullTexture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	fb->GetCommands()->TransferDeleteList->Add(std::move(stagingBuffer));
+
+	PipelineBarrier()
+		.AddImage(NullTexture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT)
+		.Execute(fb->GetCommands()->GetTransferCommands(), VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
 void VkTextureManager::CreateLightmap(int newLMTextureSize, int newLMTextureCount)
@@ -157,6 +207,20 @@ void VkTextureManager::DownloadLightmap(int arrayIndex, uint16_t* buffer)
 
 /////////////////////////////////////////////////////////////////////////////
 
+VkSamplerManager::VkSamplerManager(VulkanRenderDevice* fb) : fb(fb)
+{
+	Sampler = SamplerBuilder()
+		.MagFilter(VK_FILTER_NEAREST)
+		.MinFilter(VK_FILTER_NEAREST)
+		.AddressMode(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_REPEAT)
+		.MipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST)
+		.MaxLod(0.25f)
+		.DebugName("VkSamplerManager.Sampler")
+		.Create(fb->GetDevice());
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
 VkDescriptorSetManager::VkDescriptorSetManager(VulkanRenderDevice* fb) : fb(fb)
 {
 	CreateBindlessDescriptorSet();
@@ -196,3 +260,6 @@ int VkDescriptorSetManager::AddBindlessTextureIndex(VulkanImageView* imageview, 
 	WriteBindless.AddCombinedImageSampler(BindlessDescriptorSet.get(), 0, index, imageview, sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	return index;
 }
+
+/////////////////////////////////////////////////////////////////////////////
+

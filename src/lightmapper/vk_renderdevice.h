@@ -11,6 +11,7 @@ class VkLightmapper;
 class VkCommandBufferManager;
 class VkDescriptorSetManager;
 class VkTextureManager;
+class VkSamplerManager;
 
 class VulkanRenderDevice
 {
@@ -22,10 +23,11 @@ public:
 	VkCommandBufferManager* GetCommands() { return commands.get(); }
 	VkDescriptorSetManager* GetDescriptorSetManager() { return descriptors.get(); }
 	VkTextureManager* GetTextureManager() { return textures.get(); }
+	VkSamplerManager* GetSamplerManager() { return samplers.get(); }
 	VkLevelMesh* GetLevelMesh() { return levelmesh.get(); }
 	VkLightmapper* GetLightmapper() { return lightmapper.get(); }
 
-	int GetBindlessTextureIndex(FTextureID texture) { return 0; }
+	int GetBindlessTextureIndex(FTextureID texture) { return texture.isValid() ? 1 : 0; }
 
 	bool IsRayQueryEnabled() const { return useRayQuery; }
 
@@ -36,6 +38,7 @@ private:
 	std::unique_ptr<VkCommandBufferManager> commands;
 	std::unique_ptr<VkDescriptorSetManager> descriptors;
 	std::unique_ptr<VkTextureManager> textures;
+	std::unique_ptr<VkSamplerManager> samplers;
 	std::unique_ptr<VkLevelMesh> levelmesh;
 	std::unique_ptr<VkLightmapper> lightmapper;
 };
@@ -117,12 +120,32 @@ public:
 	void CreateLightmap(int newLMTextureSize, int newLMTextureCount);
 	void DownloadLightmap(int arrayIndex, uint16_t* buffer);
 
+	VulkanImage* GetNullTexture() { return NullTexture.get(); }
+	VulkanImageView* GetNullTextureView() { return NullTextureView.get(); }
+
 	VkTextureImage Lightmap;
 	int LMTextureSize = 0;
 	int LMTextureCount = 0;
 
 private:
+	void CreateNullTexture();
+
 	VulkanRenderDevice* fb = nullptr;
+
+	std::unique_ptr<VulkanImage> NullTexture;
+	std::unique_ptr<VulkanImageView> NullTextureView;
+};
+
+class VkSamplerManager
+{
+public:
+	VkSamplerManager(VulkanRenderDevice* fb);
+
+	VulkanSampler* Get() { return Sampler.get(); }
+
+private:
+	VulkanRenderDevice* fb = nullptr;
+	std::unique_ptr<VulkanSampler> Sampler;
 };
 
 class VkDescriptorSetManager
