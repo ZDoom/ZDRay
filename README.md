@@ -55,13 +55,13 @@ thing // ZDRayInfo (ZDRay properties for the map)
 thing // Lightmap point light (Light color and distance properties use the same args as dynamic lights)
 {
 	type = 9876;
-	lm_sourceradius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the softness)
+	sourceradius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the softness)
 }
 
 thing // Lightmap spotlight (Light color, distance and angle properties use the same args as dynamic lights)
 {
 	type = 9881;
-	lm_sourceradius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the softness)
+	sourceradius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the softness)
 }
 
 linedef

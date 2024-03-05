@@ -282,7 +282,7 @@ void FLevel::CreateLights()
 
 		for (const auto& prop : thing->props)
 		{
-			if (!stricmp(prop.key, "lm_sourceradius"))
+			if (!stricmp(prop.key, "sourceradius"))
 			{
 				sourceradius = atof(prop.value);
 			}
