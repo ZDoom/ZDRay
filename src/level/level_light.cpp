@@ -247,6 +247,7 @@ void FLevel::CreateLights()
 		float lightDistance = 0.0f;
 		float innerAngleCos = -1.0f;
 		float outerAngleCos = -1.0f;
+		float sourceradius = 5.0f;
 
 		// need to process point lights and spot lights differently due to their
 		// inconsistent arg usage...
@@ -279,6 +280,14 @@ void FLevel::CreateLights()
 			outerAngleCos = std::cos((float)thing->args[2] * 3.14159265359f / 180.0f);
 		}
 
+		for (const auto& prop : thing->props)
+		{
+			if (!stricmp(prop.key, "lm_sourceradius"))
+			{
+				sourceradius = atof(prop.value);
+			}
+		}
+
 		// this is known as "intensity" on dynamic lights (and in UDB)
 		lightDistance = thing->args[3];
 
@@ -304,6 +313,7 @@ void FLevel::CreateLights()
 			thingLight.origin.X = x;
 			thingLight.origin.Y = y;
 			thingLight.sectorGroup = thingLight.sector->group;
+			thingLight.sourceRadius = sourceradius;
 
 			ThingLights.Push(thingLight);
 		}

@@ -413,6 +413,7 @@ struct ThingLight
 	float           outerAngleCos;
 	float           height;
 	float           radius;
+	float           sourceRadius;
 	bool            bCeiling;
 	IntSector       *sector;
 	MapSubsectorEx  *ssect;

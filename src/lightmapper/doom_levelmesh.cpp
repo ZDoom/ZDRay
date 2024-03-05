@@ -148,6 +148,7 @@ int DoomLevelMesh::GetLightIndex(ThingLight* light, int portalgroup)
 	meshlight.OuterAngleCos = light->outerAngleCos;
 	meshlight.SpotDir = light->SpotDir();
 	meshlight.Color = light->rgb;
+	meshlight.SourceRadius = light->sourceRadius;
 
 	meshlight.SectorGroup = 0;
 	// if (light->sector)

@@ -37,8 +37,6 @@ VkLightmapper::VkLightmapper(VulkanRenderDevice* fb) : fb(fb)
 {
 	useRayQuery = fb->IsRayQueryEnabled();
 
-	templightlist.Resize(128);
-
 	try
 	{
 		CreateUniformBuffer();
