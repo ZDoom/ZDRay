@@ -1,5 +1,5 @@
 
-# ZDRay baking utility for GZDoom
+# ZDRay baking utility for VKDoom/GZDoom
 
 ZDRay is a node and lightmap generator for GZDoom. ZDRay is intended as a drop-in replacement for zdbsp, with the additional feature that it can also bake lightmap lights. Once ZDRay has processed the level WAD it is ready to be used by GZDoom.
 
@@ -8,6 +8,8 @@ ZDRay is based on zdbsp for the node generation and originally used dlight for t
 The ray tracing code has been completely rewritten since. ZDRay has two paths for lightmap baking - either the Vulkan ray query API path for raytracing-enabled cards, or a shader-based path utilizing storage buffers for non-RT cards. It defaults to the ray query path but will automatically fall back to the shader path if no RT card is found on the system.
 
 ## ZDRay Usage
+
+**ATTENTION: You MUST place down a ZDRayInfo actor somewhere in the map for the lightmaps to appear at all!**
 
 <pre>
 Usage: zdray [options] sourcefile.wad
