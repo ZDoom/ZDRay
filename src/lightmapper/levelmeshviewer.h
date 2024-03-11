@@ -61,7 +61,7 @@ class LevelMeshViewer
 {
 public:
 	LevelMeshViewer() { }
-	void Exec(VulkanRenderDevice* renderdevice) { }
+	void Exec(VulkanRenderDevice* renderdevice, const FVector3& sundir, const FVector3& suncolor, float sunintensity) { }
 };
 
 #endif
