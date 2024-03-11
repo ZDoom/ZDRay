@@ -81,13 +81,17 @@ set(ZDRAY_SOURCES
 	src/lightmapper/gpuraytracer.h
 	src/lightmapper/stacktrace.cpp
 	src/lightmapper/stacktrace.h
+	src/lightmapper/levelmeshviewer.cpp
+	src/lightmapper/levelmeshviewer.h
 	src/lightmapper/glsl/binding_lightmapper.glsl.h
 	src/lightmapper/glsl/binding_raytrace.glsl.h
 	src/lightmapper/glsl/binding_textures.glsl.h
+	src/lightmapper/glsl/binding_viewer.glsl.h
 	src/lightmapper/glsl/frag_blur.glsl.h
 	src/lightmapper/glsl/frag_copy.glsl.h
 	src/lightmapper/glsl/frag_raytrace.glsl.h
 	src/lightmapper/glsl/frag_resolve.glsl.h
+	src/lightmapper/glsl/frag_viewer.glsl.h
 	src/lightmapper/glsl/montecarlo.glsl.h
 	src/lightmapper/glsl/polyfill_rayquery.glsl.h
 	src/lightmapper/glsl/trace_ambient_occlusion.glsl.h
@@ -98,6 +102,7 @@ set(ZDRAY_SOURCES
 	src/lightmapper/glsl/vert_copy.glsl.h
 	src/lightmapper/glsl/vert_raytrace.glsl.h
 	src/lightmapper/glsl/vert_screenquad.glsl.h
+	src/lightmapper/glsl/vert_viewer.glsl.h
 	src/models/model.cpp
 	src/models/model.h
 	src/models/model_md2.h

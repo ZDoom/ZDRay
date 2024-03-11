@@ -118,6 +118,7 @@ int				 LMDims = 1024;
 bool			 VKDebug = false;
 bool			 DumpMesh = false;
 bool			 NoRtx = false;
+bool			 showviewer = false;
 
 int ambientSampleCount = 2048;
 
@@ -160,10 +161,11 @@ static option long_opts[] =
 	{"dump-mesh",		no_argument,		0,	1004},
 	{"preview",			no_argument,		0,	1005},
 	{"no-rtx",			no_argument,		0,	1006},
+	{"viewer",			no_argument,		0,	1007},
 	{0,0,0,0}
 };
 
-static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:D:::";
+static const char short_opts[] = "wVgGvbNrReEm:o:f:p:s:d:PqtzZXx5cj:S:D::::";
 
 // CODE --------------------------------------------------------------------
 
@@ -479,6 +481,9 @@ static void ParseArgs(int argc, char **argv)
 			break;
 		case 1006:
 			NoRtx = true;
+			break;
+		case 1007:
+			showviewer = true;
 			break;
 		case 1000:
 			ShowUsage();

@@ -4,6 +4,7 @@
 #include "framework/textureid.h"
 #include "zvulkan/vulkanobjects.h"
 #include "zvulkan/vulkanbuilders.h"
+#include "framework/matrix.h"
 #include <stdexcept>
 
 class VkLevelMesh;
@@ -12,14 +13,18 @@ class VkCommandBufferManager;
 class VkDescriptorSetManager;
 class VkTextureManager;
 class VkSamplerManager;
+class VulkanSwapChain;
+class LevelMeshViewer;
+class VSMatrix;
 
 class VulkanRenderDevice
 {
 public:
-	VulkanRenderDevice();
+	VulkanRenderDevice(LevelMeshViewer* viewer);
 	~VulkanRenderDevice();
 
 	VulkanDevice* GetDevice() { return device.get(); }
+	VulkanSwapChain* GetSwapChain() { return swapchain.get(); }
 	VkCommandBufferManager* GetCommands() { return commands.get(); }
 	VkDescriptorSetManager* GetDescriptorSetManager() { return descriptors.get(); }
 	VkTextureManager* GetTextureManager() { return textures.get(); }
@@ -31,16 +36,38 @@ public:
 
 	bool IsRayQueryEnabled() const { return useRayQuery; }
 
+	void ResizeSwapChain(int width, int height);
+	void DrawViewer(const FVector3& cameraPos, const VSMatrix& viewToWorld, float fovy, float aspect, const FVector3& sundir, const FVector3& suncolor, float sunintensity);
+
 	bool useRayQuery = false;
 
 private:
+	void CreateViewerObjects();
+
 	std::shared_ptr<VulkanDevice> device;
+	std::shared_ptr<VulkanSwapChain> swapchain;
 	std::unique_ptr<VkCommandBufferManager> commands;
 	std::unique_ptr<VkDescriptorSetManager> descriptors;
 	std::unique_ptr<VkTextureManager> textures;
 	std::unique_ptr<VkSamplerManager> samplers;
 	std::unique_ptr<VkLevelMesh> levelmesh;
 	std::unique_ptr<VkLightmapper> lightmapper;
+
+	struct
+	{
+		std::unique_ptr<VulkanDescriptorSetLayout> DescriptorSetLayout;
+		std::unique_ptr<VulkanDescriptorPool> DescriptorPool;
+		std::unique_ptr<VulkanDescriptorSet> DescriptorSet;
+		std::unique_ptr<VulkanShader> VertexShader;
+		std::unique_ptr<VulkanShader> FragmentShader;
+		std::unique_ptr<VulkanRenderPass> RenderPass;
+		std::unique_ptr<VulkanPipelineLayout> PipelineLayout;
+		std::unique_ptr<VulkanPipeline> Pipeline;
+	} Viewer;
+
+	int CurrentWidth = 0;
+	int CurrentHeight = 0;
+	std::vector<std::unique_ptr<VulkanFramebuffer>> Framebuffers;
 };
 
 class VkCommandBufferManager
@@ -48,12 +75,15 @@ class VkCommandBufferManager
 public:
 	VkCommandBufferManager(VulkanRenderDevice* fb);
 
-	void SubmitAndWait();
+	void SubmitAndWait(int imageIndex = -1);
 
 	VulkanCommandBuffer* GetTransferCommands();
+	VulkanCommandBuffer* GetDrawCommands();
 
 	void PushGroup(VulkanCommandBuffer* cmdbuffer, const FString& name) { }
 	void PopGroup(VulkanCommandBuffer* cmdbuffer) { }
+
+	int AcquireImage();
 
 	class DeleteList
 	{
@@ -90,6 +120,20 @@ private:
 	std::unique_ptr<VulkanCommandPool> mCommandPool;
 	std::unique_ptr<VulkanCommandBuffer> mTransferCommands;
 	std::unique_ptr<VulkanCommandBuffer> mDrawCommands;
+	std::unique_ptr<VulkanSemaphore> mImageAvailableSemaphore;
+	std::unique_ptr<VulkanSemaphore> mRenderFinishedSemaphore;
+	std::unique_ptr<VulkanFence> mPresentFinishedFence;
+};
+
+struct ViewerPushConstants
+{
+	VSMatrix ViewToWorld;
+	FVector3 CameraPos;
+	float ProjX;
+	FVector3 SunDir;
+	float ProjY;
+	FVector3 SunColor;
+	float SunIntensity;
 };
 
 class VkTextureImage

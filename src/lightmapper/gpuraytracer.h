@@ -3,6 +3,7 @@
 #include "vk_renderdevice.h"
 
 class DoomLevelMesh;
+class LevelMeshViewer;
 
 class GPURaytracer
 {
@@ -16,5 +17,6 @@ private:
 	void PrintVulkanInfo();
 	void LoadRenderDoc();
 
+	std::unique_ptr<LevelMeshViewer> mViewer;
 	std::unique_ptr<VulkanRenderDevice> mDevice;
 };

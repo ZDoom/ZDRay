@@ -5,6 +5,7 @@
 #include "vk_lightmapper.h"
 #include "renderdoc_app.h"
 #include "doom_levelmesh.h"
+#include "levelmeshviewer.h"
 
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -12,10 +13,14 @@
 
 static RENDERDOC_API_1_4_2* rdoc_api;
 
+extern bool showviewer;
+
 GPURaytracer::GPURaytracer()
 {
 	LoadRenderDoc();
-	mDevice = std::make_unique<VulkanRenderDevice>();
+	if (showviewer)
+		mViewer = std::make_unique<LevelMeshViewer>();
+	mDevice = std::make_unique<VulkanRenderDevice>(mViewer.get());
 	PrintVulkanInfo();
 }
 
@@ -77,6 +82,9 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 		{
 			mDevice->GetTextureManager()->DownloadLightmap(arrayIndex, mesh->LMTextureData.Data() + arrayIndex * mesh->LMTextureSize * mesh->LMTextureSize * 4);
 		}
+
+		if (mViewer)
+			mViewer->Exec(mDevice.get(), mesh->SunDirection, mesh->SunColor, 1.0f);
 	}
 	catch (...)
 	{
