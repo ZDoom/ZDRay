@@ -98,7 +98,6 @@ void VulkanRenderDevice::DrawViewer(const FVector3& cameraPos, const VSMatrix& v
 	int imageIndex = GetCommands()->AcquireImage();
 	if (imageIndex < 0)
 	{
-		Sleep(500);
 		return;
 	}
 
