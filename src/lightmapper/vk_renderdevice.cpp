@@ -82,7 +82,6 @@ VulkanRenderDevice::VulkanRenderDevice(LevelMeshViewer* viewer)
 	lightmapper = std::make_unique<VkLightmapper>(this);
 
 	descriptors->AddBindlessTextureIndex(GetTextureManager()->GetNullTextureView(), GetSamplerManager()->Get());
-	descriptors->AddBindlessTextureIndex(GetTextureManager()->GetNullTextureView(), GetSamplerManager()->Get());
 	descriptors->UpdateBindlessDescriptorSet();
 
 	CreateViewerObjects();
@@ -91,6 +90,25 @@ VulkanRenderDevice::VulkanRenderDevice(LevelMeshViewer* viewer)
 VulkanRenderDevice::~VulkanRenderDevice()
 {
 	vkDeviceWaitIdle(device->device);
+}
+
+int VulkanRenderDevice::GetBindlessTextureIndex(FTextureID textureID)
+{
+	if (!textureID.isValid())
+		return 0;
+
+	FGameTexture* tex = TexMan.GetGameTexture(textureID);
+	int& textureIndex = TextureIndexes[tex];
+	if (textureIndex != 0)
+		return textureIndex;
+
+	// To do: upload image
+
+	VulkanImageView* view = GetTextureManager()->GetNullTextureView();
+	VulkanSampler* sampler = GetSamplerManager()->Get();
+
+	textureIndex = GetDescriptorSetManager()->AddBindlessTextureIndex(view, sampler);
+	return textureIndex;
 }
 
 void VulkanRenderDevice::DrawViewer(const FVector3& cameraPos, const VSMatrix& viewToWorld, float fovy, float aspect, const FVector3& sundir, const FVector3& suncolor, float sunintensity)

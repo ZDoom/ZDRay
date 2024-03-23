@@ -32,7 +32,7 @@ public:
 	VkLevelMesh* GetLevelMesh() { return levelmesh.get(); }
 	VkLightmapper* GetLightmapper() { return lightmapper.get(); }
 
-	int GetBindlessTextureIndex(FTextureID texture) { return texture.isValid() ? 1 : 0; }
+	int GetBindlessTextureIndex(FTextureID texture);
 
 	bool IsRayQueryEnabled() const { return useRayQuery; }
 
@@ -68,6 +68,7 @@ private:
 	int CurrentWidth = 0;
 	int CurrentHeight = 0;
 	std::vector<std::unique_ptr<VulkanFramebuffer>> Framebuffers;
+	std::unordered_map<FGameTexture*, int> TextureIndexes;
 };
 
 class VkCommandBufferManager

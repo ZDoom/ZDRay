@@ -54,6 +54,7 @@ void GPURaytracer::Raytrace(DoomLevelMesh* mesh)
 		{
 			levelmesh->BeginFrame();
 			lightmapper->BeginFrame();
+			mDevice->GetDescriptorSetManager()->UpdateBindlessDescriptorSet();
 
 			TArray<LightmapTile*> tiles;
 			for (unsigned int i = 0, count = mesh->LightmapTiles.Size(); i < count; i++)

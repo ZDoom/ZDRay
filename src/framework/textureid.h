@@ -75,14 +75,28 @@ public:
 class FGameTexture
 {
 public:
+	FGameTexture() { Name = "-"; Valid = false; }
+	FGameTexture(FString name);
+
 	bool isValid() const { return Valid; }
-	float GetDisplayWidth() const { return 64.0f; }
-	float GetDisplayHeight() const { return 64.0f; }
-	float GetScaleY() const { return 1.0f; }
+	float GetDisplayWidth() const { return DisplayWidth; }
+	float GetDisplayHeight() const { return DisplayHeight; }
+	float GetScaleY() const { return ScaleY; }
+
+	const void* GetImagePixels() const { return Pixels.data(); }
+	int GetImageWidth() const { return Width; }
+	int GetImageHeight() const { return Height; }
 
 private:
 	FString Name;
 	bool Valid = true;
+	float DisplayWidth = 0.0f;
+	float DisplayHeight = 0.0f;
+	float ScaleY = 1.0f;
+
+	std::vector<unsigned char> Pixels;
+	unsigned long Width = 0;
+	unsigned long Height = 0;
 
 	friend class FTextureManager;
 };
@@ -93,8 +107,6 @@ public:
 	FTextureManager()
 	{
 		Textures.Push(std::make_unique<FGameTexture>());
-		Textures.Last()->Name = "-";
-		Textures.Last()->Valid = false;
 	}
 
 	FGameTexture* GetGameTexture(FTextureID texnum, bool animate = false)
@@ -140,8 +152,7 @@ public:
 			return FTextureID(it->second);
 
 		int id = Textures.Size();
-		Textures.Push(std::make_unique<FGameTexture>());
-		Textures.Last()->Name = name;
+		Textures.Push(std::make_unique<FGameTexture>(name));
 		NameToID[name] = id;
 
 		return FTextureID(id);
