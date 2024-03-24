@@ -6,6 +6,7 @@
 #include "zvulkan/vulkanbuilders.h"
 #include "framework/matrix.h"
 #include <stdexcept>
+#include <unordered_map>
 
 class VkLevelMesh;
 class VkLightmapper;
