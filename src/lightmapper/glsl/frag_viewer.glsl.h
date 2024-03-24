@@ -39,6 +39,17 @@ void main()
 		{
 			incoming = SunColor;
 		}
+
+		if (surface.TextureIndex != 0)
+		{
+			vec2 uv = GetSurfaceUV(result.primitiveIndex, result.primitiveWeights);
+			vec4 color = texture(textures[surface.TextureIndex], uv);
+			incoming *= color.rgb;
+		}
+		else
+		{
+			incoming = vec3(0.0, 0.0, 1.0);
+		}
 	}
 	else
 	{

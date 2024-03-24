@@ -206,8 +206,8 @@ void DoomLevelMesh::CreateSurfaces(FLevel& doomMap)
 
 		for (unsigned int j = 0; j < sector->x3dfloors.Size(); j++)
 		{
-			CreateFloorSurface(doomMap, sub, sector, sector->x3dfloors[j], i);
-			CreateCeilingSurface(doomMap, sub, sector, sector->x3dfloors[j], i);
+			CreateFloorSurface(doomMap, sub, sector, &sector->x3dfloors[j], i);
+			CreateCeilingSurface(doomMap, sub, sector, &sector->x3dfloors[j], i);
 		}
 	}
 }
@@ -454,13 +454,13 @@ void DoomLevelMesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 
 	for (unsigned int j = 0; j < back->x3dfloors.Size(); j++)
 	{
-		IntSector* xfloor = back->x3dfloors[j];
+		X3DFloor* xfloor = &back->x3dfloors[j];
 
 		// Don't create a line when both sectors have the same 3d floor
 		bool bothSides = false;
 		for (unsigned int k = 0; k < front->x3dfloors.Size(); k++)
 		{
-			if (front->x3dfloors[k] == xfloor)
+			if (front->x3dfloors[k].Sector == xfloor->Sector)
 			{
 				bothSides = true;
 				break;
@@ -473,13 +473,13 @@ void DoomLevelMesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 		surf.Type = ST_MIDDLESIDE;
 		surf.TypeIndex = side->Index(doomMap);
 		surf.Side = side;
-		surf.ControlSector = xfloor;
+		surf.ControlSector = xfloor->Sector;
 		surf.IsSky = false;
 
-		float v1Top = (float)xfloor->ceilingplane.ZatPoint(v1);
-		float v1Bottom = (float)xfloor->floorplane.ZatPoint(v1);
-		float v2Top = (float)xfloor->ceilingplane.ZatPoint(v2);
-		float v2Bottom = (float)xfloor->floorplane.ZatPoint(v2);
+		float v1Top = (float)xfloor->Sector->ceilingplane.ZatPoint(v1);
+		float v1Bottom = (float)xfloor->Sector->floorplane.ZatPoint(v1);
+		float v2Top = (float)xfloor->Sector->ceilingplane.ZatPoint(v2);
+		float v2Bottom = (float)xfloor->Sector->floorplane.ZatPoint(v2);
 
 		FFlatVertex verts[4];
 		verts[0].x = verts[2].x = v1.X;
@@ -492,7 +492,7 @@ void DoomLevelMesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 		verts[3].z = v2Top;
 
 		surf.SectorGroup = sectorGroup[back->Index(doomMap)];
-		surf.Texture = side->GetTexture(WallPart::MIDDLE);
+		surf.Texture = xfloor->Line->sidedef[0]->GetTexture(WallPart::MIDDLE);
 
 		AddWallVertices(surf, verts);
 		SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
@@ -627,7 +627,7 @@ void DoomLevelMesh::SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef*
 	}
 }
 
-void DoomLevelMesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, IntSector* controlSector, int typeIndex)
+void DoomLevelMesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, X3DFloor* controlSector, int typeIndex)
 {
 	DoomLevelMeshSurface surf;
 	surf.Subsector = sub;
@@ -640,14 +640,14 @@ void DoomLevelMesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, Int
 	}
 	else
 	{
-		plane = controlSector->ceilingplane;
+		plane = controlSector->Sector->ceilingplane;
 		plane.FlipVert();
 		surf.IsSky = false;
 	}
 
 	surf.MeshLocation.NumVerts = sub->numlines;
 	surf.MeshLocation.StartVertIndex = Mesh.Vertices.Size();
-	surf.Texture = (controlSector ? controlSector : sector)->GetTexture(PLANE_FLOOR);
+	surf.Texture = (controlSector ? controlSector->Sector : sector)->GetTexture(PLANE_FLOOR);
 
 	FGameTexture* txt = TexMan.GetGameTexture(surf.Texture);
 	float w = txt->GetDisplayWidth();
@@ -676,40 +676,28 @@ void DoomLevelMesh::CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, Int
 	unsigned int startVertIndex = surf.MeshLocation.StartVertIndex;
 	unsigned int numElements = 0;
 	surf.MeshLocation.StartElementIndex = Mesh.Indexes.Size();
-	if (!IsFacingUp(verts, surf.MeshLocation.NumVerts))
+	for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
 	{
-		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
-		{
-			Mesh.Indexes.Push(startVertIndex);
-			Mesh.Indexes.Push(startVertIndex + j - 1);
-			Mesh.Indexes.Push(startVertIndex + j);
-			numElements += 3;
-		}
+		Mesh.Indexes.Push(startVertIndex);
+		Mesh.Indexes.Push(startVertIndex + j - 1);
+		Mesh.Indexes.Push(startVertIndex + j);
+		numElements += 3;
 	}
-	else
-	{
-		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
-		{
-			Mesh.Indexes.Push(startVertIndex + j);
-			Mesh.Indexes.Push(startVertIndex + j - 1);
-			Mesh.Indexes.Push(startVertIndex);
-			numElements += 3;
-		}
-	}
+
 	surf.MeshLocation.NumElements = numElements;
 	surf.Bounds = GetBoundsFromSurface(surf);
 
 	surf.Type = ST_FLOOR;
 	surf.TypeIndex = typeIndex;
-	surf.ControlSector = controlSector;
+	surf.ControlSector = controlSector ? controlSector->Sector : nullptr;
 	surf.Plane = FVector4((float)plane.Normal().X, (float)plane.Normal().Y, (float)plane.Normal().Z, -(float)plane.d);
 	surf.SectorGroup = sectorGroup[sector->Index(doomMap)];
-	AddSurfaceToTile(surf, doomMap, (controlSector ? controlSector : sector)->sampleDistanceFloor);
+	AddSurfaceToTile(surf, doomMap, (controlSector ? controlSector->Sector : sector)->sampleDistanceFloor);
 
 	Surfaces.Push(surf);
 }
 
-void DoomLevelMesh::CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, IntSector* controlSector, int typeIndex)
+void DoomLevelMesh::CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, X3DFloor* controlSector, int typeIndex)
 {
 	DoomLevelMeshSurface surf;
 	surf.Subsector = sub;
@@ -722,14 +710,14 @@ void DoomLevelMesh::CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, I
 	}
 	else
 	{
-		plane = controlSector->floorplane;
+		plane = controlSector->Sector->floorplane;
 		plane.FlipVert();
 		surf.IsSky = false;
 	}
 
 	surf.MeshLocation.NumVerts = sub->numlines;
 	surf.MeshLocation.StartVertIndex = Mesh.Vertices.Size();
-	surf.Texture = (controlSector ? controlSector : sector)->GetTexture(PLANE_CEILING);
+	surf.Texture = (controlSector ? controlSector->Sector : sector)->GetTexture(PLANE_CEILING);
 
 	FGameTexture* txt = TexMan.GetGameTexture(surf.Texture);
 	float w = txt->GetDisplayWidth();
@@ -758,35 +746,22 @@ void DoomLevelMesh::CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, I
 	unsigned int startVertIndex = surf.MeshLocation.StartVertIndex;
 	unsigned int numElements = 0;
 	surf.MeshLocation.StartElementIndex = Mesh.Indexes.Size();
-	if (!IsFacingUp(verts, surf.MeshLocation.NumVerts))
+	for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
 	{
-		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
-		{
-			Mesh.Indexes.Push(startVertIndex + j);
-			Mesh.Indexes.Push(startVertIndex + j - 1);
-			Mesh.Indexes.Push(startVertIndex);
-			numElements += 3;
-		}
-	}
-	else
-	{
-		for (int j = 2; j < surf.MeshLocation.NumVerts; j++)
-		{
-			Mesh.Indexes.Push(startVertIndex);
-			Mesh.Indexes.Push(startVertIndex + j - 1);
-			Mesh.Indexes.Push(startVertIndex + j);
-			numElements += 3;
-		}
+		Mesh.Indexes.Push(startVertIndex + j);
+		Mesh.Indexes.Push(startVertIndex + j - 1);
+		Mesh.Indexes.Push(startVertIndex);
+		numElements += 3;
 	}
 	surf.MeshLocation.NumElements = numElements;
 	surf.Bounds = GetBoundsFromSurface(surf);
 
 	surf.Type = ST_CEILING;
 	surf.TypeIndex = typeIndex;
-	surf.ControlSector = controlSector;
+	surf.ControlSector = controlSector ? controlSector->Sector : nullptr;
 	surf.Plane = FVector4((float)plane.Normal().X, (float)plane.Normal().Y, (float)plane.Normal().Z, -(float)plane.d);
 	surf.SectorGroup = sectorGroup[sector->Index(doomMap)];
-	AddSurfaceToTile(surf, doomMap, (controlSector ? controlSector : sector)->sampleDistanceCeiling);
+	AddSurfaceToTile(surf, doomMap, (controlSector ? controlSector->Sector : sector)->sampleDistanceCeiling);
 
 	Surfaces.Push(surf);
 }

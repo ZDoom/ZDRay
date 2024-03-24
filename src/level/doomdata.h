@@ -178,6 +178,12 @@ enum SecPlaneType
 	PLANE_CEILING,
 };
 
+struct X3DFloor
+{
+	IntSector* Sector = nullptr;
+	IntLineDef* Line = nullptr;
+};
+
 struct IntSector
 {
 	// none of the sector properties are used by the node builder
@@ -200,7 +206,7 @@ struct IntSector
 	int ceilinglightdef;
 
 	bool controlsector;
-	TArray<IntSector*> x3dfloors;
+	TArray<X3DFloor> x3dfloors;
 
 	bool HasLightmaps = false;
 

@@ -656,7 +656,7 @@ void FLevel::PostLoadInitialization()
 					{
 						if (Sectors[j].tags[t] == sectorTag)
 						{
-							Sectors[j].x3dfloors.Push(controlsector);
+							Sectors[j].x3dfloors.Push({ controlsector, line });
 							break;
 						}
 					}

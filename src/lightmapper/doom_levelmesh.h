@@ -85,8 +85,8 @@ private:
 	void AddWallVertices(DoomLevelMeshSurface& surf, FFlatVertex* verts);
 	void SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef* side, WallPart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ);
 
-	void CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, IntSector* controlSector, int typeIndex);
-	void CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, IntSector* controlSector, int typeIndex);
+	void CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, X3DFloor* controlSector, int typeIndex);
+	void CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, X3DFloor* controlSector, int typeIndex);
 
 	void AddSurfaceToTile(DoomLevelMeshSurface& surf, FLevel& doomMap, uint16_t sampleDimension);
 	int GetSampleDimension(const DoomLevelMeshSurface& surf, uint16_t sampleDimension);
@@ -108,18 +108,6 @@ private:
 
 	void PropagateLight(FLevel& doomMap, ThingLight* light, int recursiveDepth);
 	int GetLightIndex(ThingLight* light, int portalgroup);
-
-	static bool IsFacingUp(FFlatVertex* vertices, int count)
-	{
-		for (int i = 2; i < count; i++)
-		{
-			if (!IsDegenerate(vertices[i - 2].fPos(), vertices[i - 1].fPos(), vertices[i].fPos()))
-			{
-				return ToPlane(vertices[i - 2].fPos(), vertices[i - 1].fPos(), vertices[i].fPos()).Z >= 0.0f;
-			}
-		}
-		return true;
-	}
 
 	static FVector4 ToPlane(const FFlatVertex& pt1, const FFlatVertex& pt2, const FFlatVertex& pt3)
 	{
