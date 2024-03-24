@@ -56,6 +56,7 @@
 #include <thread>
 
 #include "framework/zdray.h"
+#include "framework/filesystem.h"
 #include "wad/wad.h"
 #include "level/level.h"
 #include "commandline/getopt.h"
@@ -232,6 +233,8 @@ int main(int argc, char **argv)
 			OutName = out;
 			fixSame = true;
 		}
+
+		// fileSystem.AddFolderSource("C:\\Development\\VkDoom\\build\\RelWithDebInfo\\ElderJamReignited");
 
 		{
 			FWadReader inwad(InName);

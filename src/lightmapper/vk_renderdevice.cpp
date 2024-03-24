@@ -102,10 +102,17 @@ int VulkanRenderDevice::GetBindlessTextureIndex(FTextureID textureID)
 	if (textureIndex != 0)
 		return textureIndex;
 
-	// To do: upload image
-
-	VulkanImageView* view = GetTextureManager()->GetNullTextureView();
+	VulkanImageView* view;
 	VulkanSampler* sampler = GetSamplerManager()->Get();
+	if (tex->GetImageWidth() > 0 && tex->GetImageHeight() > 0)
+	{
+		int index = GetTextureManager()->CreateGameTexture(tex->GetImageWidth(), tex->GetImageHeight(), tex->GetImagePixels());
+		view = GetTextureManager()->GetGameTextureView(index);
+	}
+	else
+	{
+		view = GetTextureManager()->GetNullTextureView();
+	}
 
 	textureIndex = GetDescriptorSetManager()->AddBindlessTextureIndex(view, sampler);
 	return textureIndex;
@@ -477,6 +484,56 @@ void VkTextureManager::CreateNullTexture()
 		.Execute(fb->GetCommands()->GetTransferCommands(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
+int VkTextureManager::CreateGameTexture(int width, int height, const void* pixels)
+{
+	int index = (int)GameTextures.size();
+
+	auto texture = ImageBuilder()
+		.Format(VK_FORMAT_R8G8B8A8_UNORM)
+		.Size(width, height)
+		.Usage(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+		.DebugName("VkTextureManager.GameTexture")
+		.Create(fb->GetDevice());
+
+	auto textureView = ImageViewBuilder()
+		.Image(texture.get(), VK_FORMAT_R8G8B8A8_UNORM)
+		.DebugName("VkTextureManager.GameTextureView")
+		.Create(fb->GetDevice());
+
+	auto stagingBuffer = BufferBuilder()
+		.Size(width * height * sizeof(uint32_t))
+		.Usage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
+		.DebugName("VkTextureManager.GameTextureStaging")
+		.Create(fb->GetDevice());
+
+	uint32_t* data = (uint32_t*)stagingBuffer->Map(0, width * height * sizeof(uint32_t));
+	memcpy(data, pixels, width * height * sizeof(uint32_t));
+	stagingBuffer->Unmap();
+
+	PipelineBarrier()
+		.AddImage(texture.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_ASPECT_COLOR_BIT)
+		.Execute(fb->GetCommands()->GetTransferCommands(), VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	VkBufferImageCopy region = {};
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.layerCount = 1;
+	region.imageExtent.depth = 1;
+	region.imageExtent.width = width;
+	region.imageExtent.height = height;
+	fb->GetCommands()->GetTransferCommands()->copyBufferToImage(stagingBuffer->buffer, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	fb->GetCommands()->TransferDeleteList->Add(std::move(stagingBuffer));
+
+	PipelineBarrier()
+		.AddImage(texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT)
+		.Execute(fb->GetCommands()->GetTransferCommands(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+	GameTextures.push_back(std::move(texture));
+	GameTextureViews.push_back(std::move(textureView));
+
+	return index;
+}
+
 void VkTextureManager::CreateLightmap(int newLMTextureSize, int newLMTextureCount)
 {
 	if (LMTextureSize == newLMTextureSize && LMTextureCount == newLMTextureCount + 1)
@@ -548,7 +605,7 @@ VkSamplerManager::VkSamplerManager(VulkanRenderDevice* fb) : fb(fb)
 	Sampler = SamplerBuilder()
 		.MagFilter(VK_FILTER_NEAREST)
 		.MinFilter(VK_FILTER_NEAREST)
-		.AddressMode(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_REPEAT)
+		.AddressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT/*VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE*/, VK_SAMPLER_ADDRESS_MODE_REPEAT/*VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE*/, VK_SAMPLER_ADDRESS_MODE_REPEAT)
 		.MipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST)
 		.MaxLod(0.25f)
 		.DebugName("VkSamplerManager.Sampler")

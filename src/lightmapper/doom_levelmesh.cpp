@@ -316,7 +316,7 @@ void DoomLevelMesh::CreateLineHorizonSurface(FLevel& doomMap, IntSideDef* side)
 	verts[3].z = v2Top;
 	AddWallVertices(surf, verts);
 
-	SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
+	SetSideTextureUVs(doomMap, surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
 
 	Surfaces.Push(surf);
 }
@@ -353,7 +353,7 @@ void DoomLevelMesh::CreateFrontWallSurface(FLevel& doomMap, IntSideDef* side)
 	surf.Texture = side->GetTexture(WallPart::MIDDLE);
 	AddWallVertices(surf, verts);
 
-	SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
+	SetSideTextureUVs(doomMap, surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
 	AddSurfaceToTile(surf, doomMap, side->GetSampleDistance(WallPart::MIDDLE));
 
 	Surfaces.Push(surf);
@@ -433,7 +433,7 @@ void DoomLevelMesh::CreateMidWallSurface(FLevel& doomMap, IntSideDef* side)
 		surf.Plane.W = -surf.Plane.W;
 	}
 
-	SetSideTextureUVs(surf, side, WallPart::TOP, verts[2].z, verts[0].z, verts[3].z, verts[1].z);
+	SetSideTextureUVs(doomMap, surf, side, WallPart::TOP, verts[2].z, verts[0].z, verts[3].z, verts[1].z);
 	AddSurfaceToTile(surf, doomMap, side->GetSampleDistance(WallPart::MIDDLE));
 
 	Surfaces.Push(surf);
@@ -495,7 +495,7 @@ void DoomLevelMesh::Create3DFloorWallSurfaces(FLevel& doomMap, IntSideDef* side)
 		surf.Texture = xfloor->Line->sidedef[0]->GetTexture(WallPart::MIDDLE);
 
 		AddWallVertices(surf, verts);
-		SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
+		SetSideTextureUVs(doomMap, surf, side, WallPart::TOP, v1Top, v1Bottom, v2Top, v2Bottom);
 		AddSurfaceToTile(surf, doomMap, side->GetSampleDistance(WallPart::MIDDLE));
 
 		Surfaces.Push(surf);
@@ -539,7 +539,7 @@ void DoomLevelMesh::CreateTopWallSurface(FLevel& doomMap, IntSideDef* side)
 	surf.Texture = side->GetTexture(WallPart::TOP);
 
 	AddWallVertices(surf, verts);
-	SetSideTextureUVs(surf, side, WallPart::TOP, v1Top, v1TopBack, v2Top, v2TopBack);
+	SetSideTextureUVs(doomMap, surf, side, WallPart::TOP, v1Top, v1TopBack, v2Top, v2TopBack);
 	AddSurfaceToTile(surf, doomMap, side->GetSampleDistance(WallPart::TOP));
 
 	Surfaces.Push(surf);
@@ -581,17 +581,97 @@ void DoomLevelMesh::CreateBottomWallSurface(FLevel& doomMap, IntSideDef* side)
 	surf.Texture = side->GetTexture(WallPart::BOTTOM);
 
 	AddWallVertices(surf, verts);
-	SetSideTextureUVs(surf, side, WallPart::BOTTOM, v1BottomBack, v1Bottom, v2BottomBack, v2Bottom);
+	SetSideTextureUVs(doomMap, surf, side, WallPart::BOTTOM, v1BottomBack, v1Bottom, v2BottomBack, v2Bottom);
 	AddSurfaceToTile(surf, doomMap, side->GetSampleDistance(WallPart::BOTTOM));
 
 	Surfaces.Push(surf);
 }
 
-void DoomLevelMesh::SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef* side, WallPart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ)
+struct FTexCoordInfo
+{
+	int mRenderWidth;
+	int mRenderHeight;
+	int mWidth;
+	FVector2 mScale;
+	FVector2 mTempScale;
+	bool mWorldPanning;
+
+	float FloatToTexU(float v) const { return v / mRenderWidth; }
+	float FloatToTexV(float v) const { return v / mRenderHeight; }
+
+	float RowOffset(float rowoffset) const
+	{
+		float scale = fabsf(mScale.Y);
+		if (scale == 1.f || mWorldPanning) return rowoffset;
+		else return rowoffset / scale;
+	}
+
+	float TextureOffset(float textureoffset) const
+	{
+		float scale = fabsf(mScale.X);
+		if (scale == 1.f || mWorldPanning) return textureoffset;
+		else return textureoffset / scale;
+	}
+
+	float TextureAdjustWidth() const
+	{
+		if (mWorldPanning)
+		{
+			float tscale = fabsf(mTempScale.X);
+			if (tscale == 1.f) return (float)mRenderWidth;
+			else return mWidth / fabsf(tscale);
+		}
+		else return (float)mWidth;
+	}
+
+	void GetFromTexture(FGameTexture* tex, float x, float y, bool forceworldpanning)
+	{
+		if (x == 1.f)
+		{
+			mRenderWidth = xs_RoundToInt(tex->GetDisplayWidth());
+			mScale.X = tex->GetScaleX();
+			mTempScale.X = 1.f;
+		}
+		else
+		{
+			float scale_x = x * tex->GetScaleX();
+			mRenderWidth = xs_CeilToInt(tex->GetTexelWidth() / scale_x);
+			mScale.X = scale_x;
+			mTempScale.X = x;
+		}
+
+		if (y == 1.f)
+		{
+			mRenderHeight = xs_RoundToInt(tex->GetDisplayHeight());
+			mScale.Y = tex->GetScaleY();
+			mTempScale.Y = 1.f;
+		}
+		else
+		{
+			float scale_y = y * tex->GetScaleY();
+			mRenderHeight = xs_CeilToInt(tex->GetTexelHeight() / scale_y);
+			mScale.Y = scale_y;
+			mTempScale.Y = y;
+		}
+		if (tex->isHardwareCanvas())
+		{
+			mScale.Y = -mScale.Y;
+			mRenderHeight = -mRenderHeight;
+		}
+		mWorldPanning = tex->useWorldPanning() || forceworldpanning;
+		mWidth = tex->GetTexelWidth();
+	}
+};
+
+static void GetTexCoordInfo(FGameTexture* tex, FTexCoordInfo* tci, IntSideDef* side, WallPart texpos)
+{
+	tci->GetFromTexture(tex, (float)side->GetTextureXScale(texpos), (float)side->GetTextureYScale(texpos), false/*!!(side->GetLevel()->flags3 & LEVEL3_FORCEWORLDPANNING)*/);
+}
+
+void DoomLevelMesh::SetSideTextureUVs(FLevel& doomMap, DoomLevelMeshSurface& surface, IntSideDef* side, WallPart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ)
 {
 	FFlatVertex* verts = &Mesh.Vertices[surface.MeshLocation.StartVertIndex];
 
-#if 0
 	if (surface.Texture.isValid())
 	{
 		const auto gtxt = TexMan.GetGameTexture(surface.Texture);
@@ -600,7 +680,7 @@ void DoomLevelMesh::SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef*
 		GetTexCoordInfo(gtxt, &tci, side, texpart);
 
 		float startU = tci.FloatToTexU(tci.TextureOffset((float)side->GetTextureXOffset(texpart)) + tci.TextureOffset((float)side->GetTextureXOffset(texpart)));
-		float endU = startU + tci.FloatToTexU(side->TexelLength);
+		float endU = startU + tci.FloatToTexU(side->GetTexelLength(doomMap));
 
 		verts[0].u = startU;
 		verts[1].u = endU;
@@ -608,8 +688,8 @@ void DoomLevelMesh::SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef*
 		verts[3].u = endU;
 
 		// To do: the ceiling version is apparently used in some situation related to 3d floors (rover->top.isceiling)
-		//float offset = tci.RowOffset((float)side->GetTextureYOffset(texpart)) + tci.RowOffset((float)side->GetTextureYOffset(texpart)) + (float)side->sector->GetPlaneTexZ(PLANE_CEILING);
-		float offset = tci.RowOffset((float)side->GetTextureYOffset(texpart)) + tci.RowOffset((float)side->GetTextureYOffset(texpart)) + (float)side->sector->GetPlaneTexZ(PLANE_FLOOR);
+		//float offset = tci.RowOffset((float)side->GetTextureYOffset(texpart)) + tci.RowOffset((float)side->GetTextureYOffset(texpart)) + (float)doomMap.Sectors[side->sector].ceilingTexZ;
+		float offset = tci.RowOffset((float)side->GetTextureYOffset(texpart)) + tci.RowOffset((float)side->GetTextureYOffset(texpart)) + (float)doomMap.Sectors[side->sector].floorTexZ;
 
 		verts[0].v = tci.FloatToTexV(offset - v1BottomZ);
 		verts[1].v = tci.FloatToTexV(offset - v2BottomZ);
@@ -617,7 +697,6 @@ void DoomLevelMesh::SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef*
 		verts[3].v = tci.FloatToTexV(offset - v2TopZ);
 	}
 	else
-#endif
 	{
 		for (int i = 0; i < 4; i++)
 		{

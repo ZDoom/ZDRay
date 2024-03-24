@@ -81,17 +81,26 @@ public:
 	bool isValid() const { return Valid; }
 	float GetDisplayWidth() const { return DisplayWidth; }
 	float GetDisplayHeight() const { return DisplayHeight; }
+
+	float GetScaleX() const { return ScaleX; }
 	float GetScaleY() const { return ScaleY; }
 
 	const void* GetImagePixels() const { return Pixels.data(); }
 	int GetImageWidth() const { return Width; }
 	int GetImageHeight() const { return Height; }
 
+	int GetTexelWidth() const { return GetImageWidth(); }
+	int GetTexelHeight() const { return GetImageHeight(); }
+
+	bool isHardwareCanvas() const { return false; }
+	bool useWorldPanning() const { return false; }
+
 private:
 	FString Name;
 	bool Valid = true;
 	float DisplayWidth = 0.0f;
 	float DisplayHeight = 0.0f;
+	float ScaleX = 1.0f;
 	float ScaleY = 1.0f;
 
 	std::vector<unsigned char> Pixels;

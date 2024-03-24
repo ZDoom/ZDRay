@@ -59,6 +59,7 @@ class FolderFileSystemSource : public IFileSystemSource
 public:
 	FolderFileSystemSource(const FString& foldername)
 	{
+		Basepath = foldername;
 		ScanFolder(foldername.GetChars());
 	}
 
@@ -69,15 +70,15 @@ public:
 
 	int CheckNumForFullName(const FString& fullname) override
 	{
-		auto it = FilenameKeyToIndex.find(fullname.GetChars());
-		if (it == FilenameKeyToIndex.end())
+		auto it = FullnameKeyToIndex.find(ToFullnameKey(fullname.GetChars()));
+		if (it == FullnameKeyToIndex.end())
 			return -1;
 		return (int)it->second;
 	}
 
 	int FileLength(int lump) override
 	{
-		int64_t size = File::open_existing(Filenames[lump])->size();
+		int64_t size = File::open_existing(FilePath::combine(Basepath, Filenames[lump]))->size();
 		// For safety. The filesystem API clearly wasn't designed to handle large files.
 		if (size >= 0x7fffffff) throw std::runtime_error("File is too big");
 		return (int)size;
@@ -86,7 +87,7 @@ public:
 	FileData ReadFile(int lump) override
 	{
 		FileData data;
-		data.Buffer = File::read_all_bytes(Filenames[lump]);
+		data.Buffer = File::read_all_bytes(FilePath::combine(Basepath, Filenames[lump]));
 		return data;
 	}
 
@@ -95,26 +96,40 @@ public:
 		return Filenames[lump].c_str();
 	}
 
-	void ScanFolder(const std::string& foldername, int depth = 0)
+	static std::string ToFullnameKey(std::string name)
 	{
-		for (const std::string& filename : Directory::files(foldername))
+		for (char& c : name)
 		{
-			std::string fullname = FilePath::combine(foldername, filename);
-			FilenameKeyToIndex[fullname] = Filenames.size();
+			if (c == '\\')
+				c = '/';
+			if (c >= 'A' && c <= 'Z')
+				c = c - 'A' + 'a';
+		}
+		return name;
+	}
+
+	void ScanFolder(const std::string& foldername, const std::string& relativefoldername = {}, int depth = 0)
+	{
+		std::string search = FilePath::combine(foldername, "*");
+		for (const std::string& filename : Directory::files(search))
+		{
+			std::string fullname = FilePath::combine(relativefoldername, filename);
+			FullnameKeyToIndex[ToFullnameKey(fullname)] = Filenames.size();
 			Filenames.push_back(fullname);
 		}
 
 		if (depth < 16)
 		{
-			for (const std::string& subfolder : Directory::folders(foldername))
+			for (const std::string& subfolder : Directory::folders(search))
 			{
-				ScanFolder(FilePath::combine(foldername, subfolder), depth + 1);
+				ScanFolder(FilePath::combine(foldername, subfolder), FilePath::combine(relativefoldername, subfolder), depth + 1);
 			}
 		}
 	}
 
+	std::string Basepath;
 	std::vector<std::string> Filenames;
-	std::map<std::string, size_t> FilenameKeyToIndex;
+	std::map<std::string, size_t> FullnameKeyToIndex;
 };
 
 /////////////////////////////////////////////////////////////////////////////

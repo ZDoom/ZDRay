@@ -105,6 +105,9 @@ struct IntSideDef
 		return TexMan.CheckForTexture(names[(int)part], ETextureType::Wall);
 	}
 
+	float GetTextureXOffset(WallPart part) { return 0.0f; }
+	float GetTextureXScale(WallPart part) { return 1.0f; }
+
 	float GetTextureYOffset(WallPart part) { return 0.0f; }
 	float GetTextureYScale(WallPart part) { return 1.0f; }
 
@@ -115,6 +118,16 @@ struct IntSideDef
 
 	FVector2 V1(const FLevel& level) const;
 	FVector2 V2(const FLevel& level) const;
+
+	float GetTexelLength(const FLevel& level) const
+	{
+		FVector2 v1 = V1(level);
+		FVector2 v2 = V2(level);
+		double dx = v2.X - v1.X;
+		double dy = v2.Y - v1.Y;
+		int len = (int)(g_sqrt(dx * dx + dy * dy) + 0.5f);
+		return (float)len;
+	}
 };
 
 struct MapLineDef

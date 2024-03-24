@@ -83,7 +83,7 @@ private:
 	void CreateTopWallSurface(FLevel& doomMap, IntSideDef* side);
 	void CreateBottomWallSurface(FLevel& doomMap, IntSideDef* side);
 	void AddWallVertices(DoomLevelMeshSurface& surf, FFlatVertex* verts);
-	void SetSideTextureUVs(DoomLevelMeshSurface& surface, IntSideDef* side, WallPart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ);
+	void SetSideTextureUVs(FLevel& doomMap, DoomLevelMeshSurface& surface, IntSideDef* side, WallPart texpart, float v1TopZ, float v1BottomZ, float v2TopZ, float v2BottomZ);
 
 	void CreateFloorSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, X3DFloor* controlSector, int typeIndex);
 	void CreateCeilingSurface(FLevel& doomMap, MapSubsectorEx* sub, IntSector* sector, X3DFloor* controlSector, int typeIndex);

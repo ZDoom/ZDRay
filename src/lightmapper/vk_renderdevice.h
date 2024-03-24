@@ -166,6 +166,11 @@ public:
 	void CreateLightmap(int newLMTextureSize, int newLMTextureCount);
 	void DownloadLightmap(int arrayIndex, uint16_t* buffer);
 
+	int CreateGameTexture(int width, int height, const void* pixels);
+
+	VulkanImage* GetGameTexture(int index) { return GameTextures[index].get(); }
+	VulkanImageView* GetGameTextureView(int index) { return GameTextureViews[index].get(); }
+
 	VulkanImage* GetNullTexture() { return NullTexture.get(); }
 	VulkanImageView* GetNullTextureView() { return NullTextureView.get(); }
 
@@ -180,6 +185,9 @@ private:
 
 	std::unique_ptr<VulkanImage> NullTexture;
 	std::unique_ptr<VulkanImageView> NullTextureView;
+
+	std::vector<std::unique_ptr<VulkanImage>> GameTextures;
+	std::vector<std::unique_ptr<VulkanImageView>> GameTextureViews;
 };
 
 class VkSamplerManager
