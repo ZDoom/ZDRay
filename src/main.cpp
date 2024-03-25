@@ -57,6 +57,7 @@
 
 #include "framework/zdray.h"
 #include "framework/filesystem.h"
+#include "framework/file.h"
 #include "wad/wad.h"
 #include "level/level.h"
 #include "commandline/getopt.h"
@@ -234,7 +235,10 @@ int main(int argc, char **argv)
 			fixSame = true;
 		}
 
-		// fileSystem.AddFolderSource("C:\\Development\\VkDoom\\build\\RelWithDebInfo\\ElderJamReignited");
+		// Search for texture resources with the assumption that the map is in a maps folder and the textures folder is next to it.
+		// To do: allow specifying the path via commandline
+		FString inResourceFolder = FilePath::combine(FilePath::remove_last_component(InName), "..").c_str();
+		fileSystem.AddFolderSource(inResourceFolder);
 
 		{
 			FWadReader inwad(InName);
