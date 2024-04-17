@@ -51,7 +51,7 @@ thing // ZDRayInfo (ZDRay properties for the map)
 {
 	type = 9890;
 	lm_suncolor = &lt;int&gt; (default: 16777215, color value of the sun)
-	lm_sampledist = &lt;int&gt; (default: 16, map units each lightmap texel covers, must be in powers of two)
+	lm_sampledist = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
 }
 
 thing // Lightmap point light (Light color and distance properties use the same args as dynamic lights)
