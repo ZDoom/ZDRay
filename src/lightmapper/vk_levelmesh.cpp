@@ -670,7 +670,7 @@ void VkLevelMeshUploader::UploadLights()
 			info.OuterAngleCos = light.OuterAngleCos;
 			info.SpotDir = SwapYZ(light.SpotDir);
 			info.Color = light.Color;
-			info.SourceRadius = light.SourceRadius;
+			info.SoftShadowRadius = light.SoftShadowRadius;
 			*(lights++) = info;
 		}
 

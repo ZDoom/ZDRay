@@ -30,7 +30,7 @@ struct LightInfo
 	float InnerAngleCos;
 	float OuterAngleCos;
 	vec3 SpotDir;
-	float SourceRadius;
+	float SoftShadowRadius;
 	vec3 Color;
 	float Padding3;
 };

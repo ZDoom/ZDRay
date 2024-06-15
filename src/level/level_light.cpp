@@ -247,7 +247,7 @@ void FLevel::CreateLights()
 		float lightDistance = 0.0f;
 		float innerAngleCos = -1.0f;
 		float outerAngleCos = -1.0f;
-		float sourceradius = 5.0f;
+		float softshadowradius = 5.0f;
 
 		// need to process point lights and spot lights differently due to their
 		// inconsistent arg usage...
@@ -282,9 +282,9 @@ void FLevel::CreateLights()
 
 		for (const auto& prop : thing->props)
 		{
-			if (!stricmp(prop.key, "sourceradius"))
+			if (!stricmp(prop.key, "softshadowradius"))
 			{
-				sourceradius = atof(prop.value);
+				softshadowradius = atof(prop.value);
 			}
 		}
 
@@ -313,7 +313,7 @@ void FLevel::CreateLights()
 			thingLight.origin.X = x;
 			thingLight.origin.Y = y;
 			thingLight.sectorGroup = thingLight.sector->group;
-			thingLight.sourceRadius = sourceradius;
+			thingLight.softShadowRadius = softshadowradius;
 
 			ThingLights.Push(thingLight);
 		}
