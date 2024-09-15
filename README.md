@@ -1,5 +1,7 @@
 
-# ZDRay baking utility for GZDoom
+# ZDRay baking utility for DISDAIN (demo version)
+
+## NOTE: This branch of ZDRay specifically only works for the demo version of DISDAIN! Do not use this branch outside of the DISDAIN demo.
 
 ZDRay is a node and lightmap generator for GZDoom. ZDRay is intended as a drop-in replacement for zdbsp, with the additional feature
 that it can also bake lights. Once ZDRay has processed the level WAD it is ready to be used by GZDoom.
@@ -54,16 +56,16 @@ thing // ZDRayInfo (ZDRay properties for the map)
 {
 	type = 9890;
 	lm_suncolor = &lt;string&gt; (default: "FFFFFF", hex color value of the sun)
-	lm_sampledistance = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
+	lm_sampledist = &lt;int&gt; (default: 8, map units each lightmap texel covers, must be in powers of two)
 	lm_gridsize = &lt;float&gt; (default: 32, grid density for the automatic light probes)
 }
 
-thing // Static point light (Light color and distance properties use the same args as dynamic lights)
+thing // Lightmap point light (Light color and distance properties use the same args as dynamic lights)
 {
 	type = 9876;
 }
 
-thing // Static spotlight (Light color, distance and angle properties use the same args as dynamic lights)
+thing // Lightmap spotlight (Light color, distance and angle properties use the same args as dynamic lights)
 {
 	type = 9881;
 }
