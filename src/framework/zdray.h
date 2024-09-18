@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <stdint.h>
 
-#define ZDRAY_VERSION	"1.0"
+#define ZDRAY_VERSION	"0.1 (DISDAIN demo)"
 
 enum EBlockmapMode
 {
