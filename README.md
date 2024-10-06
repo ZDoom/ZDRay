@@ -57,13 +57,13 @@ thing // ZDRayInfo (ZDRay properties for the map)
 thing // Lightmap point light (Light color and distance properties use the same args as dynamic lights)
 {
 	type = 9876;
-	SoftShadowRadius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the shadow softness. Note that dynamic raytraced lights can also use this feature)
+	light_softshadowradius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the shadow softness. Note that dynamic raytraced lights can also use this feature)
 }
 
 thing // Lightmap spotlight (Light color, distance and angle properties use the same args as dynamic lights)
 {
 	type = 9881;
-	SoftShadowRadius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the shadow softness. Note that dynamic raytraced lights can also use this feature)
+	light_softshadowradius = &lt;float&gt; (default: 5, radius of the light source in map units; controls the shadow softness. Note that dynamic raytraced lights can also use this feature)
 }
 
 linedef

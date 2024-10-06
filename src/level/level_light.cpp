@@ -264,6 +264,7 @@ void FLevel::CreateLights()
 
 			// UDB's color picker will assign the color as a hex string, stored
 			// in the arg0str field. detect this, so that it can be converted into an int
+			// this behavior is unique to spotlights.
 			if (thing->arg0str.Len() > 0)
 			{
 				FString hex = "0x" + thing->arg0str;
@@ -282,16 +283,16 @@ void FLevel::CreateLights()
 
 		for (const auto& prop : thing->props)
 		{
-			if (!stricmp(prop.key, "softshadowradius"))
+			if (!stricmp(prop.key, "light_softshadowradius"))
 			{
 				softshadowradius = atof(prop.value);
 			}
 		}
 
-		// this is known as "intensity" on dynamic lights (and in UDB)
+		// this is known as "intensity" on dynamic lights (and in UDB) - what it actually is though, is the radius
 		lightDistance = thing->args[3];
 
-		// lightmap light intensity (not to be confused with dynamic lights' intensity, which is actually lightmap light distance
+		// light intensity is how bright or dark a light is. can go below or above 1.0.
 		lightIntensity = thing->alpha;
 
 		if (lightDistance > 0.0f && lightIntensity > 0.0f && lightColor != FVector3(0, 0, 0))
